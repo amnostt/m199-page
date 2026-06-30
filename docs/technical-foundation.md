@@ -49,15 +49,38 @@ The web app must not import Prisma directly. Business rules belong in API module
 
 ## Constraint Strategy
 
-Prisma expresses standard uniqueness and indexes directly: slugs, email, token hash, unique outing like fingerprints, and featured post slots.
+Every business invariant is classified into one of two enforcement tiers, matching the
+`// DB:` and `// APP:` labels in `packages/db/prisma/schema.prisma`.
 
-Some rules require application services, database transactions, or later SQL migrations:
+### Tier Definitions
 
-- One `LandingSettings` row should be maintained with `id = 1`.
-- Upload size and MIME limits must be validated per `FileCategory` before writing files.
-- Featured-slot updates should run transactionally to avoid replacing or duplicating landing selections accidentally.
-- Keep `Outing.likesCount` synchronized transactionally with `OutingLike` inserts and deletes.
-- Published content should require required public fields before `PUBLISHED` status.
+| Tier | Label | Enforcement | Notes |
+|------|-------|-------------|-------|
+| **Database** | `DB` | Prisma-native: `@unique`, `@@unique`, `@@index`, `@default`, enum, required field, relation | Source of truth lives in the schema. |
+| **Application** | `APP` | API/service logic, transactional writes, future SQL migrations | Prisma cannot enforce these directly at the DB level. |
+
+### Invariant Classification
+
+| Invariant | Tier | Mechanism |
+|---|---|---|
+| Unique email, slug, token hash | DB | `@unique` constraints |
+| FeaturedPost max 3 slots | DB | `FeaturedPostSlot` enum (3 values) + `slot @unique` + `postId @unique` |
+| One featured outing | DB | `LandingSettings.featuredOutingId @unique` |
+| One like per visitor per outing | DB | `@@unique([outingId, visitorHash])` |
+| Anonymous likes (no PII) | DB | `visitorHash` column; no identity columns |
+| One verse per date | DB | `@@unique([date])` |
+| One post per download file | DB | `@@unique([postId, fileId])` |
+| Inactive responsible users | DB | `ResponsibleUserStatus` enum + `status` field + `@@index([status])` |
+| File size/type metadata | DB | `sizeBytes`, `mimeType`, `extension` columns in `FileAsset` |
+| Post tags | DB | `tags String[] @default([])` + `@@index([tags], type: Gin)` |
+| Verse history / revisions | DB | `VerseRevision` model + `@@index([verseId, changedAt])` |
+| Refresh-session fields | DB | `tokenHash @unique`, status/expiresAt columns, indexes |
+| LandingSettings singleton | APP | Service enforces `WHERE id = 1` on upsert |
+| Inactive user enforcement | APP | Login/content-creation guards check `status != INACTIVE` |
+| Outing.likesCount sync | APP | Transactional writes on like/unlike |
+| Upload MIME/size limits | APP | Per-category validation before `FileAsset` insert |
+| Publish-readiness | APP | Status transition guard requires complete public fields |
+| Refresh token lifecycle | APP | Hash-only storage; app layer handles revoke/rotate/expiry |
 
 ## Auth and Session Model
 

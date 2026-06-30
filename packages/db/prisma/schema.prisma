@@ -1,3 +1,7 @@
+// === Enforcement Tiers ===
+// DB:  → Prisma constructs: @unique, @@unique, @@index, @default, enum, required field, relation
+// APP: → API/service logic, transactional writes, future SQL migrations
+//
 // Initial Prisma model draft for the Misión 1-99 MVP.
 // This file is documentation/design for now: no migrations or generated client setup yet.
 
@@ -49,6 +53,8 @@ enum FeaturedPostSlot {
 }
 
 model ResponsibleUser {
+  // DB: Unique email (@unique), status enum tracks ACTIVE/INACTIVE, @@index([status])
+  // APP: Login/content-creation guards must check status != INACTIVE
   id           String                @id @default(uuid())
   email        String                @unique
   displayName  String
@@ -68,6 +74,8 @@ model ResponsibleUser {
 }
 
 model RefreshSession {
+  // DB: tokenHash @unique, status/expiresAt columns, @@index([userId, status]), @@index([expiresAt]), @@index([status, expiresAt])
+  // APP: Hash-only storage; app layer handles revoke/rotate/expiry lifecycle
   id        String               @id @default(uuid())
   userId    String
   tokenHash String               @unique
@@ -84,9 +92,12 @@ model RefreshSession {
 
   @@index([userId, status])
   @@index([expiresAt])
+  @@index([status, expiresAt])
 }
 
 model FileAsset {
+  // DB: sizeBytes, mimeType, extension metadata columns, @@index([category]), @@index([uploadedById])
+  // APP: Upload MIME/size limits validated per FileCategory before insert
   id              String              @id @default(uuid())
   storageProvider FileStorageProvider @default(LOCAL)
   category        FileCategory
@@ -115,6 +126,8 @@ model FileAsset {
 }
 
 model Outing {
+  // DB: slug @unique, likesCount field, @@index([status, dateTime]), @@index([createdById])
+  // APP: Outing.likesCount sync requires transactional writes on like/unlike
   id          String        @id @default(uuid())
   slug        String        @unique
   title       String
@@ -143,6 +156,8 @@ model Outing {
 }
 
 model OutingLike {
+  // DB: @@unique([outingId, visitorHash]) dedupes; no identity columns stored
+  // APP: Privacy-safe visitorHash derivation — salted hash from request/client signals at API layer; never raw IP or public identity
   id                 String   @id @default(uuid())
   outingId           String
   visitorHash        String
@@ -151,13 +166,13 @@ model OutingLike {
 
   outing Outing @relation(fields: [outingId], references: [id])
 
-  // visitorHash should be a salted hash derived from privacy-safe request/client signals.
-  // Do not store public user identity or raw IP addresses for anonymous likes.
   @@unique([outingId, visitorHash])
   @@index([createdAt])
 }
 
 model Post {
+  // DB: slug @unique, tags String[] @@index([tags], type: Gin), @@index([status, publishedAt]), @@index([createdById])
+  // APP: Publish-readiness guard: status transition requires complete public fields
   id           String        @id @default(uuid())
   slug         String        @unique
   title        String
@@ -178,9 +193,11 @@ model Post {
 
   @@index([status, publishedAt])
   @@index([tags], type: Gin)
+  @@index([createdById])
 }
 
 model FeaturedPost {
+  // DB: FeaturedPostSlot enum (3 values) limits max featured posts; slot @unique, postId @unique
   id        String           @id @default(uuid())
   slot      FeaturedPostSlot @unique
   postId    String           @unique
@@ -191,6 +208,7 @@ model FeaturedPost {
 }
 
 model PostDownload {
+  // DB: @@unique([postId, fileId]) — one post per download file
   id        String   @id @default(uuid())
   postId    String
   fileId    String
@@ -206,6 +224,7 @@ model PostDownload {
 }
 
 model Verse {
+  // DB: @@unique([date]) — one verse per date, @@index([status, date]), @@index([createdById])
   id          String        @id @default(uuid())
   text        String
   reference   String
@@ -220,9 +239,11 @@ model Verse {
 
   @@unique([date])
   @@index([status, date])
+  @@index([createdById])
 }
 
 model VerseRevision {
+  // DB: @@index([verseId, changedAt]) — verse history/revision tracking
   id          String   @id @default(uuid())
   verseId     String
   text        String
@@ -237,6 +258,8 @@ model VerseRevision {
 }
 
 model LandingSettings {
+  // DB: featuredOutingId @unique — one featured outing
+  // APP: Singleton enforcement: service keeps exactly one row with id = 1
   id               Int      @id @default(1)
   heroTitle        String?
   heroSubtitle     String?
@@ -246,13 +269,10 @@ model LandingSettings {
 
   heroImage      FileAsset? @relation("LandingHero", fields: [heroImageId], references: [id])
   featuredOuting Outing?    @relation(fields: [featuredOutingId], references: [id])
-
-  // Application/transactional rule: keep exactly one settings row with id = 1.
-  // Featured posts are represented by at most one row per FeaturedPostSlot.
 }
 
-// Application/transactional constraints to enforce during implementation:
-// - Validate allowed MIME types and max file size per FileCategory before writing files.
-// - Require complete public fields before changing content status to PUBLISHED.
-// - Keep Outing.likesCount synchronized transactionally with OutingLike writes/deletes.
-// - Rotate/revoke refresh sessions using token hashes only; never persist raw tokens.
+// APP-tier invariants (see per-model // APP: labels for enforcement context):
+// - FileAsset upload validation: allowed MIME types and max file size per FileCategory.
+// - Content publish-readiness: complete public fields required before PUBLISHED status.
+// - Outing.likesCount synchronization: transactional writes on like/unlike.
+// - RefreshSession lifecycle: hash-only storage; rotate/revoke at application layer.
