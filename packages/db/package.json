@@ -7,14 +7,15 @@
   "scripts": {
     "db:validate": "prisma validate",
     "db:format": "prisma format",
-    "typecheck": "echo \"No TypeScript source in @m199/db yet; skipping typecheck.\" && exit 0",
-    "test": "echo \"Test runner not configured yet for @m199/db\" && exit 0"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "dotenv": "^17.2.0",
     "prisma": "^7.5.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

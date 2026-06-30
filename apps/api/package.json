@@ -6,9 +6,10 @@
   "description": "Mision 1-99 API package placeholder. No endpoints or NestJS modules yet; real API behavior ships in later changes.",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Test runner not configured yet for @m199/api\" && exit 0"
+    "test": "vitest run"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

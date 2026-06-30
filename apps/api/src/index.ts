@@ -7,6 +7,8 @@
  * later SDD changes.
  */
 
+/** Package version identifier used by the test baseline. */
+export const API_PACKAGE_VERSION = "0.0.0" as const;
+
 // Placeholder: the real server bootstrap (e.g. NestJS or Express) will
 // be wired here when API implementation begins.
-console.log("@m199/api workspace shell loaded (no endpoints yet).");
