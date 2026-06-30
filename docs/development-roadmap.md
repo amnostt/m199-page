@@ -4,19 +4,27 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Ya está terminada la base de planificación:
+Estamos en el **paso 2: Base de datos y Prisma real**.
+
+Ya está terminada la base técnica inicial:
 
 - Documento técnico base.
-- Modelo Prisma inicial.
-- Spec SDD archivada.
+- Monorepo con `apps/web`, `apps/api` y `packages/db`.
+- Scripts de calidad: lint, format, typecheck, build y test runner.
+- Baseline de Vitest en web, API y DB.
+- Modelo Prisma inicial endurecido.
 - Reglas principales del dominio documentadas.
+- Constraints clasificadas como `DB` o `APP`.
+- Specs SDD archivadas para bootstrap y hardening de schema.
 - Validación inicial del schema Prisma.
 
-En otras palabras: ya tenemos el plano arquitectónico, pero todavía no la obra construida.
+En otras palabras: ya tenemos los cimientos del proyecto y el plano de datos más firme. Todavía falta convertir la base de datos en una base operativa real con PostgreSQL, migraciones y Prisma Client.
 
 ## Camino hasta finalizar el MVP
 
 ### 1. Bootstrap técnico del proyecto
+
+**Estado:** ✅ Completo.
 
 Crear la estructura real del monorepo:
 
@@ -34,6 +42,8 @@ Crear la estructura real del monorepo:
 
 ### 2. Base de datos y Prisma real
 
+**Estado:** 🟡 En progreso.
+
 Convertir el modelo inicial en una base operativa:
 
 - ajustar `schema.prisma`
@@ -42,6 +52,17 @@ Convertir el modelo inicial en una base operativa:
 - configurar Prisma Client
 - agregar seeds iniciales si hacen falta
 - resolver constraints que Prisma no cubre completamente
+
+Avance actual:
+
+- ✅ `schema.prisma` ajustado y endurecido.
+- ✅ Constraints principales clasificadas entre `DB` y `APP`.
+- ✅ Índices y reglas Prisma-native revisadas.
+- ✅ Documentación técnica sincronizada con el schema.
+- ⏳ Falta crear migraciones.
+- ⏳ Falta configurar PostgreSQL real/dev.
+- ⏳ Falta configurar Prisma Client para consumo desde la API.
+- ⏳ Falta decidir/agregar seeds iniciales si hacen falta.
 
 **Resultado esperado:** base de datos lista para uso real.
 
@@ -220,6 +241,8 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser el **bootstrap del monorepo y tooling**.
+El próximo SDD change debería ser **database-operational-foundation**.
 
-Sin esa base, cualquier feature posterior queda apoyada en barro. Primero cimientos: workspace, apps vacías, Prisma config, scripts y test runner. Después recién conviene construir autenticación, admin y módulos de contenido.
+Ese cambio debería cerrar el paso 2 convirtiendo el schema endurecido en una base usable por la aplicación: PostgreSQL local/dev, migraciones, Prisma Client y seeds mínimos si aportan valor.
+
+No conviene saltar todavía al backend foundation o a autenticación. Primero hay que asegurarse de que la capa de datos sea operativa; si no, todo lo demás queda apoyado en barro.
