@@ -4,7 +4,7 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Estamos listos para empezar el **paso 3: Backend foundation**.
+Estamos listos para empezar el **paso 4: Autenticación y responsables**.
 
 Ya está terminada la base técnica inicial:
 
@@ -20,8 +20,11 @@ Ya está terminada la base técnica inicial:
 - PostgreSQL local/dev documentado.
 - Migración inicial creada.
 - Prisma Client configurado y consumible desde `apps/api` vía `@m199/db`.
+- API NestJS base con config/env validada.
+- Manejo global de errores y validación base.
+- Health check operativo.
 
-En otras palabras: ya tenemos los cimientos del proyecto y una base de datos operativa para desarrollo. Ahora conviene construir la base del backend antes de sumar autenticación o features de producto.
+En otras palabras: ya tenemos los cimientos del proyecto, una base de datos operativa y una API base sobre la cual construir features reales. Ahora sí conviene avanzar sobre autenticación y responsables.
 
 ## Camino hasta finalizar el MVP
 
@@ -72,17 +75,26 @@ Avance actual:
 
 ### 3. Backend foundation
 
-**Estado:** ⏭️ Próximo.
+**Estado:** ✅ Completo.
 
 Crear la base NestJS:
 
 - módulos principales
-- `PrismaService`
+- `DbService` (boundary dinámico contra `@m199/db`)
 - config/env
 - validación de DTOs
 - manejo de errores
 - estructura común
 - health check
+
+Avance actual:
+
+- ✅ NestJS bootstrap configurado.
+- ✅ Config/env validada antes del acceso a DB.
+- ✅ Integración con `@m199/db` mediante boundary dinámico.
+- ✅ Manejo global de errores definido.
+- ✅ Validación base con `class-validator`/`class-transformer`.
+- ✅ Health check sin ping a DB.
 
 **Resultado esperado:** API base funcionando con buenas convenciones.
 
@@ -247,8 +259,8 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser **backend-foundation**.
+El próximo SDD change debería ser **auth-responsibles-foundation**.
 
-Ese cambio debería crear la base real de la API: estructura de módulos, config/env, integración limpia con `@m199/db`, manejo de errores, validación y health check.
+Ese cambio debería implementar la primera funcionalidad crítica del admin: login, sesiones con refresh token, cookies seguras, logout, usuario activo/inactivo y la base del CRUD de responsables.
 
-No conviene saltar todavía a autenticación o módulos de contenido. Primero necesitamos una API base bien armada; si no, cada feature posterior va a inventar sus propias convenciones.
+No conviene saltar todavía a módulos de contenido. Primero necesitamos una puerta de entrada segura para el panel admin; sin autenticación, el resto queda sin límite claro de acceso.

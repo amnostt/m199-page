@@ -81,21 +81,13 @@ The model/foundation MUST represent rules for one featured outing, up to three f
 
 ### Requirement: MVP Exclusions
 
-The foundation MUST NOT implement advanced roles, social login, email password recovery, public search, dark mode, presenter mode, embedded post images, product UI screens, auth flows, upload handling, API endpoints, production deployment, or real product seed data. It MAY include local/dev database migrations, operational scaffolding, Prisma Client generation, runtime shells, and tooling needed to run the workspace baseline.
-(Previously: prohibited all migrations and database provisioning; now allows local/dev operational DB workflow while excluding production deployment and product seed data.)
+The foundation MUST NOT implement advanced roles, social login, password recovery, public search, dark mode, presenter mode, embedded images, product UI, auth flows, uploads, product endpoints, production deployment, or product seed data. It MAY include local/dev migrations, operational scaffolding, Prisma Client generation, runtime shells (including NestJS API bootstrap with an operational health endpoint), and workspace tooling.
+(Previously: permitted generic runtime shells; now explicitly names NestJS API scaffolding.)
 
-#### Scenario: Exclusion remains out of scope
-
-- GIVEN an excluded feature appears in the artifact or workspace
-- WHEN it is reviewed
-- THEN it is marked as deferred and does not add implementation requirements
-
-#### Scenario: Operational scaffolding allowed
-
-- GIVEN this change is applied
-- WHEN resulting files are inspected
-- THEN local/dev migrations, Prisma Client generation, and package shells are present
-- AND no product features, endpoints, or auth flows are implemented
+| Scenario | Given | When | Then |
+|----------|-------|------|------|
+| Exclusion stays out of scope | An excluded feature appears | It is reviewed | Marked deferred, no implementation reqs |
+| Scaffolding allowed | This change is applied | Files are inspected | Migrations, Prisma generation, shells present; no product features/endpoints/auth; NestJS API health-only scaffolding present |
 
 ### Requirement: Artifact Validation
 
@@ -116,21 +108,13 @@ The spec, foundation document, model artifact, workspace baseline, and operation
 
 ### Requirement: Installable Workspace Baseline
 
-The technical foundation MUST provide an installable monorepo baseline for `apps/web`, `apps/api`, and `packages/db` with operational database scaffolding and without product behavior.
-(Previously: baseline strictly prohibited all migrations and seed data; now allows local/dev operational DB scaffolding.)
+The technical foundation MUST provide an installable monorepo baseline for `apps/web`, `apps/api`, and `packages/db` with operational database scaffolding and runtime API foundation, without product behavior.
+(Previously: baseline described operational DB scaffolding without explicitly mentioning runtime API.)
 
-#### Scenario: Fresh workspace install
-
-- GIVEN a clean checkout with supported Node and pnpm
-- WHEN dependencies are installed from the repository root
-- THEN the workspace installs all declared app and package shells successfully
-
-#### Scenario: Product behavior remains absent
-
-- GIVEN the workspace baseline is reviewed
-- WHEN reviewers inspect web, api, and db package outputs
-- THEN no admin screens, public feature flows, auth flows, API endpoints, uploads, or product seed data are implemented
-- AND local/dev migrations and Prisma Client generation are present as operational scaffolding
+| Scenario | Given | When | Then |
+|----------|-------|------|------|
+| Fresh install | Clean checkout, Node+pnpm | Dependencies installed from root | All app/package shells install successfully |
+| Product behavior absent | Workspace baseline reviewed | Web, api, db outputs inspected | No admin screens, public flows, auth, product endpoints, uploads, seed data; migrations+Prisma gen present; NestJS API with health-only endpoint present as scaffolding |
 
 ### Requirement: Shared Tooling Commands
 
