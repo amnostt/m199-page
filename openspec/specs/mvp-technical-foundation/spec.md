@@ -81,8 +81,8 @@ The model/foundation MUST represent rules for one featured outing, up to three f
 
 ### Requirement: MVP Exclusions
 
-The foundation MUST NOT implement advanced roles, social login, email password recovery, public search, dark mode, presenter mode, embedded post images, product UI screens, auth flows, upload handling, API endpoints, migrations, production deployment, database provisioning, or real seed data. It MAY include runtime/package shells and tooling needed to run the workspace baseline.
-(Previously: the foundation prohibited runtime app behavior entirely and treated the change as documentation-only.)
+The foundation MUST NOT implement advanced roles, social login, email password recovery, public search, dark mode, presenter mode, embedded post images, product UI screens, auth flows, upload handling, API endpoints, production deployment, or real product seed data. It MAY include local/dev database migrations, operational scaffolding, Prisma Client generation, runtime shells, and tooling needed to run the workspace baseline.
+(Previously: prohibited all migrations and database provisioning; now allows local/dev operational DB workflow while excluding production deployment and product seed data.)
 
 #### Scenario: Exclusion remains out of scope
 
@@ -90,32 +90,34 @@ The foundation MUST NOT implement advanced roles, social login, email password r
 - WHEN it is reviewed
 - THEN it is marked as deferred and does not add implementation requirements
 
-#### Scenario: Baseline-only runtime shell
+#### Scenario: Operational scaffolding allowed
 
 - GIVEN this change is applied
 - WHEN resulting files are inspected
-- THEN only package shells, tooling, and a non-product web shell are present
+- THEN local/dev migrations, Prisma Client generation, and package shells are present
+- AND no product features, endpoints, or auth flows are implemented
 
 ### Requirement: Artifact Validation
 
-The spec, foundation document, model artifact, and workspace baseline MUST be reviewable with clear acceptance checks before product implementation begins.
-(Previously: validation covered only documentation/design outputs before implementation began.)
+The spec, foundation document, model artifact, workspace baseline, and operational database workflow MUST be reviewable with clear acceptance checks before product implementation begins.
+(Previously: validation covered documentation/design outputs and workspace baseline; now includes DB operational workflow verification.)
 
 #### Scenario: Complete validation pass
 
 - GIVEN the artifacts are ready for review
 - WHEN acceptance criteria are checked
-- THEN document structure, model coverage, business rules, exclusions, assumptions, workspace install, root scripts, and baseline build all pass
+- THEN document structure, model coverage, business rules, exclusions, assumptions, workspace install, root scripts, baseline build, migration workflow, and client generation all pass
 
 #### Scenario: Incomplete validation
 
-- GIVEN any required entity, rule, exclusion, assumption, workspace install, script, or baseline command is missing or failing
-- WHEN validation runs manually or through review checklist
+- GIVEN any required artifact, script, migration, or client generation step is missing or failing
+- WHEN validation runs
 - THEN the change MUST remain incomplete until the artifact or workspace is corrected
 
 ### Requirement: Installable Workspace Baseline
 
-The technical foundation MUST provide an installable monorepo baseline for `apps/web`, `apps/api`, and `packages/db` without adding product behavior.
+The technical foundation MUST provide an installable monorepo baseline for `apps/web`, `apps/api`, and `packages/db` with operational database scaffolding and without product behavior.
+(Previously: baseline strictly prohibited all migrations and seed data; now allows local/dev operational DB scaffolding.)
 
 #### Scenario: Fresh workspace install
 
@@ -127,7 +129,8 @@ The technical foundation MUST provide an installable monorepo baseline for `apps
 
 - GIVEN the workspace baseline is reviewed
 - WHEN reviewers inspect web, api, and db package outputs
-- THEN no admin screens, public feature flows, auth flows, API endpoints, uploads, migrations, or seed data are implemented
+- THEN no admin screens, public feature flows, auth flows, API endpoints, uploads, or product seed data are implemented
+- AND local/dev migrations and Prisma Client generation are present as operational scaffolding
 
 ### Requirement: Shared Tooling Commands
 
@@ -144,3 +147,83 @@ The foundation MUST expose root-level commands for formatting, linting, type che
 - GIVEN app and package shells contain no product features
 - WHEN root quality commands run
 - THEN they complete against the baseline or report only actionable tooling failures
+
+### Requirement: Local/Dev PostgreSQL Environment Contract
+
+The system MUST document the local/dev PostgreSQL connection contract in `.env.example` so contributors can configure their environment before running migrations.
+
+#### Scenario: Env contract is discoverable
+
+- GIVEN a contributor clones the repository
+- WHEN they inspect `.env.example`
+- THEN the `DATABASE_URL` format for a local PostgreSQL instance is documented
+
+#### Scenario: Missing contract blocks workflow
+
+- GIVEN `.env.example` lacks PostgreSQL connection documentation
+- WHEN migration workflow is attempted
+- THEN the contributor cannot proceed until the env contract is provided
+
+### Requirement: Prisma Migration Workflow
+
+The system MUST provide a Prisma migration workflow under `packages/db` that allows contributors to create and apply migrations from the hardened MVP schema.
+
+#### Scenario: First migration applied locally
+
+- GIVEN a configured `DATABASE_URL` pointing to a local PostgreSQL instance
+- WHEN the migration command is executed from `packages/db`
+- THEN an initial migration reflecting the existing Prisma schema is created and applied
+
+#### Scenario: Migration history is preserved
+
+- GIVEN the initial migration has been applied
+- WHEN a contributor inspects `packages/db/prisma/migrations/`
+- THEN the migration history directory contains versioned SQL migration files
+
+### Requirement: Prisma Client Generation
+
+The system MUST generate Prisma Client from the schema and expose it through `@m199/db`.
+
+#### Scenario: Client generated from schema
+
+- GIVEN the Prisma schema is present and valid
+- WHEN the generate command executes from `packages/db`
+- THEN Prisma Client is generated and importable by TypeScript consumers
+
+#### Scenario: Generation failure blocks consumption
+
+- GIVEN the Prisma schema is invalid or missing
+- WHEN the generate command executes
+- THEN the process MUST fail with an actionable error before consumers can import stale types
+
+### Requirement: Database Package Ownership Boundary
+
+`@m199/db` MUST own Prisma configuration, schema, migrations, and client generation. `apps/api` MUST consume database access only through this package boundary.
+
+#### Scenario: API consumes DB through package boundary
+
+- GIVEN `packages/db` exports the generated Prisma Client
+- WHEN `apps/api` imports from `@m199/db`
+- THEN type-safe database access is available without `apps/api` owning Prisma config
+
+#### Scenario: API type-check with DB package
+
+- GIVEN Prisma Client is generated by `packages/db`
+- WHEN `apps/api` runs type-checking against `@m199/db` imports
+- THEN type resolution succeeds and model types are available
+
+### Requirement: Seed Safeguard
+
+The system MUST NOT include product content, user data, or domain-specific seed data. Seed scaffolding, if present, MUST be limited to operational validation only.
+
+#### Scenario: Seed is absent or minimal
+
+- GIVEN the seed command is defined or omitted in `packages/db`
+- WHEN it is inspected or executed
+- THEN no product data (users, outings, posts, verses) is inserted
+
+#### Scenario: Operational seed only
+
+- GIVEN a seed file exists
+- WHEN it runs
+- THEN it MAY insert only schema-validation rows to prove migrations and client wiring work

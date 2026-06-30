@@ -4,7 +4,7 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Estamos en el **paso 2: Base de datos y Prisma real**.
+Estamos listos para empezar el **paso 3: Backend foundation**.
 
 Ya está terminada la base técnica inicial:
 
@@ -17,8 +17,11 @@ Ya está terminada la base técnica inicial:
 - Constraints clasificadas como `DB` o `APP`.
 - Specs SDD archivadas para bootstrap y hardening de schema.
 - Validación inicial del schema Prisma.
+- PostgreSQL local/dev documentado.
+- Migración inicial creada.
+- Prisma Client configurado y consumible desde `apps/api` vía `@m199/db`.
 
-En otras palabras: ya tenemos los cimientos del proyecto y el plano de datos más firme. Todavía falta convertir la base de datos en una base operativa real con PostgreSQL, migraciones y Prisma Client.
+En otras palabras: ya tenemos los cimientos del proyecto y una base de datos operativa para desarrollo. Ahora conviene construir la base del backend antes de sumar autenticación o features de producto.
 
 ## Camino hasta finalizar el MVP
 
@@ -42,7 +45,7 @@ Crear la estructura real del monorepo:
 
 ### 2. Base de datos y Prisma real
 
-**Estado:** 🟡 En progreso.
+**Estado:** ✅ Completo.
 
 Convertir el modelo inicial en una base operativa:
 
@@ -59,14 +62,17 @@ Avance actual:
 - ✅ Constraints principales clasificadas entre `DB` y `APP`.
 - ✅ Índices y reglas Prisma-native revisadas.
 - ✅ Documentación técnica sincronizada con el schema.
-- ⏳ Falta crear migraciones.
-- ⏳ Falta configurar PostgreSQL real/dev.
-- ⏳ Falta configurar Prisma Client para consumo desde la API.
-- ⏳ Falta decidir/agregar seeds iniciales si hacen falta.
+- ✅ PostgreSQL local/dev documentado en `.env.example` y `docs/technical-foundation.md`.
+- ✅ Migración inicial creada.
+- ✅ Prisma Client configurado en `@m199/db`.
+- ✅ `apps/api` puede consumir la capa DB vía `@m199/db`.
+- ✅ Seeds omitidos por decisión: no aportaban valor operativo sin meter datos de producto.
 
 **Resultado esperado:** base de datos lista para uso real.
 
 ### 3. Backend foundation
+
+**Estado:** ⏭️ Próximo.
 
 Crear la base NestJS:
 
@@ -241,8 +247,8 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser **database-operational-foundation**.
+El próximo SDD change debería ser **backend-foundation**.
 
-Ese cambio debería cerrar el paso 2 convirtiendo el schema endurecido en una base usable por la aplicación: PostgreSQL local/dev, migraciones, Prisma Client y seeds mínimos si aportan valor.
+Ese cambio debería crear la base real de la API: estructura de módulos, config/env, integración limpia con `@m199/db`, manejo de errores, validación y health check.
 
-No conviene saltar todavía al backend foundation o a autenticación. Primero hay que asegurarse de que la capa de datos sea operativa; si no, todo lo demás queda apoyado en barro.
+No conviene saltar todavía a autenticación o módulos de contenido. Primero necesitamos una API base bien armada; si no, cada feature posterior va a inventar sus propias convenciones.
