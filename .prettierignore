@@ -1,0 +1,11 @@
+# Keep generated and non-source paths out of formatting.
+node_modules
+dist
+build
+.output
+coverage
+pnpm-lock.yaml
+packages/db/prisma
+openspec
+docs
+.atl

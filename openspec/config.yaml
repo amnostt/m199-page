@@ -1,0 +1,56 @@
+schema: spec-driven
+
+context: |
+  Project: m199-page
+  Stack: no application stack detected
+  Architecture: no source code or runtime modules present
+  Testing: no test runner, coverage, linter, type checker, or formatter detected
+  Style: no project conventions detected yet
+  Persistence: hybrid (OpenSpec + Engram)
+
+strict_tdd: false
+
+testing:
+  detected: 2026-06-29
+  strict_tdd: false
+  test_runner:
+    command: null
+    framework: null
+  layers:
+    unit: false
+    integration: false
+    e2e: false
+  coverage:
+    available: false
+    command: null
+  quality_tools:
+    linter:
+      available: false
+      command: null
+    type_checker:
+      available: false
+      command: null
+    formatter:
+      available: false
+      command: null
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes.
+  specs:
+    - Use Given/When/Then for scenarios.
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
+  design:
+    - Include sequence diagrams for complex flows.
+    - Document architecture decisions with rationale.
+  tasks:
+    - Group by phase, use hierarchical numbering.
+    - Keep tasks completable in one session.
+  apply:
+    - Follow existing code patterns.
+    - Prefer strict TDD when enabled.
+  verify:
+    - Record exact commands and results.
+    - Report gaps when tooling is unavailable.
+  archive:
+    - Warn before merging destructive deltas.

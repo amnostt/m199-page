@@ -1,0 +1,258 @@
+// Initial Prisma model draft for the Misión 1-99 MVP.
+// This file is documentation/design for now: no migrations or generated client setup yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7 keeps connection URLs in prisma.config.ts, not in schema.prisma.
+  // Add packages/db/prisma.config.ts with datasource.url during implementation setup.
+}
+
+enum ResponsibleUserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RefreshSessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum FileStorageProvider {
+  LOCAL
+}
+
+enum FileCategory {
+  OUTING_MAIN_IMAGE
+  OUTING_CROQUIS
+  OUTING_PLAN
+  POST_COVER_IMAGE
+  POST_DOWNLOAD
+  LANDING_HERO
+  OTHER
+}
+
+enum FeaturedPostSlot {
+  SLOT_1
+  SLOT_2
+  SLOT_3
+}
+
+model ResponsibleUser {
+  id           String                @id @default(uuid())
+  email        String                @unique
+  displayName  String
+  passwordHash String
+  status       ResponsibleUserStatus @default(ACTIVE)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  refreshSessions RefreshSession[]
+  authoredOutings Outing[]
+  authoredPosts   Post[]
+  authoredVerses  Verse[]
+  verseRevisions  VerseRevision[]
+  uploadedFiles   FileAsset[]
+
+  @@index([status])
+}
+
+model RefreshSession {
+  id        String               @id @default(uuid())
+  userId    String
+  tokenHash String               @unique
+  status    RefreshSessionStatus @default(ACTIVE)
+  userAgent String?
+  ipHash    String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  rotatedAt DateTime?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  user ResponsibleUser @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@index([expiresAt])
+}
+
+model FileAsset {
+  id              String              @id @default(uuid())
+  storageProvider FileStorageProvider @default(LOCAL)
+  category        FileCategory
+  originalName    String
+  mimeType        String
+  extension       String?
+  sizeBytes       Int
+  path            String
+  url             String
+  metadata        Json?
+  uploadedById    String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  uploadedBy ResponsibleUser? @relation(fields: [uploadedById], references: [id])
+
+  outingMainImages Outing[]          @relation("OutingMainImage")
+  outingCroquis    Outing[]          @relation("OutingCroquis")
+  outingPlans      Outing[]          @relation("OutingPlan")
+  postCoverImages  Post[]            @relation("PostCoverImage")
+  postDownloads    PostDownload[]
+  landingHeroes    LandingSettings[] @relation("LandingHero")
+
+  @@index([category])
+  @@index([uploadedById])
+}
+
+model Outing {
+  id          String        @id @default(uuid())
+  slug        String        @unique
+  title       String
+  dateTime    DateTime
+  location    String
+  description String
+  status      ContentStatus @default(DRAFT)
+  likesCount  Int           @default(0)
+  mainImageId String?
+  croquisId   String?
+  planId      String?
+  createdById String?
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  mainImage FileAsset?       @relation("OutingMainImage", fields: [mainImageId], references: [id])
+  croquis   FileAsset?       @relation("OutingCroquis", fields: [croquisId], references: [id])
+  plan      FileAsset?       @relation("OutingPlan", fields: [planId], references: [id])
+  createdBy ResponsibleUser? @relation(fields: [createdById], references: [id])
+  likes     OutingLike[]
+  landing   LandingSettings?
+
+  @@index([status, dateTime])
+  @@index([createdById])
+}
+
+model OutingLike {
+  id                 String   @id @default(uuid())
+  outingId           String
+  visitorHash        String
+  fingerprintVersion Int      @default(1)
+  createdAt          DateTime @default(now())
+
+  outing Outing @relation(fields: [outingId], references: [id])
+
+  // visitorHash should be a salted hash derived from privacy-safe request/client signals.
+  // Do not store public user identity or raw IP addresses for anonymous likes.
+  @@unique([outingId, visitorHash])
+  @@index([createdAt])
+}
+
+model Post {
+  id           String        @id @default(uuid())
+  slug         String        @unique
+  title        String
+  description  String
+  coverImageId String?
+  content      String
+  status       ContentStatus @default(DRAFT)
+  tags         String[]      @default([])
+  createdById  String?
+  publishedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  coverImage   FileAsset?       @relation("PostCoverImage", fields: [coverImageId], references: [id])
+  createdBy    ResponsibleUser? @relation(fields: [createdById], references: [id])
+  downloads    PostDownload[]
+  featuredSlot FeaturedPost?
+
+  @@index([status, publishedAt])
+  @@index([tags], type: Gin)
+}
+
+model FeaturedPost {
+  id        String           @id @default(uuid())
+  slot      FeaturedPostSlot @unique
+  postId    String           @unique
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  post Post @relation(fields: [postId], references: [id])
+}
+
+model PostDownload {
+  id        String   @id @default(uuid())
+  postId    String
+  fileId    String
+  label     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  post Post      @relation(fields: [postId], references: [id])
+  file FileAsset @relation(fields: [fileId], references: [id])
+
+  @@unique([postId, fileId])
+  @@index([postId, sortOrder])
+}
+
+model Verse {
+  id          String        @id @default(uuid())
+  text        String
+  reference   String
+  date        DateTime
+  status      ContentStatus @default(PUBLISHED)
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  createdBy ResponsibleUser? @relation(fields: [createdById], references: [id])
+  revisions VerseRevision[]
+
+  @@unique([date])
+  @@index([status, date])
+}
+
+model VerseRevision {
+  id          String   @id @default(uuid())
+  verseId     String
+  text        String
+  reference   String
+  changedAt   DateTime @default(now())
+  changedById String?
+
+  verse     Verse            @relation(fields: [verseId], references: [id])
+  changedBy ResponsibleUser? @relation(fields: [changedById], references: [id])
+
+  @@index([verseId, changedAt])
+}
+
+model LandingSettings {
+  id               Int      @id @default(1)
+  heroTitle        String?
+  heroSubtitle     String?
+  heroImageId      String?
+  featuredOutingId String?  @unique
+  updatedAt        DateTime @updatedAt
+
+  heroImage      FileAsset? @relation("LandingHero", fields: [heroImageId], references: [id])
+  featuredOuting Outing?    @relation(fields: [featuredOutingId], references: [id])
+
+  // Application/transactional rule: keep exactly one settings row with id = 1.
+  // Featured posts are represented by at most one row per FeaturedPostSlot.
+}
+
+// Application/transactional constraints to enforce during implementation:
+// - Validate allowed MIME types and max file size per FileCategory before writing files.
+// - Require complete public fields before changing content status to PUBLISHED.
+// - Keep Outing.likesCount synchronized transactionally with OutingLike writes/deletes.
+// - Rotate/revoke refresh sessions using token hashes only; never persist raw tokens.

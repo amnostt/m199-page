@@ -1,0 +1,20 @@
+{
+  "name": "@m199/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mision 1-99 database package — Prisma schema, config, and scripts. Migrations and client generation are deferred until real feature work begins.",
+  "scripts": {
+    "db:validate": "prisma validate",
+    "db:format": "prisma format",
+    "typecheck": "echo \"No TypeScript source in @m199/db yet; skipping typecheck.\" && exit 0",
+    "test": "echo \"Test runner not configured yet for @m199/db\" && exit 0"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.0",
+    "prisma": "^7.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

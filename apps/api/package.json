@@ -1,0 +1,14 @@
+{
+  "name": "@m199/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mision 1-99 API package placeholder. No endpoints or NestJS modules yet; real API behavior ships in later changes.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"Test runner not configured yet for @m199/api\" && exit 0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
