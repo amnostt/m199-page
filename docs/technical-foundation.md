@@ -4,7 +4,7 @@ This document defines the first technical baseline for the Misión 1-99 MVP. It 
 
 ## Current State
 
-The repository currently contains SDD/OpenSpec metadata only. No React app, NestJS API, Prisma client setup, migrations, tests, linting, formatting, or build tooling exists yet.
+The repository now contains an installable monorepo baseline with `apps/web`, `apps/api`, and `packages/db`; root quality scripts; Vitest smoke tests; a hardened Prisma schema; local/dev PostgreSQL documentation; an initial migration; Prisma Client generation; and an `@m199/db` package boundary consumed by the API shell. Runtime product behavior is still intentionally absent.
 
 ## Architecture Baseline
 
@@ -106,18 +106,45 @@ MVP storage is local filesystem storage with metadata in `FileAsset`.
 
 Final size and MIME values remain an open product/technical decision.
 
+## Database Operational Foundation
+
+### Prerequisites
+
+- PostgreSQL 16+ installed and running locally.
+- The `DATABASE_URL` must be configured in a `.env` file at the repository root (copy from `.env.example` and fill in real credentials). Prisma 7 reads `DATABASE_URL` via `packages/db/prisma.config.ts` dotenv loading from `.env`. `.env.example` is a documented template only; it is never read as a runtime source.
+
+### Package Boundary
+
+`@m199/db` owns the Prisma schema, config, migration history, and Prisma Client singleton. `apps/api` consumes the client exclusively through `@m199/db`'s public exports — never importing `@prisma/client` directly.
+
+### Commands
+
+Run from the repository root:
+
+```sh
+pnpm --filter @m199/db db:validate    # Validate schema syntax
+pnpm --filter @m199/db db:migrate:dev  # Create and apply a new migration (requires .env with DATABASE_URL)
+pnpm --filter @m199/db db:migrate:deploy # Apply pending migrations (production-safe)
+pnpm --filter @m199/db db:generate     # Regenerate Prisma Client types
+pnpm --filter @m199/api typecheck       # Verify @m199/db boundary compiles
+```
+
 ## MVP Exclusions
 
-This foundation does not design or implement advanced roles, social login, email password recovery, public search, dark mode, presenter mode, embedded post images, UI screens, auth flows, upload handling, migrations, Prisma config, or generated Prisma client setup.
+This foundation does not design or implement advanced roles, social login, email password recovery, public search, dark mode, presenter mode, embedded post images, UI screens, auth flows, upload handling, API endpoints, production deployment, or real product seed data. Database migrations, Prisma config, generated Prisma Client, and local/dev database tooling are operational scaffolding and ARE included.
 
 ## Acceptance Checklist
 
 - [x] Module boundaries are documented.
-- [x] MVP entities and relationships are represented in the Prisma draft.
+- [x] MVP entities and relationships are represented in the Prisma schema.
 - [x] Featured outing and featured post rules are visible beyond UI behavior.
 - [x] Anonymous likes avoid public identity storage.
 - [x] File metadata and local-storage assumptions are documented.
 - [x] Deferred features and unresolved assumptions are explicit.
+- [x] `@m199/db` owns Prisma schema, migration history, config, and client generation.
+- [x] Migration workflow creates and applies migrations from the hardened schema.
+- [x] `apps/api` consumes the database package through the `@m199/db` boundary.
+- [x] Workspace installs, validates, typechecks, and tests pass from a clean checkout.
 
 ## Open Questions
 
