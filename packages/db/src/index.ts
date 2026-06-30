@@ -1,23 +1,36 @@
 /**
  * @m199/db — Database package source entry point.
  *
- * Owns Prisma Client instantiation and exports a singleton for all
- * workspace consumers. `apps/api` accesses the database exclusively
- * through this module — never by importing `@prisma/client` directly.
- *
- * Prisma 7 requires a driver adapter for PostgreSQL; `PrismaPg`
- * from `@prisma/adapter-pg` provides this.
+ * Uses async factory `getPrisma()` with dynamic imports so Prisma Client
+ * resolution is deferred until after API config validation (BF-01, BF-02).
+ * Consumers call `await getPrisma()` explicitly — no eager singleton.
  */
 
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-
-const adapter = new PrismaPg({
-  connectionString: process.env["DATABASE_URL"]!,
-});
-
-/** Singleton PrismaClient instance shared across the workspace. */
-export const prisma = new PrismaClient({ adapter });
+import type { PrismaClient } from "@prisma/client";
 
 /** Package version identifier used by the test baseline. */
 export const DB_PACKAGE_VERSION = "0.0.0" as const;
+
+let _prisma: PrismaClient | undefined;
+
+/**
+ * Async factory: dynamically imports @prisma/client and @prisma/adapter-pg,
+ * then creates and caches a PrismaClient singleton with the Pg adapter.
+ *
+ * Call AFTER env validation — `DATABASE_URL` must be set in process.env.
+ */
+export async function getPrisma(): Promise<PrismaClient> {
+  if (_prisma) return _prisma;
+
+  const [{ PrismaClient }, { PrismaPg }] = await Promise.all([
+    import("@prisma/client"),
+    import("@prisma/adapter-pg"),
+  ]);
+
+  const adapter = new PrismaPg({
+    connectionString: process.env["DATABASE_URL"]!,
+  });
+
+  _prisma = new PrismaClient({ adapter });
+  return _prisma;
+}
