@@ -4,19 +4,17 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Estamos listos para empezar el **paso 4: Autenticación y responsables**.
+Estamos listos para empezar el **paso 5: Archivos y uploads**.
 
-Ya está terminada la base técnica inicial:
+Ya está terminada la base técnica completa, incluyendo autenticación y responsables:
 
+### Base técnica (pasos 1–3)
 - Documento técnico base.
 - Monorepo con `apps/web`, `apps/api` y `packages/db`.
 - Scripts de calidad: lint, format, typecheck, build y test runner.
 - Baseline de Vitest en web, API y DB.
 - Modelo Prisma inicial endurecido.
-- Reglas principales del dominio documentadas.
 - Constraints clasificadas como `DB` o `APP`.
-- Specs SDD archivadas para bootstrap y hardening de schema.
-- Validación inicial del schema Prisma.
 - PostgreSQL local/dev documentado.
 - Migración inicial creada.
 - Prisma Client configurado y consumible desde `apps/api` vía `@m199/db`.
@@ -24,7 +22,20 @@ Ya está terminada la base técnica inicial:
 - Manejo global de errores y validación base.
 - Health check operativo.
 
-En otras palabras: ya tenemos los cimientos del proyecto, una base de datos operativa y una API base sobre la cual construir features reales. Ahora sí conviene avanzar sobre autenticación y responsables.
+### Autenticación y responsables (paso 4)
+- Auth module: login con bcrypt, refresh token rotation (SHA-256), logout con revocación de sesión.
+- Access token JWT (15m) y refresh token opaco (7d) en cookies httpOnly, SameSite=Lax.
+- Múltiples sesiones independientes por usuario.
+- CSRF protection: interceptor global con validación de `Origin` en mutaciones.
+- Guard con enforce de usuario ACTIVE y `authVersion` para invalidación inmediata.
+- Responsibles module: CRUD completo detrás de `@UseGuards(AuthGuard)`.
+- Reset de contraseña por otro responsable (revoca todas las sesiones del afectado).
+- Desactivación de responsable revoca todas sus sesiones.
+- `authVersion` en JWT + DB para invalidar access tokens inmediatamente tras revocación.
+- 97 tests (auth + responsibles + lifecycle), typecheck y db:validate pasando.
+- Spec SDD `auth-responsibles` archivada con 10 requisitos (AR-01 a AR-10).
+
+En otras palabras: el panel admin ya tiene login, sesiones seguras y CRUD de responsables listo para producción. Ahora conviene avanzar sobre archivos antes de tocar contenido.
 
 ## Camino hasta finalizar el MVP
 
@@ -100,6 +111,8 @@ Avance actual:
 
 ### 4. Autenticación y responsables
 
+**Estado:** ✅ Completo.
+
 Implementar la primera funcionalidad crítica del admin:
 
 - login
@@ -110,6 +123,19 @@ Implementar la primera funcionalidad crítica del admin:
 - usuario activo/inactivo
 - CRUD básico de responsables
 - reset de contraseña por otro responsable
+
+Avance actual:
+
+- ✅ `AuthModule` con login, refresh rotation, logout, guard, interceptor CSRF.
+- ✅ Access token JWT (15m) y refresh token opaco (7d) en cookies httpOnly.
+- ✅ Sesiones múltiples independientes por usuario.
+- ✅ `AuthGuard` con enforce de usuario ACTIVE y `authVersion`.
+- ✅ Invalidación inmediata de access tokens vía `authVersion` en JWT + DB.
+- ✅ `ResponsiblesModule` con CRUD completo, password reset y desactivación con bulk revoke.
+- ✅ Todas las rutas de responsables protegidas con `@UseGuards(AuthGuard)`.
+- ✅ 97 tests pasando, typecheck limpio, `db:validate` ok.
+- ✅ Spec SDD `auth-responsibles` archivada (AR-01 a AR-10).
+- ✅ `docs/technical-foundation.md` actualizado con auth cookie flow, sesiones y CSRF.
 
 **Resultado esperado:** panel admin protegible con responsables reales.
 
@@ -259,8 +285,6 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser **auth-responsibles-foundation**.
+El próximo SDD change debería ser **archivos y uploads**.
 
-Ese cambio debería implementar la primera funcionalidad crítica del admin: login, sesiones con refresh token, cookies seguras, logout, usuario activo/inactivo y la base del CRUD de responsables.
-
-No conviene saltar todavía a módulos de contenido. Primero necesitamos una puerta de entrada segura para el panel admin; sin autenticación, el resto queda sin límite claro de acceso.
+Con el panel admin ya protegible mediante autenticación y responsables, conviene resolver el manejo de archivos antes de implementar módulos de contenido como salidas y posts. Tener uploads, validación MIME/extensión, metadata en DB y rutas para servir archivos listo desde el principio evita retrabajo cuando las entidades de contenido empiecen a referenciar imágenes, croquis, planes y PDFs.
