@@ -20,6 +20,7 @@ const { getPrismaMock, validateMock } = vi.hoisted(() => ({
     NODE_ENV: "test",
     PORT: 3001,
     DATABASE_URL: "postgresql://localhost/test",
+    JWT_SECRET: "test-jwt-secret",
   }),
 }));
 
@@ -48,6 +49,7 @@ describe("AppModule", () => {
       NODE_ENV: "test",
       PORT: 3001,
       DATABASE_URL: "postgresql://localhost/test",
+      JWT_SECRET: "test-jwt-secret",
     });
     getPrismaMock.mockResolvedValue({
       $connect: vi.fn(),

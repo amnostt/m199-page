@@ -6,6 +6,7 @@
  */
 import "reflect-metadata";
 
+import cookieParser from "cookie-parser";
 import { ValidationPipe, type INestApplication } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
@@ -30,6 +31,10 @@ export function applyGlobalPipes(app: INestApplication): void {
 
 export async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
+
+  // Parse httpOnly cookies so AuthGuard/AuthService can read
+  // access_token and refresh_token from signed-in clients.
+  app.use(cookieParser());
 
   applyGlobalPipes(app);
 

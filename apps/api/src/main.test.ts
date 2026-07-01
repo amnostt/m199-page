@@ -6,6 +6,7 @@
  * - Registers a global ValidationPipe (applyGlobalPipes) — see BF-03.
  * - Resolves ConfigService.get("PORT") from the app container
  * - Calls app.listen(port) with the resolved port
+ * - Adds cookie-parser middleware via app.use()
  *
  * Avoids real network listening by mocking NestFactory.create to return
  * a fake app whose listen and useGlobalPipes are vitest spies. The
@@ -13,9 +14,10 @@
  * which builds a full Nest app and exercises the pipe through HTTP.
  */
 
-const { listenMock, useGlobalPipesMock } = vi.hoisted(() => ({
+const { listenMock, useGlobalPipesMock, useMock } = vi.hoisted(() => ({
   listenMock: vi.fn(),
   useGlobalPipesMock: vi.fn(),
+  useMock: vi.fn(),
 }));
 
 // Mock env.validation so the @Module decorator in AppModule evaluates
@@ -48,6 +50,7 @@ vi.mock("@nestjs/core", async (importOriginal) => {
     NestFactory: {
       ...actual.NestFactory,
       create: vi.fn().mockResolvedValue({
+        use: useMock,
         useGlobalPipes: useGlobalPipesMock,
         get: vi.fn().mockReturnValue({
           get: vi.fn().mockReturnValue(3001),
@@ -76,6 +79,14 @@ describe("main bootstrap (BF-01 valid server start)", () => {
 
     expect(listenMock).toHaveBeenCalledTimes(1);
     expect(listenMock).toHaveBeenCalledWith(3001);
+  });
+
+  it("registers cookieParser middleware via app.use", async () => {
+    await bootstrap();
+
+    expect(useMock).toHaveBeenCalledTimes(1);
+    // First argument should be a function (cookieParser is a middleware factory)
+    expect(typeof useMock.mock.calls[0]?.[0]).toBe("function");
   });
 
   it("registers a global ValidationPipe via applyGlobalPipes", async () => {

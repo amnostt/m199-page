@@ -48,6 +48,7 @@ vi.mock("./config/env.validation.js", () => ({
     NODE_ENV: "test",
     PORT: 0,
     DATABASE_URL: "postgresql://localhost/test",
+    JWT_SECRET: "test-jwt-secret",
   }),
 }));
 
