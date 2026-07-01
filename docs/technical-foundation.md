@@ -84,10 +84,46 @@ Every business invariant is classified into one of two enforcement tiers, matchi
 
 ## Auth and Session Model
 
-1. Admin login validates a `ResponsibleUser` with `ACTIVE` status and a password hash.
-2. API issues a short-lived JWT access token.
-3. API creates a `RefreshSession` row containing a hashed refresh token, expiry, optional user-agent/IP hash metadata, and status.
-4. Logout or suspected compromise marks the session `REVOKED`; expired sessions are ignored or cleaned later.
+### Authentication Flow
+
+1. **Login** (`POST /auth/login`): validates a `ResponsibleUser` with `ACTIVE` status and a bcrypt password hash. On success, issues a short-lived JWT access token (15m) and an opaque refresh token (7d). Both travel as `httpOnly` cookies.
+2. **Refresh** (`POST /auth/refresh`): reads the `refresh_token` cookie, hashes it (SHA-256), locates the matching ACTIVE `RefreshSession`, and performs token rotation — the old session is revoked, a new session is created, and fresh cookies are set. Inactive users are rejected with 403.
+3. **Logout** (`POST /auth/logout`): revokes the current refresh session and clears both auth cookies. Idempotent — missing or already-revoked tokens still result in cleared cookies.
+4. **Multiple sessions**: concurrent refresh sessions per user are supported (AR-04). Logging out from one device revokes only that session.
+
+### Token Details
+
+| Token | Type | Storage | TTL | Transport |
+|-------|------|---------|-----|-----------|
+| Access token | JWT (stateless) | Not stored server-side | 15 minutes | `access_token` httpOnly cookie |
+| Refresh token | Opaque (`crypto.randomBytes(48)`) | SHA-256 hash in `RefreshSession.tokenHash` | 7 days | `refresh_token` httpOnly cookie |
+
+### CSRF Protection
+
+Defence-in-depth CSRF protection combines two layers:
+
+1. **SameSite=Lax cookies**: both auth cookies use `sameSite: 'lax'`, which blocks cross-site requests for mutation methods. `secure` is enabled in production (`NODE_ENV === 'production'`).
+2. **Origin header validation**: a global `AuthInterceptor` validates the `Origin` header on every POST, PUT, PATCH, and DELETE request. GET, HEAD, and OPTIONS are exempt. The expected origin is configurable via the `API_ORIGIN` environment variable (defaults to `http://localhost:{PORT}`). Mismatched or missing origins on mutation endpoints return 403.
+
+### Guard and Active-Status Enforcement
+
+- **`AuthGuard`**: a NestJS `CanActivate` guard that extracts the `access_token` cookie, verifies the JWT, looks up the user, enforces ACTIVE status, and attaches `{ id, email, displayName }` to the request. Exported from `AuthModule` so downstream modules (e.g., `ResponsiblesModule`) can protect routes.
+- **Inactive enforcement**: inactive users are rejected at login (403), refresh (403, cookies cleared), and every guard-protected endpoint (403).
+
+### Session Revocation
+
+| Trigger | Scope | Mechanism |
+|---------|-------|-----------|
+| Logout | Current session | `AuthService.logout` → revoke single `RefreshSession` |
+| Refresh rotation | Previous session (in same transaction) | `AuthService.refresh` → `$transaction` revokes old + creates new |
+| User deactivation | All sessions for that user | `ResponsiblesService.update(status=INACTIVE)` → `AuthService.revokeAllUserSessions` |
+| Password reset | All sessions for that user | `ResponsiblesService.resetPassword` → `AuthService.revokeAllUserSessions` |
+
+### Module Structure
+
+- **`AuthModule`** (`apps/api/src/auth/`): provides `AuthService`, `AuthGuard`, `AuthInterceptor` (global `APP_INTERCEPTOR`), and `AuthController`. Exports `AuthGuard` and `AuthService` for consumption by other modules.
+- **`ResponsiblesModule`** (`apps/api/src/responsibles/`): imports `AuthModule`, provides `ResponsiblesService` and `ResponsiblesController`. All routes are behind `@UseGuards(AuthGuard)`.
+- **First user**: created via seed or manual database setup only — no public registration endpoint (AR-09). All authenticated active users have equal access (AR-10).
 
 Password recovery, social login, and differentiated roles are explicitly deferred.
 
