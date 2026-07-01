@@ -13,11 +13,13 @@ describe("config validation", () => {
       NODE_ENV: "development",
       PORT: "3000",
       DATABASE_URL: "postgresql://localhost/m199",
+      JWT_SECRET: "test-jwt-secret",
     });
 
     expect(result.NODE_ENV).toBe("development");
     expect(result.PORT).toBe(3000);
     expect(result.DATABASE_URL).toBe("postgresql://localhost/m199");
+    expect(result.JWT_SECRET).toBe("test-jwt-secret");
   });
 
   it("throws when DATABASE_URL is missing", () => {
@@ -25,6 +27,7 @@ describe("config validation", () => {
       validate({
         NODE_ENV: "development",
         PORT: "3000",
+        JWT_SECRET: "test-jwt-secret",
       }),
     ).toThrow("Missing required env var: DATABASE_URL");
   });
@@ -34,6 +37,7 @@ describe("config validation", () => {
       validate({
         PORT: "3000",
         DATABASE_URL: "postgresql://localhost/m199",
+        JWT_SECRET: "test-jwt-secret",
       }),
     ).toThrow("Missing required env var: NODE_ENV");
   });
@@ -43,6 +47,7 @@ describe("config validation", () => {
       validate({
         NODE_ENV: "development",
         DATABASE_URL: "postgresql://localhost/m199",
+        JWT_SECRET: "test-jwt-secret",
       }),
     ).toThrow("Missing required env var: PORT");
   });
@@ -53,6 +58,7 @@ describe("config validation", () => {
         NODE_ENV: "development",
         PORT: "abc",
         DATABASE_URL: "postgresql://localhost/m199",
+        JWT_SECRET: "test-jwt-secret",
       }),
     ).toThrow("PORT must be an integer between 1-65535");
   });
@@ -63,6 +69,7 @@ describe("config validation", () => {
         NODE_ENV: "development",
         PORT: "70000",
         DATABASE_URL: "postgresql://localhost/m199",
+        JWT_SECRET: "test-jwt-secret",
       }),
     ).toThrow("PORT must be an integer between 1-65535");
   });
@@ -73,7 +80,18 @@ describe("config validation", () => {
         NODE_ENV: "",
         PORT: "3000",
         DATABASE_URL: "postgresql://localhost/m199",
+        JWT_SECRET: "test-jwt-secret",
       }),
     ).toThrow("Missing required env var: NODE_ENV");
+  });
+
+  it("throws when JWT_SECRET is missing", () => {
+    expect(() =>
+      validate({
+        NODE_ENV: "development",
+        PORT: "3000",
+        DATABASE_URL: "postgresql://localhost/m199",
+      }),
+    ).toThrow("Missing required env var: JWT_SECRET");
   });
 });
