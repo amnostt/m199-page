@@ -15,7 +15,6 @@ import { validate } from "./config/env.validation.js";
 import { DbModule } from "./db/db.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { AuthModule } from "./auth/auth.module.js";
-import { ResponsiblesModule } from "./responsibles/responsibles.module.js";
 
 @Module({
   imports: [
@@ -24,7 +23,6 @@ import { ResponsiblesModule } from "./responsibles/responsibles.module.js";
     HealthModule,
     ValidationProofModule,
     AuthModule,
-    ResponsiblesModule,
   ],
   providers: [
     {
