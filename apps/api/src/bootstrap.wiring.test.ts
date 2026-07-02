@@ -49,6 +49,10 @@ vi.mock("./config/env.validation.js", () => ({
     PORT: 0,
     DATABASE_URL: "postgresql://localhost/test",
     JWT_SECRET: "test-jwt-secret",
+    UPLOAD_DIR: "./uploads",
+    MAX_FILE_SIZE: 10485760,
+    ORIGIN: "http://localhost:3000",
+    REFRESH_TOKEN_TTL: "7d",
   }),
 }));
 

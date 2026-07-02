@@ -14,10 +14,11 @@
  * which builds a full Nest app and exercises the pipe through HTTP.
  */
 
-const { listenMock, useGlobalPipesMock, useMock } = vi.hoisted(() => ({
+const { listenMock, useGlobalPipesMock, useMock, mkdirMock } = vi.hoisted(() => ({
   listenMock: vi.fn(),
   useGlobalPipesMock: vi.fn(),
   useMock: vi.fn(),
+  mkdirMock: vi.fn(),
 }));
 
 // Mock env.validation so the @Module decorator in AppModule evaluates
@@ -28,6 +29,8 @@ vi.mock("./config/env.validation.js", () => ({
     NODE_ENV: "test",
     PORT: 3001,
     DATABASE_URL: "postgresql://localhost/test",
+    UPLOAD_DIR: "./uploads",
+    MAX_FILE_SIZE: 10485760,
   }),
 }));
 
@@ -53,13 +56,25 @@ vi.mock("@nestjs/core", async (importOriginal) => {
         use: useMock,
         useGlobalPipes: useGlobalPipesMock,
         get: vi.fn().mockReturnValue({
-          get: vi.fn().mockReturnValue(3001),
+          get: vi.fn().mockImplementation((key: string) => {
+            const values: Record<string, unknown> = {
+              PORT: 3001,
+              UPLOAD_DIR: "./uploads",
+              MAX_FILE_SIZE: 10485760,
+            };
+            return values[key] ?? "./uploads";
+          }),
         }),
         listen: listenMock,
       }),
     },
   };
 });
+
+// Mock fs/promises to verify mkdir is called with UPLOAD_DIR on bootstrap.
+vi.mock("fs/promises", () => ({
+  mkdir: mkdirMock,
+}));
 
 import { ValidationPipe } from "@nestjs/common";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -123,5 +138,12 @@ describe("main bootstrap (BF-01 valid server start)", () => {
     );
 
     expect(listenMock).not.toHaveBeenCalled();
+  });
+
+  it("calls fs.mkdir with UPLOAD_DIR and recursive:true before app.listen", async () => {
+    await bootstrap();
+
+    expect(mkdirMock).toHaveBeenCalledTimes(1);
+    expect(mkdirMock).toHaveBeenCalledWith("./uploads", { recursive: true });
   });
 });

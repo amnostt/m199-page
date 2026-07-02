@@ -21,6 +21,10 @@ const { getPrismaMock, validateMock } = vi.hoisted(() => ({
     PORT: 3001,
     DATABASE_URL: "postgresql://localhost/test",
     JWT_SECRET: "test-jwt-secret",
+    UPLOAD_DIR: "./uploads",
+    MAX_FILE_SIZE: 10485760,
+    ORIGIN: "http://localhost:3000",
+    REFRESH_TOKEN_TTL: "7d",
   }),
 }));
 
@@ -50,6 +54,10 @@ describe("AppModule", () => {
       PORT: 3001,
       DATABASE_URL: "postgresql://localhost/test",
       JWT_SECRET: "test-jwt-secret",
+      UPLOAD_DIR: "./uploads",
+      MAX_FILE_SIZE: 10485760,
+      ORIGIN: "http://localhost:3000",
+      REFRESH_TOKEN_TTL: "7d",
     });
     getPrismaMock.mockResolvedValue({
       $connect: vi.fn(),
@@ -110,6 +118,19 @@ describe("AppModule", () => {
       // Critical: @m199/db mock was never called because validate threw
       // before the factory could trigger the dynamic import.
       expect(getPrismaMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("BF-06 compile with FileModule", () => {
+    it("compiles AppModule with FileModule imported", async () => {
+      // validateMock returns valid config → compile succeeds
+      const module = await Test.createTestingModule({
+        imports: [AppModule],
+      }).compile();
+
+      expect(module).toBeDefined();
+      // FileModule registers FileService and both controllers
+      expect(module.get(AppModule)).toBeInstanceOf(AppModule);
     });
   });
 });
