@@ -4,9 +4,9 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Estamos listos para empezar el **paso 6: Landing admin y pública**.
+Estamos listos para empezar el **paso 7: Salidas**.
 
-Ya está terminada la base técnica completa, incluyendo autenticación, responsables y archivos/uploads:
+Ya está terminada la base técnica completa, incluyendo autenticación, responsables, archivos/uploads y una primera landing pública editable:
 
 ### Base técnica (pasos 1–3)
 - Documento técnico base.
@@ -180,6 +180,8 @@ Avance actual:
 
 ### 6. Landing admin y pública
 
+**Estado:** ✅ Completo.
+
 Implementar edición y visualización de la landing:
 
 - misión, visión y descripción
@@ -190,6 +192,15 @@ Implementar edición y visualización de la landing:
 - versículo actual
 
 **Resultado esperado:** home pública básica y editable.
+
+Avance actual:
+
+- ✅ `LandingSettings` extendido con misión, visión, descripción, video destacado y contacto minimalista.
+- ✅ `LandingModule` implementado en API con endpoints admin protegidos y endpoint público.
+- ✅ Payload público de landing con hero, salida destacada, posts destacados y versículo actual, tolerante a contenido faltante.
+- ✅ Home web reemplaza el shell inicial y consume `GET /landing/public`.
+- ✅ 224 tests pasando, typecheck y lint limpios.
+- ✅ Spec SDD `landing-admin-public` archivada como `openspec/changes/archive/2026-07-02-landing-admin-public/`.
 
 ### 7. Salidas
 
