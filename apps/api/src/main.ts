@@ -11,6 +11,7 @@ import { ValidationPipe, type INestApplication } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module.js";
+import { mkdir } from "fs/promises";
 
 /**
  * Applies the global ValidationPipe used by the API.
@@ -40,6 +41,10 @@ export async function bootstrap(): Promise<void> {
 
   const config = app.get(ConfigService);
   const port = config.get<number>("PORT", 3000);
+
+  // Ensure the upload directory exists before the server starts (FU-01)
+  const uploadDir = config.get<string>("UPLOAD_DIR", "./uploads");
+  await mkdir(uploadDir, { recursive: true });
 
   await app.listen(port);
   console.log(`API listening on port ${String(port)}`);

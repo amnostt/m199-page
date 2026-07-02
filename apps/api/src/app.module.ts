@@ -16,6 +16,7 @@ import { DbModule } from "./db/db.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { ResponsiblesModule } from "./responsibles/responsibles.module.js";
+import { FileModule } from "./file-module/file.module.js";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ResponsiblesModule } from "./responsibles/responsibles.module.js";
     ValidationProofModule,
     AuthModule,
     ResponsiblesModule,
+    FileModule,
   ],
   providers: [
     {
