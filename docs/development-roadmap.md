@@ -4,9 +4,9 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Estamos listos para empezar el **paso 5: Archivos y uploads**.
+Estamos listos para empezar el **paso 6: Landing admin y pública**.
 
-Ya está terminada la base técnica completa, incluyendo autenticación y responsables:
+Ya está terminada la base técnica completa, incluyendo autenticación, responsables y archivos/uploads:
 
 ### Base técnica (pasos 1–3)
 - Documento técnico base.
@@ -35,7 +35,19 @@ Ya está terminada la base técnica completa, incluyendo autenticación y respon
 - 97 tests (auth + responsibles + lifecycle), typecheck y db:validate pasando.
 - Spec SDD `auth-responsibles` archivada con 10 requisitos (AR-01 a AR-10).
 
-En otras palabras: el panel admin ya tiene login, sesiones seguras y CRUD de responsables listo para producción. Ahora conviene avanzar sobre archivos antes de tocar contenido.
+### Archivos y uploads (paso 5)
+- File module con upload local por categoría.
+- Soporte para imágenes y PDF con máximo configurable de 10 MB por defecto.
+- Validación de categoría, MIME allowlist y firma/magic bytes antes de persistir archivos.
+- Metadata persistida en `FileAsset` con rutas absolutas contenidas bajo `UPLOAD_DIR`.
+- Serving público de archivos y thumbnails con `Content-Type` correcto.
+- Delete admin protegido, con metadata DB eliminada antes del unlink físico.
+- Manejo de errores Multer, tamaño excedido como 413 y logs mínimos con Nest `Logger`.
+- Migración `FileAsset` alineada al spec con `RENAME COLUMN` y `down.sql` documentado.
+- 191 tests pasando, typecheck y lint limpios.
+- Spec SDD `file-uploads` archivada como `openspec/changes/archive/2026-07-02-file-uploads/`.
+
+En otras palabras: el panel admin ya tiene login, sesiones seguras, CRUD de responsables y una base sólida de archivos para que las próximas entidades puedan referenciar imágenes, croquis, planes y PDFs. Ahora conviene avanzar sobre landing antes de implementar módulos de contenido más grandes.
 
 ## Camino hasta finalizar el MVP
 
@@ -141,6 +153,8 @@ Avance actual:
 
 ### 5. Archivos y uploads
 
+**Estado:** ✅ Completo.
+
 Resolver archivos antes de posts y salidas:
 
 - subida local
@@ -149,6 +163,18 @@ Resolver archivos antes de posts y salidas:
 - metadata en DB
 - rutas públicas o controladas para servir archivos
 - validación MIME/extensión
+
+Avance actual:
+
+- ✅ `FileModule` implementado en API con rutas de upload, serving público, thumbnails y delete admin.
+- ✅ `UPLOAD_DIR` y `MAX_FILE_SIZE` agregados a config/env.
+- ✅ Archivos almacenados bajo upload root con containment checks para lectura y borrado.
+- ✅ Validación de categoría, allowlist MIME y magic bytes para evitar confiar sólo en metadata del cliente.
+- ✅ Serving público con `Content-Type` correcto desde DB.
+- ✅ Uploads mayores a 10 MB devuelven 413 con prueba real por ruta Nest.
+- ✅ Migración `FileAsset` sincronizada con el spec, con SQL reversible documentado.
+- ✅ 191 tests, typecheck y lint pasando.
+- ✅ Spec SDD `file-uploads` archivada y spec principal `file-management` creado.
 
 **Resultado esperado:** las entidades pueden referenciar imágenes, croquis, planes y PDFs.
 
@@ -285,6 +311,6 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser **archivos y uploads**.
+El próximo SDD change debería ser **landing admin y pública**.
 
-Con el panel admin ya protegible mediante autenticación y responsables, conviene resolver el manejo de archivos antes de implementar módulos de contenido como salidas y posts. Tener uploads, validación MIME/extensión, metadata en DB y rutas para servir archivos listo desde el principio evita retrabajo cuando las entidades de contenido empiecen a referenciar imágenes, croquis, planes y PDFs.
+Con auth, responsables y archivos ya resueltos, la landing es el siguiente slice natural: permite conectar contenido visible para usuarios finales sin tener que abordar todavía todo el CRUD de salidas/posts. El objetivo debería ser dejar editable la información base de la home pública y preparar los slots donde luego se conectarán salida destacada, posts destacados y versículo actual.
