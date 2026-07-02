@@ -17,6 +17,7 @@ import { HealthModule } from "./health/health.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { ResponsiblesModule } from "./responsibles/responsibles.module.js";
 import { FileModule } from "./file-module/file.module.js";
+import { LandingModule } from "./landing/landing.module.js";
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { FileModule } from "./file-module/file.module.js";
     AuthModule,
     ResponsiblesModule,
     FileModule,
+    LandingModule,
   ],
   providers: [
     {
