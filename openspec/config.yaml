@@ -2,37 +2,37 @@ schema: spec-driven
 
 context: |
   Project: m199-page
-  Stack: no application stack detected
-  Architecture: no source code or runtime modules present
-  Testing: no test runner, coverage, linter, type checker, or formatter detected
-  Style: no project conventions detected yet
+  Stack: pnpm workspaces — NestJS API (apps/api), Vite React (apps/web), Prisma/PostgreSQL (packages/db)
+  Architecture: 3-package monorepo with shared tooling at root
+  Testing: Vitest across all packages — 97 tests passing
+  Style: ESLint + Prettier + TypeScript strict
   Persistence: hybrid (OpenSpec + Engram)
 
-strict_tdd: false
+strict_tdd: true
 
 testing:
-  detected: 2026-06-29
-  strict_tdd: false
+  detected: 2026-07-01
+  strict_tdd: true
   test_runner:
-    command: null
-    framework: null
+    command: pnpm test
+    framework: vitest 3.2.4
   layers:
-    unit: false
-    integration: false
+    unit: true
+    integration: true
     e2e: false
   coverage:
     available: false
     command: null
   quality_tools:
     linter:
-      available: false
-      command: null
+      available: true
+      command: pnpm lint
     type_checker:
-      available: false
-      command: null
+      available: true
+      command: pnpm typecheck
     formatter:
-      available: false
-      command: null
+      available: true
+      command: pnpm format
 
 rules:
   proposal:
