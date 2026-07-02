@@ -97,21 +97,22 @@ model RefreshSession {
 }
 
 model FileAsset {
-  // DB: sizeBytes, mimeType, extension metadata columns, @@index([category]), @@index([uploadedById])
+  // DB: fileSize, mimeType, extension metadata columns, @@index([category]), @@index([uploadedById]), @@index([createdAt])
   // APP: Upload MIME/size limits validated per FileCategory before insert
   id              String              @id @default(uuid())
   storageProvider FileStorageProvider @default(LOCAL)
   category        FileCategory
-  originalName    String
+  originalFilename String
   mimeType        String
   extension       String?
-  sizeBytes       Int
-  path            String
+  fileSize        Int
+  storagePath     String
   url             String
   metadata        Json?
+  thumbnailPath   String?
   uploadedById    String?
   createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  updatedAt       DateTime             @updatedAt
 
   uploadedBy ResponsibleUser? @relation(fields: [uploadedById], references: [id])
 
@@ -124,6 +125,7 @@ model FileAsset {
 
   @@index([category])
   @@index([uploadedById])
+  @@index([createdAt])
 }
 
 model Outing {

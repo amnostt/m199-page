@@ -94,4 +94,74 @@ describe("config validation", () => {
       }),
     ).toThrow("Missing required env var: JWT_SECRET");
   });
+
+  describe("UPLOAD_DIR", () => {
+    it("defaults to ./uploads when not provided", () => {
+      const result = validate({
+        NODE_ENV: "development",
+        PORT: "3000",
+        DATABASE_URL: "postgresql://localhost/m199",
+        JWT_SECRET: "test-jwt-secret",
+      });
+      expect(result.UPLOAD_DIR).toBe("./uploads");
+    });
+
+    it("accepts a custom UPLOAD_DIR value", () => {
+      const result = validate({
+        NODE_ENV: "development",
+        PORT: "3000",
+        DATABASE_URL: "postgresql://localhost/m199",
+        JWT_SECRET: "test-jwt-secret",
+        UPLOAD_DIR: "/var/data/uploads",
+      });
+      expect(result.UPLOAD_DIR).toBe("/var/data/uploads");
+    });
+  });
+
+  describe("MAX_FILE_SIZE", () => {
+    it("defaults to 10485760 (10MB) when not provided", () => {
+      const result = validate({
+        NODE_ENV: "development",
+        PORT: "3000",
+        DATABASE_URL: "postgresql://localhost/m199",
+        JWT_SECRET: "test-jwt-secret",
+      });
+      expect(result.MAX_FILE_SIZE).toBe(10485760);
+    });
+
+    it("accepts a custom MAX_FILE_SIZE value", () => {
+      const result = validate({
+        NODE_ENV: "development",
+        PORT: "3000",
+        DATABASE_URL: "postgresql://localhost/m199",
+        JWT_SECRET: "test-jwt-secret",
+        MAX_FILE_SIZE: "20971520",
+      });
+      expect(result.MAX_FILE_SIZE).toBe(20971520);
+    });
+
+    it("throws when MAX_FILE_SIZE is not a positive number", () => {
+      expect(() =>
+        validate({
+          NODE_ENV: "development",
+          PORT: "3000",
+          DATABASE_URL: "postgresql://localhost/m199",
+          JWT_SECRET: "test-jwt-secret",
+          MAX_FILE_SIZE: "-1",
+        }),
+      ).toThrow("MAX_FILE_SIZE must be a positive integer");
+    });
+
+    it("throws when MAX_FILE_SIZE is zero", () => {
+      expect(() =>
+        validate({
+          NODE_ENV: "development",
+          PORT: "3000",
+          DATABASE_URL: "postgresql://localhost/m199",
+          JWT_SECRET: "test-jwt-secret",
+          MAX_FILE_SIZE: "0",
+        }),
+      ).toThrow("MAX_FILE_SIZE must be a positive integer");
+    });
+  });
 });
