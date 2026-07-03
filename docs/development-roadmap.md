@@ -199,7 +199,7 @@ Avance actual:
 - ✅ `LandingModule` implementado en API con endpoints admin protegidos y endpoint público.
 - ✅ Payload público de landing con hero, salida destacada, posts destacados y versículo actual, tolerante a contenido faltante.
 - ✅ Home web reemplaza el shell inicial y consume `GET /landing/public`.
-- ✅ 224 tests pasando, typecheck y lint limpios.
+- ✅ 226 tests pasando, typecheck y lint limpios.
 - ✅ Spec SDD `landing-admin-public` archivada como `openspec/changes/archive/2026-07-02-landing-admin-public/`.
 
 ### 7. Salidas
