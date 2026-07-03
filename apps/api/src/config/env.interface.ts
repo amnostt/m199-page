@@ -4,6 +4,7 @@ export interface EnvConfig {
   PORT: number;
   DATABASE_URL: string;
   JWT_SECRET: string;
+  VISITOR_HASH_SECRET: string;
   UPLOAD_DIR: string;
   MAX_FILE_SIZE: number;
 }

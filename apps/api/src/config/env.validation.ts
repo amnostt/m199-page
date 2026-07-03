@@ -1,8 +1,8 @@
 /**
  * Synchronous config validation for @nestjs/config.
  *
- * Validates required keys (NODE_ENV, PORT, DATABASE_URL, JWT_SECRET) before
- * any module import resolves `@m199/db`, satisfying BF-01 and BF-02.
+ * Validates required keys before any module import resolves `@m199/db`,
+ * satisfying BF-01 and BF-02.
  */
 import type { EnvConfig } from "./env.interface.js";
 
@@ -11,6 +11,7 @@ const REQUIRED_KEYS = [
   "PORT",
   "DATABASE_URL",
   "JWT_SECRET",
+  "VISITOR_HASH_SECRET",
 ] as const;
 
 /** TCP port range (inclusive). */
@@ -50,6 +51,7 @@ export function validate(config: Record<string, unknown>): EnvConfig {
     PORT: port,
     DATABASE_URL: String(config["DATABASE_URL"]),
     JWT_SECRET: String(config["JWT_SECRET"]),
+    VISITOR_HASH_SECRET: String(config["VISITOR_HASH_SECRET"]),
     UPLOAD_DIR:
       config["UPLOAD_DIR"] != null && config["UPLOAD_DIR"] !== ""
         ? String(config["UPLOAD_DIR"])

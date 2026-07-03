@@ -18,6 +18,7 @@ import { AuthModule } from "./auth/auth.module.js";
 import { ResponsiblesModule } from "./responsibles/responsibles.module.js";
 import { FileModule } from "./file-module/file.module.js";
 import { LandingModule } from "./landing/landing.module.js";
+import { OutingsModule } from "./outings/outings.module.js";
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { LandingModule } from "./landing/landing.module.js";
     ResponsiblesModule,
     FileModule,
     LandingModule,
+    OutingsModule,
   ],
   providers: [
     {
