@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: m199-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: m199
+      POSTGRES_PASSWORD: m199
+      POSTGRES_DB: m199
+    volumes:
+      - m199_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  m199_postgres_data:

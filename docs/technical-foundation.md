@@ -146,23 +146,38 @@ Final size and MIME values remain an open product/technical decision.
 
 ### Prerequisites
 
-- PostgreSQL 16+ installed and running locally.
-- The `DATABASE_URL` must be configured in a `.env` file at the repository root (copy from `.env.example` and fill in real credentials). Prisma 7 reads `DATABASE_URL` via `packages/db/prisma.config.ts` dotenv loading from `.env`. `.env.example` is a documented template only; it is never read as a runtime source.
+- Docker with Compose support.
+- Copy `.env.example` to `.env` at the repository root. The included `DATABASE_URL` matches the Compose service defaults and works out of the box — no manual credential editing required.
+
+### Database Lifecycle (root `pnpm db:*`)
+
+The official local/dev database workflow uses root scripts that wrap Docker Compose:
+
+```sh
+pnpm db:up      # Start PostgreSQL in the background
+pnpm db:status  # Check whether the container is running
+pnpm db:down    # Stop the container (preserves data in the named volume)
+pnpm db:reset   # Destroy the volume and recreate the service — all local data is lost
+```
+
+`pnpm db:up` and `pnpm db:reset` return after the container starts. PostgreSQL can still need a short readiness wait before immediate Prisma or `psql` commands.
+
+Data persists in the `m199_postgres_data` named volume across `db:down` / `db:up` cycles. Docker may display the actual Compose volume with a project prefix, such as `m199-page_m199_postgres_data`. Only `pnpm db:reset` destroys local data.
 
 ### Package Boundary
 
-`@m199/db` owns the Prisma schema, config, migration history, and Prisma Client singleton. `apps/api` consumes the client exclusively through `@m199/db`'s public exports — never importing `@prisma/client` directly.
+`@m199/db` owns the Prisma schema, config, migration history, and Prisma Client singleton. `apps/api` consumes the client exclusively through `@m199/db`'s public exports — never importing `@prisma/client` directly. All Prisma commands remain host-run under `packages/db`.
 
-### Commands
+### Prisma Commands
 
-Run from the repository root:
+Run from the repository root (requires a ready database via `pnpm db:up`):
 
 ```sh
-pnpm --filter @m199/db db:validate    # Validate schema syntax
-pnpm --filter @m199/db db:migrate:dev  # Create and apply a new migration (requires .env with DATABASE_URL)
+pnpm --filter @m199/db db:validate      # Validate schema syntax
+pnpm --filter @m199/db db:migrate:dev    # Create and apply a new migration
 pnpm --filter @m199/db db:migrate:deploy # Apply pending migrations (production-safe)
-pnpm --filter @m199/db db:generate     # Regenerate Prisma Client types
-pnpm --filter @m199/api typecheck       # Verify @m199/db boundary compiles
+pnpm --filter @m199/db db:generate       # Regenerate Prisma Client types
+pnpm --filter @m199/api typecheck        # Verify @m199/db boundary compiles
 ```
 
 ## MVP Exclusions
