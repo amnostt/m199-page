@@ -9,7 +9,7 @@
  * Password hashing uses bcryptjs (pure JS, zero native deps), matching
  * the AuthService convention.
  */
-import { hash } from "bcryptjs";
+import bcrypt from "bcryptjs";
 import {
   ConflictException,
   Inject,
@@ -158,7 +158,7 @@ export class ResponsiblesService {
       throw new ConflictException("Email already in use");
     }
 
-    const passwordHash = await hash(dto.password, 10);
+    const passwordHash = await bcrypt.hash(dto.password, 10);
 
     const user = await this.client.responsibleUser.create({
       data: {
@@ -230,7 +230,7 @@ export class ResponsiblesService {
       throw new NotFoundException("User not found");
     }
 
-    const newPasswordHash = await hash(dto.newPassword, 10);
+    const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
 
     const user = await this.client.responsibleUser.update({
       where: { id },

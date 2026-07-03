@@ -21,7 +21,11 @@ import { LandingModule } from "./landing/landing.module.js";
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ validate, isGlobal: true }),
+    ConfigModule.forRoot({
+      envFilePath: ["../../.env", ".env"],
+      validate,
+      isGlobal: true,
+    }),
     DbModule,
     HealthModule,
     ValidationProofModule,

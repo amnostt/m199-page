@@ -14,7 +14,7 @@
  * diagrams in design.md.
  */
 import { createHash, randomBytes } from "node:crypto";
-import { compare } from "bcryptjs";
+import bcrypt from "bcryptjs";
 import {
   ForbiddenException,
   Inject,
@@ -201,7 +201,7 @@ export class AuthService {
   async login(dto: LoginDto, res: Response): Promise<AuthUser> {
     const user = await this.findActiveUser(dto.email);
 
-    const passwordValid = await compare(dto.password, user.passwordHash);
+    const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordValid) {
       throw new UnauthorizedException("Invalid credentials");
     }

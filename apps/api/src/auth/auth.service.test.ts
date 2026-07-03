@@ -18,7 +18,9 @@ const { compareMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("bcryptjs", () => ({
-  compare: compareMock,
+  default: {
+    compare: compareMock,
+  },
 }));
 
 const { randomBytesMock, createHashMock } = vi.hoisted(() => ({

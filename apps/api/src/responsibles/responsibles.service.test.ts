@@ -18,7 +18,9 @@ const { hashMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("bcryptjs", () => ({
-  hash: hashMock,
+  default: {
+    hash: hashMock,
+  },
 }));
 
 // ---- imports after mocks --------------------------------------------------
