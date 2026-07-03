@@ -322,6 +322,6 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser **landing admin y pública**.
+El próximo SDD change debería ser **Salidas**.
 
-Con auth, responsables y archivos ya resueltos, la landing es el siguiente slice natural: permite conectar contenido visible para usuarios finales sin tener que abordar todavía todo el CRUD de salidas/posts. El objetivo debería ser dejar editable la información base de la home pública y preparar los slots donde luego se conectarán salida destacada, posts destacados y versículo actual.
+Con auth, responsables, archivos y la landing base ya resueltos, Salidas es el siguiente slice natural: conecta el primer contenido real del sitio público con el panel admin y aprovecha la base de uploads para imagen principal, croquis y plan.
