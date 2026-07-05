@@ -4,29 +4,32 @@
 
 | Field | Value |
 |-------|-------|
-| Estimated changed lines | 1000-1200 |
+| Estimated changed lines | 1600-1800 (revised upward after Phase 2 implementation) |
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
-| Suggested split | PR 1 (types+config) → PR 2 (service) → PR 3 (controllers) → PR 4 (web) → PR 5 (landing fix) |
-| Delivery strategy | ask-on-risk |
-| Chain strategy | pending |
+| Suggested split | PR 1 (types+config) → PR 2a (CRUD + guard) → PR 2b (public + likes + feature) → PR 3 (controllers) → PR 4 (web) → PR 5 (landing fix) |
+| Delivery strategy | ask-on-risk → accepted: stacked-to-main with size-exception for PR 2a |
+| Chain strategy | stacked-to-main |
 
-Decision needed before apply: Yes
+Decision needed before apply: No
 Chained PRs recommended: Yes
-Chain strategy: pending
+Chain strategy: stacked-to-main
 400-line budget risk: High
+
+> **Budget note (2026-07-05)**: The NestJS test mock infrastructure for DbService/Prisma (~360 lines of mock factories) is shared across all Phase 2 tests. Even the minimal CRUD-only slice (Phase 2a) requires ~316 service lines + ~650 test lines + ~11 module lines = ~977 changed lines, plus ~120 lines of SDD documentation. The 400-line budget is mathematically impossible for this service layer. The Phase 2a/2b split reduces the review scope to the smallest coherent work unit while preserving full SDD traceability. See apply-progress.md for detailed line budget analysis.
 
 ### Suggested Work Units
 
 | Unit | Goal | Likely PR | Notes |
 |------|------|-----------|-------|
-| 1 | DTOs, env config, module skeleton, app.module wiring | PR 1 | Base: main; ~180 lines; autonomous types+config |
-| 2 | OutingsService with CRUD, publish-readiness, visitor hash, transactional likes | PR 2 | Base: PR 1; ~300 lines; service logic + unit tests |
-| 3 | Admin + Public controllers, AuthGuard, like endpoint | PR 3 | Base: PR 2; ~330 lines; controllers + integration tests |
-| 4 | App.tsx routing for /outings, /outings/:slug, like action | PR 4 | Base: main; ~250 lines; web rendering against mocked API |
+| 1 | DTOs, env config, module skeleton, app.module wiring | PR 1 | ✅ Committed (87213e1); ~180 lines |
+| 2a | OutingsService CRUD + publish-readiness guard + asset validation | PR 2a | Base: PR 1; ~977 lines; size:exception accepted — smallest coherent service slice |
+| 2b | findAllPublic, visitor hash derivation, transactional likes, featureOuting delegation | PR 2b | Base: PR 2a; ~350 lines; adds remaining service methods |
+| 3 | Admin + Public controllers, AuthGuard, like endpoint | PR 3 | Base: PR 2b; ~330 lines |
+| 4 | App.tsx routing for /outings, /outings/:slug, like action | PR 4 | Base: main; ~250 lines |
 | 5 | LandingService.featuredOutingId DB-level PUBLISHED resolution | PR 5 | Base: main; ~40 lines; independent landing fix |
 
-## Phase 1: Type Layer + Config (PR 1)
+## Phase 1: Type Layer + Config (PR 1) ✅
 
 - [x] 1.1 Create `apps/api/src/outings/dto/create-outing.dto.ts` with class-validator Decorators (title, slug, dateTime, location, description, optional file IDs, status enum)
 - [x] 1.2 Create `apps/api/src/outings/dto/update-outing.dto.ts` as `PartialType(CreateOutingDto)`
@@ -37,15 +40,24 @@ Chain strategy: pending
 - [x] 1.7 Test: DTO validation rejects missing required fields and invalid status (OUT-01, OUT-04). Asset existence validation deferred to Phase 2 service layer.
 - [x] 1.8 Test: startup fails when `VISITOR_HASH_SECRET` is unset (OUT-07 scenario)
 
-## Phase 2: Outings Service (PR 2)
+## Phase 2a: Core CRUD + Publish-Readiness (PR 2a)
 
-- [ ] 2.1 Create `apps/api/src/outings/outings.service.ts` with `create`, `update`, `archive`, `findAll`, `findBySlug` using Prisma client from DbService
-- [ ] 2.2 Implement publish-readiness guard: reject `PUBLISHED` when title/slug/dateTime/location/description are null or empty
-- [ ] 2.3 Implement `findAllPublic`: filter only `status: "PUBLISHED"`, map to `OutingResponse` (OUT-02, OUT-06)
-- [ ] 2.4 Implement visitor hash derivation: `sha256(version + VISITOR_HASH_SECRET + normalized_ip + user-agent)`, store only hash/version in `OutingLike`
-- [ ] 2.5 Implement transactional like: upsert on `@@unique([outingId, visitorHash])`, increment `likesCount` on first insert only (OUT-07)
-- [ ] 2.6 Implement `featureOuting(id)`: validate outing is `PUBLISHED`, delegate to `LandingService.updateSettings({ featuredOutingId: id })` (OUT-05)
-- [ ] 2.7 Test: service unit tests for CRUD, publish-readiness rejection, public filter, like idempotency, hash derivation excludes raw fields
+> **size:exception** — This slice exceeds 400 lines (~977 changed lines) but is the smallest coherent service work-unit. The NestJS test mock infrastructure (~360 lines of Prisma mock factories) is shared and cannot be split without losing test fidelity. See apply-progress.md for detailed line budget.
+
+- [x] 2.1 Create `apps/api/src/outings/outings.service.ts` with `create`, `update`, `archive`, `findAll`, `findBySlug` using Prisma client from DbService
+- [x] 2.2 Implement publish-readiness guard: reject `PUBLISHED` when title/slug/dateTime/location/description are null or empty
+- [x] 2.3 Test: 24 service unit tests for CRUD (12), publish-readiness rejection (8), asset validation (4) — OUT-01, OUT-02, OUT-04
+
+## Phase 2b: Public Filter + Visitor Hash + Likes + Feature (PR 2b)
+
+> Deferred from original Phase 2. Code for these methods was fully implemented and tested during the initial Phase 2 implementation, but review is deferred to keep PR 2a scope manageable. The working tree has been reduced to only Phase 2a scope; these methods and their tests will be restored in the Phase 2b apply batch.
+
+- [ ] 2.4 Implement `findAllPublic`: filter only `status: "PUBLISHED"`, map to `OutingResponse` (OUT-02, OUT-06)
+- [ ] 2.5 Implement visitor hash derivation: `sha256(version + VISITOR_HASH_SECRET + normalized_ip + user-agent)`, store only hash/version in `OutingLike`
+- [ ] 2.6 Implement transactional like: upsert on `@@unique([outingId, visitorHash])`, increment `likesCount` on first insert only (OUT-07)
+- [ ] 2.7 Implement `featureOuting(id)`: validate outing is `PUBLISHED`, delegate to `LandingService.updateSettings({ featuredOutingId: id })` (OUT-05)
+- [ ] 2.8 Test: service unit tests for public filter (3), hash derivation (3), like idempotency (5), feature delegation (4) — OUT-05, OUT-06, OUT-07
+- [ ] 2.9 Module wiring: add `LandingModule` import to `OutingsModule`, export `LandingService` from `LandingModule` (deferred from PR 2a)
 
 ## Phase 3: API Controllers (PR 3)
 
