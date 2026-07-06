@@ -39,7 +39,7 @@ const FULL_PAYLOAD = {
 };
 
 function mockFetchOk(
-  payload: Record<string, unknown>,
+  payload: unknown,
 ): ReturnType<typeof vi.fn> {
   return vi.fn().mockResolvedValue({
     ok: true,
@@ -74,6 +74,41 @@ function getOne(testId: string): HTMLElement {
   const elements = screen.getAllByTestId(testId);
   return elements[0]!;
 }
+
+// ---------------------------------------------------------------------------
+// Outings fixtures
+// ---------------------------------------------------------------------------
+
+const OUTING_LIST = [
+  {
+    id: "outing-1",
+    slug: "camp-day",
+    title: "Camp Day 2025",
+    dateTime: "2025-06-15T10:00:00.000Z",
+    location: "Chaco, Argentina",
+    description: "A day full of activities",
+    status: "PUBLISHED",
+    likesCount: 5,
+    mainImageUrl: "/files/img-outing",
+    croquisUrl: null,
+    planUrl: null,
+  },
+  {
+    id: "outing-2",
+    slug: "retreat",
+    title: "Retiro Espiritual",
+    dateTime: "2025-07-20T09:00:00.000Z",
+    location: "C\u00f3rdoba, Argentina",
+    description: "Un fin de semana de reflexi\u00f3n",
+    status: "PUBLISHED",
+    likesCount: 12,
+    mainImageUrl: null,
+    croquisUrl: "/files/img-croquis",
+    planUrl: "/files/img-plan",
+  },
+];
+
+const SINGLE_OUTING = OUTING_LIST[0]!;
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -273,5 +308,303 @@ describe("App (landing rendering)", () => {
     const shellTexts = screen.getAllByText(/workspace shell is running/i);
     expect(shellTexts.length).toBeGreaterThan(0);
     expectNoSection("hero-section");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4: Outings web UI
+// ---------------------------------------------------------------------------
+
+describe("Outings list (4.2)", () => {
+  it("renders published outings with titles and links", async () => {
+    globalThis.fetch = mockFetchOk(OUTING_LIST) as unknown as typeof fetch;
+
+    render(<App pathname="/outings" />);
+
+    await waitFor(() => {
+      expectSection("outings-list-section");
+    });
+
+    // Both outing titles should be visible
+    expect(screen.getByText("Camp Day 2025")).toBeTruthy();
+    expect(screen.getByText("Retiro Espiritual")).toBeTruthy();
+
+    // Each outing links to its detail page
+    const links = screen.getAllByRole("link");
+    expect(links.length).toBe(2);
+    expect(links[0]!.getAttribute("href")).toBe("/outings/camp-day");
+    expect(links[1]!.getAttribute("href")).toBe("/outings/retreat");
+  });
+
+  it("shows empty state when no outings exist", async () => {
+    globalThis.fetch = mockFetchOk([]) as unknown as typeof fetch;
+
+    render(<App pathname="/outings" />);
+
+    await waitFor(() => {
+      expectSection("outings-list-section");
+    });
+
+    expect(screen.getByTestId("outings-empty").textContent).toBe(
+      "No hay salidas publicadas.",
+    );
+  });
+
+  it("shows loading state while outings fetch is in-flight", () => {
+    // Never-resolving fetch keeps the component in loading state
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+
+    render(<App pathname="/outings" />);
+
+    expect(screen.getByTestId("outings-loading")).toBeTruthy();
+    expect(
+      screen.getByText(/cargando salidas/i),
+    ).toBeTruthy();
+  });
+
+  it("shows error state when outings fetch fails", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Network error")) as unknown as typeof fetch;
+
+    render(<App pathname="/outings" />);
+
+    await waitFor(() => {
+      expectSection("outings-error");
+    });
+
+    expect(
+      screen.getByText(/no se pudo cargar la lista/i),
+    ).toBeTruthy();
+  });
+});
+
+describe("Outing detail (4.3)", () => {
+  it("renders outing detail with title, date, location, description, and assets", async () => {
+    globalThis.fetch = mockFetchOk(SINGLE_OUTING) as unknown as typeof fetch;
+
+    render(<App pathname="/outings/camp-day" />);
+
+    await waitFor(() => {
+      expectSection("outing-detail-section");
+    });
+
+    expect(screen.getByText("Camp Day 2025")).toBeTruthy();
+    expect(screen.getByText("Chaco, Argentina")).toBeTruthy();
+    expect(screen.getByText("A day full of activities")).toBeTruthy();
+
+    // Main image should be rendered
+    const img = screen.getByTestId("outing-main-image") as HTMLImageElement;
+    expect(img.getAttribute("src")).toBe("/files/img-outing");
+  });
+
+  it("shows loading state while outing detail fetch is in-flight", () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+
+    render(<App pathname="/outings/camp-day" />);
+
+    expect(screen.getByTestId("outing-detail-loading")).toBeTruthy();
+    expect(
+      screen.getByText(/cargando salida/i),
+    ).toBeTruthy();
+  });
+
+  it("shows not found when API returns 404", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () => Promise.resolve({ message: "Not Found" }),
+    }) as unknown as typeof fetch;
+
+    render(<App pathname="/outings/nonexistent" />);
+
+    await waitFor(() => {
+      expectSection("outing-not-found");
+    });
+
+    expect(
+      screen.getByText(/salida no encontrada/i),
+    ).toBeTruthy();
+  });
+
+  it("renders like button with initial count from detail response", async () => {
+    globalThis.fetch = mockFetchOk(SINGLE_OUTING) as unknown as typeof fetch;
+
+    render(<App pathname="/outings/camp-day" />);
+
+    await waitFor(() => {
+      expectSection("outing-detail-section");
+    });
+
+    expect(screen.getByTestId("like-button")).toBeTruthy();
+    expect(screen.getByTestId("like-count").textContent).toBe("5");
+  });
+});
+
+describe("Like button (4.4)", () => {
+  it("increments like count on click and disables for idempotency", async () => {
+    let likePostCalled = false;
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((_url: string, init?: RequestInit) => {
+        if (init?.method === "POST" && !likePostCalled) {
+          likePostCalled = true;
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ likesCount: 6 }),
+          });
+        }
+        if (init?.method === "POST") {
+          // Idempotent: second POST returns same count
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ likesCount: 6 }),
+          });
+        }
+        // Detail fetch
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(SINGLE_OUTING),
+        });
+      }) as unknown as typeof fetch;
+
+    render(<App pathname="/outings/camp-day" />);
+
+    await waitFor(() => {
+      expectSection("outing-detail-section");
+    });
+
+    const likeButton = screen.getByTestId("like-button");
+    expect(screen.getByTestId("like-count").textContent).toBe("5");
+
+    // First click: increments
+    likeButton.click();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("like-count").textContent).toBe("6");
+    });
+
+    // Button should be disabled after click
+    expect((likeButton as HTMLButtonElement).disabled).toBe(true);
+
+    // Second click: stays at 6 (button is disabled anyway)
+    expect(screen.getByTestId("like-count").textContent).toBe("6");
+  });
+
+  it("shows like error state on POST failure", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((_url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          return Promise.resolve({
+            ok: false,
+            status: 500,
+            json: () => Promise.resolve({ message: "Error" }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(SINGLE_OUTING),
+        });
+      }) as unknown as typeof fetch;
+
+    render(<App pathname="/outings/camp-day" />);
+
+    await waitFor(() => {
+      expectSection("outing-detail-section");
+    });
+
+    const likeButton = screen.getByTestId("like-button");
+    likeButton.click();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("like-error")).toBeTruthy();
+    });
+  });
+});
+
+describe("Landing featured outing link (4.6)", () => {
+  it("links featured outing to its detail page", async () => {
+    globalThis.fetch = mockFetchOk({
+      ...FULL_PAYLOAD,
+      featuredOuting: {
+        id: "outing-1",
+        slug: "camp-day",
+        title: "Salida Misionera 2025",
+        location: "Chaco, Argentina",
+        mainImageUrl: "/files/img-outing",
+      },
+    }) as unknown as typeof fetch;
+
+    render(<App pathname="/" />);
+
+    await waitFor(() => {
+      expectSection("featured-outing-section");
+    });
+
+    const link = screen.getByTestId("featured-outing-link");
+    expect(link.getAttribute("href")).toBe("/outings/camp-day");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TRIANGULATE — edge cases for outings detail
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Manual verification: anchor / direct page load behavior
+// ---------------------------------------------------------------------------
+//
+// The OutingsList and FeaturedOutingSection components render plain <a href>
+// links to /outings/:slug. In the Vite dev server, browser page loads with
+// Accept: text/html are now bypassed past the /outings proxy (see
+// vite.config.ts bypass function), so direct navigation or page reloads at
+// /outings/:slug serve the SPA correctly instead of hitting the API.
+//
+// Manual verification steps (Vite dev server running):
+//   1. Start dev:  pnpm -F @m199/web dev
+//   2. Start API:  pnpm -F @m199/api dev
+//   3. Load http://localhost:5173/ — landing page renders
+//   4. Click "Ver salida" link → should navigate to /outings/:slug and render
+//      the outing detail page (not raw JSON)
+//   5. Reload the page at /outings/:slug → should still render the SPA page
+//   6. Navigate to /outings → should render the outings list
+//   7. Reload /outings → should still render the SPA list page
+//
+// All existing unit tests verify the <a href> attributes and page-path
+// rendering via the `pathname` prop, which covers the component-level behavior
+// independently of the dev-server proxy configuration.
+// ---------------------------------------------------------------------------
+
+describe("Outing detail triangulation", () => {
+  it("renders croquis and plan images when present", async () => {
+    const outingWithAssets = OUTING_LIST[1]!; // has croquisUrl and planUrl
+    globalThis.fetch = mockFetchOk(outingWithAssets) as unknown as typeof fetch;
+
+    render(<App pathname="/outings/retreat" />);
+
+    await waitFor(() => {
+      expectSection("outing-detail-section");
+    });
+
+    expect(screen.getByTestId("outing-croquis")).toBeTruthy();
+    expect(screen.getByTestId("outing-plan")).toBeTruthy();
+  });
+
+  it("does not render main image when mainImageUrl is null", async () => {
+    const outingNoImage = { ...SINGLE_OUTING, mainImageUrl: null };
+    globalThis.fetch = mockFetchOk(outingNoImage) as unknown as typeof fetch;
+
+    render(<App pathname="/outings/camp-day" />);
+
+    await waitFor(() => {
+      expectSection("outing-detail-section");
+    });
+
+    expectNoSection("outing-main-image");
   });
 });

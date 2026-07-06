@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 // ---------------------------------------------------------------------------
 // Types — mirrors LandingPublicPayload from the API design contract
@@ -38,6 +38,28 @@ interface LandingPublicPayload {
   featuredOuting: FeaturedOutingPayload | null;
   featuredPosts: FeaturedPostPayload[];
   currentVerse: CurrentVersePayload | null;
+}
+
+// ---------------------------------------------------------------------------
+// Outings types — mirrors OutingResponse from the API
+// ---------------------------------------------------------------------------
+
+interface OutingPayload {
+  id: string;
+  slug: string;
+  title: string;
+  dateTime: string;
+  location: string;
+  description: string;
+  status: string;
+  likesCount: number;
+  mainImageUrl: string | null;
+  croquisUrl: string | null;
+  planUrl: string | null;
+}
+
+interface LikeResponsePayload {
+  likesCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -140,6 +162,12 @@ function FeaturedOutingSection({ data }: { data: LandingPublicPayload }) {
     <section data-testid="featured-outing-section">
       <h2>{outing.title}</h2>
       <p data-testid="outing-location">{outing.location}</p>
+      <a
+        data-testid="featured-outing-link"
+        href={`/outings/${outing.slug}`}
+      >
+        Ver salida
+      </a>
     </section>
   );
 }
@@ -169,10 +197,216 @@ function VerseSection({ data }: { data: LandingPublicPayload }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main Application component
+// Outings components — OutingsList, OutingDetail, LikeButton
 // ---------------------------------------------------------------------------
 
-export function App() {
+function OutingsList() {
+  const [outings, setOutings] = useState<OutingPayload[] | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/outings")
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: OutingPayload[]) => {
+        if (!cancelled) setOutings(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (error) {
+    return (
+      <section data-testid="outings-error">
+        <p>No se pudo cargar la lista de salidas.</p>
+      </section>
+    );
+  }
+
+  if (!outings) {
+    return (
+      <section data-testid="outings-loading">
+        <p>Cargando salidas…</p>
+      </section>
+    );
+  }
+
+  if (outings.length === 0) {
+    return (
+      <section data-testid="outings-list-section">
+        <p data-testid="outings-empty">No hay salidas publicadas.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section data-testid="outings-list-section">
+      {outings.map((outing) => (
+        <article key={outing.id} data-testid={`outing-${outing.id}`}>
+          <a href={`/outings/${outing.slug}`}>{outing.title}</a>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function LikeButton({
+  initialCount,
+  slug,
+}: {
+  initialCount: number;
+  slug: string;
+}) {
+  const [count, setCount] = useState(initialCount);
+  const [liked, setLiked] = useState(false);
+  const [error, setError] = useState(false);
+
+  const handleLike = useCallback(() => {
+    if (liked) return;
+
+    fetch(`/outings/${slug}/like`, { method: "POST" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: LikeResponsePayload) => {
+        setCount(data.likesCount);
+        setLiked(true);
+      })
+      .catch(() => {
+        setError(true);
+      });
+  }, [slug, liked]);
+
+  return (
+    <div>
+      <button
+        data-testid="like-button"
+        onClick={handleLike}
+        disabled={liked}
+      >
+        ❤️ <span data-testid="like-count">{count}</span>
+      </button>
+      {error && (
+        <span data-testid="like-error">Error al registrar like.</span>
+      )}
+    </div>
+  );
+}
+
+function OutingDetail({ slug }: { slug: string }) {
+  const [outing, setOuting] = useState<OutingPayload | null>(null);
+  const [error, setError] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/outings/${slug}`)
+      .then((res) => {
+        if (res.status === 404) {
+          if (!cancelled) setNotFound(true);
+          return null;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: OutingPayload | null) => {
+        if (data && !cancelled) setOuting(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  if (notFound) {
+    return (
+      <section data-testid="outing-not-found">
+        <p>Salida no encontrada.</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section data-testid="outing-error">
+        <p>No se pudo cargar la salida.</p>
+      </section>
+    );
+  }
+
+  if (!outing) {
+    return (
+      <section data-testid="outing-detail-loading">
+        <p>Cargando salida…</p>
+      </section>
+    );
+  }
+
+  return (
+    <section data-testid="outing-detail-section">
+      <h1 data-testid="outing-title">{outing.title}</h1>
+      <p data-testid="outing-location">{outing.location}</p>
+      <p data-testid="outing-description">{outing.description}</p>
+      <time data-testid="outing-datetime">{outing.dateTime}</time>
+      {outing.mainImageUrl && (
+        <img
+          data-testid="outing-main-image"
+          src={outing.mainImageUrl}
+          alt={outing.title}
+        />
+      )}
+      {outing.croquisUrl && (
+        <img
+          data-testid="outing-croquis"
+          src={outing.croquisUrl}
+          alt="Croquis"
+        />
+      )}
+      {outing.planUrl && (
+        <img
+          data-testid="outing-plan"
+          src={outing.planUrl}
+          alt="Plan"
+        />
+      )}
+      <LikeButton initialCount={outing.likesCount} slug={slug} />
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Routing helpers
+// ---------------------------------------------------------------------------
+
+const ROUTE_OUTINGS = "/outings";
+
+function isOutingsList(path: string): boolean {
+  return path === ROUTE_OUTINGS;
+}
+
+function matchOutingSlug(path: string): string | null {
+  if (!path.startsWith(`${ROUTE_OUTINGS}/`)) return null;
+  const slug = path.slice(ROUTE_OUTINGS.length + 1);
+  // Reject empty slugs and slugs containing another slash
+  if (slug.length === 0 || slug.includes("/")) return null;
+  return slug;
+}
+
+// ---------------------------------------------------------------------------
+// LandingPage — renders the full landing experience
+// ---------------------------------------------------------------------------
+
+function LandingPage() {
   const [data, setData] = useState<LandingPublicPayload | null>(null);
   const [error, setError] = useState(false);
 
@@ -211,4 +445,34 @@ export function App() {
       <VerseSection data={data} />
     </main>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Main Application component — path-based routing
+// ---------------------------------------------------------------------------
+
+export function App({ pathname }: { pathname?: string }) {
+  const rawPath = pathname ?? window.location.pathname;
+
+  // Outing detail: /outings/:slug
+  const outingSlug = matchOutingSlug(rawPath);
+  if (outingSlug !== null) {
+    return (
+      <main>
+        <OutingDetail slug={outingSlug} />
+      </main>
+    );
+  }
+
+  // Outings list: /outings
+  if (isOutingsList(rawPath)) {
+    return (
+      <main>
+        <OutingsList />
+      </main>
+    );
+  }
+
+  // Default: landing page at /
+  return <LandingPage />;
 }

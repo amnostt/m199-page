@@ -71,12 +71,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Web Rendering (PR 4)
 
-- [ ] 4.1 Add path-based routing in `apps/web/src/App.tsx`: landing at `/`, outings list at `/outings`, detail at `/outings/:slug`, like button per outing
-- [ ] 4.2 Add `OutingsList` component: fetch `/outings`, render published outings with link to slug detail (OUT-06)
-- [ ] 4.3 Add `OutingDetail` component: fetch `/outings/:slug`, show title/date/location/description/assets/likes, handle 404
-- [ ] 4.4 Add `LikeButton` component: POST `/outings/:slug/like`, show updated count, idempotent disabled state
-- [ ] 4.5 Test: outings list renders, detail shows for valid slug, 404 for draft slug, like increments once, empty/error states
-- [ ] 4.6 Test: landing featured outing link works (LP-02 scenario)
+- [x] 4.1 Add path-based routing in `apps/web/src/App.tsx`: landing at `/`, outings list at `/outings`, detail at `/outings/:slug`, like button per outing
+- [x] 4.2 Add `OutingsList` component: fetch `/outings`, render published outings with link to slug detail (OUT-06)
+- [x] 4.3 Add `OutingDetail` component: fetch `/outings/:slug`, show title/date/location/description/assets/likes, handle 404
+- [x] 4.4 Add `LikeButton` component: POST `/outings/:slug/like`, show updated count, idempotent disabled state
+- [x] 4.5 Test: 20 web tests total — 7 pre-existing landing tests plus 13 outings tests covering list, detail, loading/error/not-found states, like increment/idempotency/error, landing featured link, and asset triangulation
+- [x] 4.6 Test: landing featured outing link works (LP-02 scenario)
 
 ## Phase 5: Landing Featured Fix (PR 5)
 

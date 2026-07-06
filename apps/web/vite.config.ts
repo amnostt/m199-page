@@ -15,6 +15,23 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      "/outings": {
+        target: API_TARGET,
+        changeOrigin: true,
+        // Bypass the proxy for browser page loads (GET + Accept: text/html)
+        // so the SPA handles /outings and /outings/:slug navigation. All
+        // component fetch() calls use Accept: */* and still pass through to
+        // the API. This prevents plain <a href> clicks and direct page loads
+        // from hitting the API and returning JSON instead of the SPA page.
+        bypass(req) {
+          if (
+            req.method === "GET" &&
+            req.headers?.accept?.includes("text/html")
+          ) {
+            return "/index.html";
+          }
+        },
+      },
       "/landing": {
         target: API_TARGET,
         changeOrigin: true,
