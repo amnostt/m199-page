@@ -80,5 +80,5 @@ Chain strategy: stacked-to-main
 
 ## Phase 5: Landing Featured Fix (PR 5)
 
-- [ ] 5.1 Modify `apps/api/src/landing/landing.service.ts` `getPublicPayload()`: resolve `featuredOutingId` only when the Outing's DB status is `PUBLISHED`, return null otherwise
-- [ ] 5.2 Test: `GET /landing/public` returns `featuredOuting: null` when featuredOutingId points to `DRAFT`, `ARCHIVED`, or missing outing (LP-02 scenarios)
+- [x] 5.1 Modify `apps/api/src/landing/landing.service.ts` `getPublicPayload()`: resolve `featuredOutingId` only when the Outing's DB status is `PUBLISHED`, return null otherwise
+- [x] 5.2 Test: `GET /landing/public` returns `featuredOuting: null` when featuredOutingId points to `DRAFT`, `ARCHIVED`, or missing outing (LP-02 scenarios)

@@ -96,6 +96,15 @@ const DRAFT_OUTING: OutingRow = {
   mainImageId: null,
 };
 
+const ARCHIVED_OUTING: OutingRow = {
+  id: "out-003",
+  slug: "salida-archived",
+  title: "Salida Archivada",
+  location: "Palermo",
+  status: "ARCHIVED",
+  mainImageId: "img-out-003",
+};
+
 const PUBLISHED_POST: PostRow = {
   id: "post-001",
   slug: "primer-post",
@@ -479,6 +488,46 @@ describe("LandingService", () => {
 
       // Service should guard against non-PUBLISHED outings
       expect(result.featuredOuting).toBeNull();
+    });
+
+    it("returns featuredOuting null when findUnique returns an ARCHIVED outing", async () => {
+      const { service } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        featuredPostsReturns: [FEATURED_PUBLISHED],
+        outingReturn: ARCHIVED_OUTING,
+        verseReturn: CURRENT_VERSE,
+      });
+
+      const result = await service.getPublicPayload();
+
+      expect(result.featuredOuting).toBeNull();
+      // Rest of payload intact — DB-level non-PUBLISHED guard
+      expect(result.heroTitle).toBe("Misión 1-99");
+      expect(result.featuredPosts).toHaveLength(1);
+      expect(result.currentVerse).not.toBeNull();
+    });
+
+    it("returns featuredOuting null when featuredOutingId points to non-existent outing", async () => {
+      // featuredOutingId is set to an ID that doesn't match any outing.
+      // The mock findUnique returns null for unknown IDs.
+      const { service, mocks } = await buildService({
+        settingsReturn: { ...FULL_SETTINGS, featuredOutingId: "out-nonexistent" },
+        featuredPostsReturns: [FEATURED_PUBLISHED],
+        outingReturn: null,
+        verseReturn: CURRENT_VERSE,
+      });
+
+      const result = await service.getPublicPayload();
+
+      expect(result.featuredOuting).toBeNull();
+      // findUnique was called with the non-existent ID
+      expect(mocks.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: "out-nonexistent" } }),
+      );
+      // Rest of payload intact
+      expect(result.heroTitle).toBe("Misión 1-99");
+      expect(result.featuredPosts).toHaveLength(1);
+      expect(result.currentVerse).not.toBeNull();
     });
 
     it("returns empty array for featuredPosts when none exist", async () => {

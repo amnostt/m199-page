@@ -1,3 +1,67 @@
+# Apply Progress: Outings — Phase 5 (Landing Featured Fix)
+
+## Phase 5 Batch
+
+**Date**: 2026-07-06
+**Mode**: Strict TDD
+**Status**: Complete — tasks 5.1, 5.2 done (2 new tests)
+
+### Completed Tasks
+
+- [x] 5.1 LandingService.getPublicPayload() already correctly guards `featuredOuting` on `status === "PUBLISHED"` (implemented in original landing service). No service code changes needed — the existing ternary `outing && outing.status === "PUBLISHED"` at line 250 correctly returns null for DRAFT, ARCHIVED, and missing outings.
+- [x] 5.2 Added 2 new service tests: ARCHIVED outing → null featuredOuting, non-existent outing → null featuredOuting. Combined with the pre-existing DRAFT test, all three LP-02 "Non-publishable featured outing" scenarios are now covered.
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `apps/api/src/landing/landing.service.test.ts` | Modified (+51) | Added `ARCHIVED_OUTING` fixture, 2 new tests: ARCHIVED outing returns null featuredOuting, non-existent outing returns null featuredOuting with findUnique call verification. |
+| `openspec/changes/outings/tasks.md` | Modified | Marked 5.1, 5.2 complete. |
+| `openspec/changes/outings/apply-progress.md` | Modified | Phase 5 implementation documentation. |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 5.1 | N/A | N/A | N/A | Production code already correct — status guard at `landing.service.ts:250` | N/A | N/A | N/A |
+| 5.2 | `landing.service.test.ts` | Unit | ✅ 17/17 | ✅ Written (2 new test cases) | ✅ 19/19 | ✅ 3 status scenarios (DRAFT + ARCHIVED + missing) = full triangulation | ➖ Clean |
+
+### Test Summary
+- **Phase 5 tests written**: 2 new (ARCHIVED featuredOuting: null, non-existent featuredOuting: null)
+- **Landing service tests**: 19 (was 17, +2)
+- **Full landing test suite**: 31/31 passing (19 service + 4 public controller + 8 admin controller)
+- **Full test suite**: 339/339 passing (db: 17 + web: 20 + api: 302)
+- **Typecheck**: Clean across all workspaces
+- **Layers used**: Unit (2)
+- **Approval tests**: None — no refactoring of existing behavior
+- **Pure functions created**: None
+
+### Deviations from Design
+- **No service code change needed**: The design called for modifying `landing.service.ts` (task 5.1), but the existing implementation already contains the correct `outing && outing.status === "PUBLISHED"` guard. The service was implemented correctly ahead of the SDD coverage requirements — only test coverage was missing.
+- **No ARCHIVED outing in original landing fixtures**: The original test fixtures only included `PUBLISHED_OUTING` and `DRAFT_OUTING`. Added `ARCHIVED_OUTING` to complete the status coverage.
+
+### Issues Found
+- None.
+
+### Line Budget
+- **Phase 5 diff**: 117 changed lines total (49 test insertions + 64 apply-progress insertions + 2 tasks insertions + 2 tasks deletions)
+  - `landing.service.test.ts`: +50 lines (1 fixture + 2 tests with assertions)
+  - `tasks.md` + `apply-progress.md`: ~44 lines
+  - **Total**: 117 changed lines — well within 400-line budget
+- **Budget note**: Phase 5 is the smallest and most focused slice in the Outings change. The service code was already correct; the work consisted entirely of filling a test coverage gap for the LP-02 spec scenarios.
+
+### Remaining Tasks
+None — all Outings SDD tasks (1.1 through 5.2) are now complete.
+
+### Workload / PR Boundary
+- **Mode**: Single PR 5 / Phase 5
+- **Chain strategy**: stacked-to-main (base: main)
+- **Current work unit**: Landing featured outing DB-level PUBLISHED resolution coverage gaps (117 changed lines)
+- **Boundary**: 2 new tests covering ARCHIVED and non-existent featuredOutingId → full LP-02 triangulation
+- **Budget**: 117 changed lines — within the 400-line review budget
+
+---
+
 # Apply Progress: Outings — Phase 4 (Web UI)
 
 ## Phase 4 Gate Remediation (2026-07-05)
