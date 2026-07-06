@@ -56,7 +56,7 @@ None — all Outings SDD tasks (1.1 through 5.2) are now complete.
 ### Workload / PR Boundary
 - **Mode**: Single PR 5 / Phase 5
 - **Chain strategy**: stacked-to-main (base: main)
-- **Current work unit**: Landing featured outing DB-level PUBLISHED resolution coverage gaps (117 changed lines)
+- **Current work unit**: Landing featured outing behavior-level PUBLISHED status-guard resolution coverage gaps (117 changed lines)
 - **Boundary**: 2 new tests covering ARCHIVED and non-existent featuredOutingId → full LP-02 triangulation
 - **Budget**: 117 changed lines — within the 400-line review budget
 
@@ -87,7 +87,7 @@ None — all Outings SDD tasks (1.1 through 5.2) are now complete.
 | `apps/web/vite.config.ts` | Modified | Added `bypass` function to `/outings` proxy returning `/index.html` for browser page loads (GET + Accept: text/html). |
 | `apps/web/src/App.tsx` | Modified | Replaced `return null` loading states in OutingsList and OutingDetail with visible loading indicators (`outings-loading`, `outing-detail-loading`). |
 | `apps/web/src/App.test.tsx` | Modified | Added 2 loading-state tests (in-flight fetch), documented manual proxy-bypass verification steps. |
-| `openspec/changes/outings/apply-progress.md` | Modified | Corrected line budget (640 total) and test breakdown (11 = 9 behavior + 2 triangulation). |
+| `openspec/changes/outings/apply-progress.md` | Modified | Corrected line budget (from ~550 to 747 total) and test breakdown (11 = 9 behavior + 2 triangulation). |
 
 ### Verification (Post-Remediation)
 - `pnpm --filter @m199/web test` → 20/20 ✅ (18 original + 2 loading-state)
@@ -149,22 +149,22 @@ None — all Outings SDD tasks (1.1 through 5.2) are now complete.
 
 ### Issues Found
 - **`mockFetchOk` type**: The existing helper was typed as `Record<string, unknown>` but the outings list endpoint returns an array. Changed parameter type to `unknown` (minimal change, does not affect existing landing tests).
-- **Phase 5 not implemented**: Landing featured outing link (task 4.6) adds a client-side `<a href>` to the outing detail page, but the actual DB-level `PUBLISHED` resolution for `featuredOutingId` (task 5.1) remains in Phase 5. The link will navigate to `/outings/:slug` regardless of the outing's current status — if Phase 5 hasn't run yet, a DRAFT/ARCHIVED outing shown as featured will 404 on click. This is the expected two-phase rollout.
+- **Phase 5 dependency (resolved)**: Landing featured outing link (task 4.6) adds a client-side `<a href>` to the outing detail page. Phase 5 later verified and covered the behavior-level `PUBLISHED` status-guard resolution for `featuredOutingId`, so DRAFT/ARCHIVED/missing featured outings now produce `featuredOuting: null` in the public landing payload.
 - **Proxy/route conflict (gate finding)**: The Vite `/outings` proxy prefix intercepted browser page loads to `/outings` and `/outings/:slug` because plain `<a href>` navigation sends `Accept: text/html`. Fixed with a `bypass` function that returns SPA `index.html` for GET requests with `Accept: text/html` header.
 - **Untestable loading states (gate finding)**: OutingsList and OutingDetail used `return null` for loading, which renders nothing and is invisible to tests. Replaced with `data-testid`-tagged loading sections.
 
 ### Line Budget
 - **Phase 4 total diff**: 747 changed lines (737 insertions + 10 deletions) post-remediation
-  - Original implementation: ~640 changed lines (630 insertions + 10 deletions)
+  - Original implementation: ~674 changed lines (664 insertions + 10 deletions)
   - Gate remediation: +73 insertions (loading states + proxy bypass + tests + docs)
   - Code-only web files: ~622 lines (App.test.tsx: 335, App.tsx: 270, vite.config.ts: 17)
   - SDD artifacts (tasks.md + apply-progress.md): ~91 lines
   - **Budget note**: The original estimate of ~250 lines significantly underestimated the web layer. Each of the 3 independent components (list, detail, like) requires its own state management, fetch logic, error/empty/loading states, and test coverage. The test file accounts for 54% of the code diff — typical for this project where service tests (Phase 2b: 60% test code, Phase 3: 66% test code) also dominate. Component boilerplate (useState, useEffect, JSX markup) is irreducible per component.
   - **Size exception rationale**: A component-level split (PR 4a: OutingsList, PR 4b: OutingDetail+Like, PR 4c: Routing+Landing) would produce slices too interdependent to verify independently. The 3 components share the same `App.tsx` file, same routing logic, and same test file. Splitting would require artificial file splits that contradict the existing single-file App pattern.
 
-### Remaining Tasks (Phase 5: Landing Featured Fix)
-- [ ] 5.1 Modify `apps/api/src/landing/landing.service.ts` `getPublicPayload()`: resolve `featuredOutingId` only when the Outing's DB status is `PUBLISHED`, return null otherwise
-- [ ] 5.2 Test: `GET /landing/public` returns `featuredOuting: null` when featuredOutingId points to `DRAFT`, `ARCHIVED`, or missing outing (LP-02 scenarios)
+### Historical Next Tasks (Phase 5: Landing Featured Fix — now complete)
+- [x] 5.1 Verify `apps/api/src/landing/landing.service.ts` `getPublicPayload()`: return `featuredOuting` only when the resolved Outing has status `PUBLISHED`, otherwise return null
+- [x] 5.2 Test: `GET /landing/public` returns `featuredOuting: null` when featuredOutingId points to `DRAFT`, `ARCHIVED`, or missing outing (LP-02 scenarios)
 
 ### Workload / PR Boundary
 - **Mode**: Chained PR slice 4 / Phase 4

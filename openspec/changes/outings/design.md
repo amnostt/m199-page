@@ -37,7 +37,7 @@ Landing public ──────────→ LandingService ─→ LandingSe
 | `apps/api/src/app.module.ts` | Modify | Import `OutingsModule`. |
 | `apps/api/src/config/env.validation.ts` | Modify | Require `VISITOR_HASH_SECRET` in all environments. |
 | `apps/api/src/config/env.interface.ts` | Modify | Add validated `VISITOR_HASH_SECRET`. |
-| `apps/api/src/landing/landing.service.ts` | Modify | Prefer DB-level `status: PUBLISHED` lookup for featured outing and keep null fallback. |
+| `apps/api/src/landing/landing.service.ts` | Modify | Prefer behavior-level `status: PUBLISHED` status-guard lookup for featured outing and keep null fallback. |
 | `apps/web/src/App.tsx` | Modify | Add path-based rendering for landing, outings list, outing detail, and like action. |
 | `apps/web/src/App.test.tsx` | Modify | Cover landing featured link, list/detail routing, empty/error states, like action. |
 | `packages/db/prisma/schema.prisma` | Reuse | No schema change planned. |

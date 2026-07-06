@@ -8,9 +8,9 @@
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | PR 1 (types+config) → PR 2a (CRUD + guard) → PR 2b (public + likes + feature) → PR 3 (controllers) → PR 4 (web) → PR 5 (landing fix) |
-| Delivery strategy | ask-on-risk → accepted: stacked-to-main with size-exception for PR 2a, PR 3 |
+| Delivery strategy | ask-on-risk → accepted: stacked-to-main with size-exception for PR 2a, PR 2b, PR 3, PR 4 |
 | Chain strategy | stacked-to-main |
-| Completed PRs | PR 1 (87213e1), PR 2a (7078b4c), PR 2b (c097aa9) |
+| Completed PRs | PR 1 (87213e1), PR 2a (7078b4c), PR 2b (c097aa9), PR 3 (53a0ffe), PR 4 (0362301), PR 5 (85ac440) |
 
 Decision needed before apply: No
 Chained PRs recommended: Yes
@@ -28,7 +28,7 @@ Chain strategy: stacked-to-main
 | 2b | findAllPublic, visitor hash derivation, transactional likes, featureOuting delegation | PR 2b | Base: PR 2a; ~350 lines; adds remaining service methods |
 | 3 | Admin + Public controllers, AuthGuard, like endpoint | PR 3 | Base: PR 2b; ~330 lines |
 | 4 | App.tsx routing for /outings, /outings/:slug, like action | PR 4 | Base: main; ~250 lines |
-| 5 | LandingService.featuredOutingId DB-level PUBLISHED resolution | PR 5 | Base: main; ~40 lines; independent landing fix |
+| 5 | LandingService.featuredOutingId behavior-level PUBLISHED status-guard resolution | PR 5 | Base: main; ~40 lines; independent landing fix |
 
 ## Phase 1: Type Layer + Config (PR 1) ✅
 
@@ -80,5 +80,5 @@ Chain strategy: stacked-to-main
 
 ## Phase 5: Landing Featured Fix (PR 5)
 
-- [x] 5.1 Modify `apps/api/src/landing/landing.service.ts` `getPublicPayload()`: resolve `featuredOutingId` only when the Outing's DB status is `PUBLISHED`, return null otherwise
+- [x] 5.1 Verify `apps/api/src/landing/landing.service.ts` `getPublicPayload()`: return `featuredOuting` only when the resolved Outing has status `PUBLISHED`, otherwise return null
 - [x] 5.2 Test: `GET /landing/public` returns `featuredOuting: null` when featuredOutingId points to `DRAFT`, `ARCHIVED`, or missing outing (LP-02 scenarios)
