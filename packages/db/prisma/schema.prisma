@@ -201,13 +201,18 @@ model Post {
 
 model FeaturedPost {
   // DB: FeaturedPostSlot enum (3 values) limits max featured posts; slot @unique, postId @unique
-  id        String           @id @default(uuid())
-  slot      FeaturedPostSlot @unique
-  postId    String           @unique
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  //     featuredAt records when the post was featured for landing ordering (desc).
+  //     Unfeature/archive/delete removes the row; active feature = row existence.
+  id         String           @id @default(uuid())
+  slot       FeaturedPostSlot @unique
+  postId     String           @unique
+  featuredAt DateTime         @default(now())
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   post Post @relation(fields: [postId], references: [id])
+
+  @@index([featuredAt])
 }
 
 model PostDownload {
