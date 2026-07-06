@@ -14,7 +14,10 @@ import { Test } from "@nestjs/testing";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { OutingsService } from "./outings.service.js";
+import { normalizeIp, deriveVisitorHash } from "./outings.service.js";
 import { DbService } from "../db/db.service.js";
+import { ConfigService } from "@nestjs/config";
+import { LandingService } from "../landing/landing.service.js";
 
 // ---- minimal Prisma row types -----------------------------------------------
 
@@ -38,6 +41,14 @@ interface OutingRow {
 
 interface FileAssetRow {
   id: string;
+}
+
+interface OutingLikeRow {
+  id: string;
+  outingId: string;
+  visitorHash: string;
+  fingerprintVersion: number;
+  createdAt: Date;
 }
 
 // ---- test data --------------------------------------------------------------
@@ -106,6 +117,10 @@ interface MockDbOverrides {
   findFirstReturn?: OutingRow | null;
   /** FileAsset lookup results. */
   existingFiles?: FileAssetRow[];
+  /** Existing likes for addLike dedupe (in-memory store). */
+  existingLikes?: OutingLikeRow[];
+  /** Simulate concurrent-like race: create throws P2002 even when findUnique returns null. */
+  likeCreateThrowsP2002?: boolean;
 }
 
 /** Query shape for outing.findMany */
@@ -199,11 +214,34 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
         err.code = "P2025";
         throw err;
       }
+      // Handle Prisma atomic update operators (increment)
+      const resolved: Partial<OutingRow> = {};
+      for (const [key, value] of Object.entries(args.data)) {
+        if (value && typeof value === "object" && "increment" in value) {
+          const current = (existing as unknown as Record<string, unknown>)[key];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (resolved as any)[key] = Number(current) + Number((value as { increment: number }).increment);
+        } else {
+          (resolved as Record<string, unknown>)[key] = value;
+        }
+      }
       const merged: OutingRow = {
         ...existing,
-        ...(args.data as Partial<OutingRow>),
+        ...resolved,
         updatedAt: new Date(),
       };
+      // Update the in-memory array so subsequent reads see the changes
+      const idx = existingOutings.indexOf(existing);
+      if (idx !== -1) {
+        existingOutings[idx] = merged;
+      }
+      // Also update findUniqueReturn if it matches (prevents stale overrides)
+      if (
+        overrides.findUniqueReturn &&
+        overrides.findUniqueReturn.id === id
+      ) {
+        overrides.findUniqueReturn = merged;
+      }
       return merged;
     });
 
@@ -215,6 +253,94 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
       if (id && files.some((f) => f.id === id)) return { id };
       return null;
     });
+
+  // -- OutingLike mocks (Phase 2b: addLike) --
+
+  const existingLikes: OutingLikeRow[] = [...(overrides.existingLikes ?? [])];
+
+  const outingLikeUpsert = vi
+    .fn<(args: {
+      where: { outingId_visitorHash: { outingId: string; visitorHash: string } };
+      create: { outingId: string; visitorHash: string; fingerprintVersion: number };
+      update: Record<string, unknown>;
+    }) => Promise<OutingLikeRow>>()
+    .mockImplementation(async (args) => {
+      const { outingId, visitorHash } = args.where.outingId_visitorHash;
+      const existing = existingLikes.find(
+        (l) => l.outingId === outingId && l.visitorHash === visitorHash,
+      );
+      if (existing) {
+        // Already exists — return existing (no mutation, upsert with empty update)
+        return existing;
+      }
+      const created: OutingLikeRow = {
+        id: `like-${String(existingLikes.length)}`,
+        outingId,
+        visitorHash,
+        fingerprintVersion: args.create.fingerprintVersion ?? 1,
+        createdAt: new Date(),
+      };
+      existingLikes.push(created);
+      return created;
+    });
+
+  const outingLikeFindUnique = vi
+    .fn<(args: { where: { outingId_visitorHash: { outingId: string; visitorHash: string } } }) => Promise<OutingLikeRow | null>>()
+    .mockImplementation(async (args) => {
+      const { outingId, visitorHash } = args.where.outingId_visitorHash;
+      const found = existingLikes.find(
+        (l) => l.outingId === outingId && l.visitorHash === visitorHash,
+      );
+      return found ?? null;
+    });
+
+  const outingLikeCreate = vi
+    .fn<(args: { data: { outingId: string; visitorHash: string; fingerprintVersion: number } }) => Promise<OutingLikeRow>>()
+    .mockImplementation(async (args) => {
+      const { outingId: oid, visitorHash: vh } = args.data;
+
+      // Simulate a concurrent-like race: findUnique said "none" but create hits the unique constraint
+      if (overrides.likeCreateThrowsP2002) {
+        const err = new Error(
+          "Unique constraint failed on the fields: (outingId_visitorHash)",
+        ) as Error & { code?: string };
+        err.code = "P2002";
+        throw err;
+      }
+
+      // Realistic duplicate check — matches Prisma's @@unique behavior
+      const dup = existingLikes.find(
+        (l) => l.outingId === oid && l.visitorHash === vh,
+      );
+      if (dup) {
+        const err = new Error(
+          "Unique constraint failed on the fields: (outingId_visitorHash)",
+        ) as Error & { code?: string };
+        err.code = "P2002";
+        throw err;
+      }
+
+      const created: OutingLikeRow = {
+        id: `like-${String(existingLikes.length)}`,
+        outingId: oid,
+        visitorHash: vh,
+        fingerprintVersion: args.data.fingerprintVersion ?? 1,
+        createdAt: new Date(),
+      };
+      existingLikes.push(created);
+      return created;
+    });
+
+  const outingLikeFindFirst = vi
+    .fn<(args?: { where?: Record<string, unknown> }) => Promise<OutingLikeRow | null>>()
+    .mockImplementation(async (_args) => null);
+
+  // $transaction — passes the mock client as the tx callback argument
+  const $transaction = vi
+    .fn()
+    .mockImplementation(
+      async <T>(cb: (tx: unknown) => Promise<T>) => cb(client),
+    );
 
   const client = {
     outing: {
@@ -228,6 +354,13 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     fileAsset: {
       findUnique: findUniqueFile,
     },
+    outingLike: {
+      upsert: outingLikeUpsert,
+      findUnique: outingLikeFindUnique,
+      findFirst: outingLikeFindFirst,
+      create: outingLikeCreate,
+    },
+    $transaction,
   };
 
   return {
@@ -238,12 +371,17 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     findMany,
     update,
     findUniqueFile,
+    outingLikeUpsert,
+    outingLikeFindUnique,
+    outingLikeCreate,
+    $transaction,
   };
 }
 
 interface ServiceFixture {
   service: OutingsService;
   mocks: ReturnType<typeof makeDbValue>;
+  landingServiceMock: { updateSettings: ReturnType<typeof vi.fn> };
 }
 
 async function buildService(
@@ -251,16 +389,30 @@ async function buildService(
 ): Promise<ServiceFixture> {
   const dbValue = makeDbValue(dbOverrides);
 
+  const landingServiceMock = {
+    updateSettings: vi.fn().mockResolvedValue({}),
+  };
+
   const module = await Test.createTestingModule({
     providers: [
       OutingsService,
       { provide: DbService, useValue: dbValue },
+      {
+        provide: ConfigService,
+        useValue: {
+          get: vi.fn((key: string) =>
+            key === "VISITOR_HASH_SECRET" ? "test-visitor-hash-secret" : undefined,
+          ),
+        },
+      },
+      { provide: LandingService, useValue: landingServiceMock },
     ],
   }).compile();
 
   return {
     service: module.get(OutingsService),
     mocks: dbValue,
+    landingServiceMock,
   };
 }
 
@@ -651,6 +803,262 @@ describe("OutingsService", () => {
       expect(result.mainImageId).toBeNull();
       expect(result.croquisId).toBeNull();
       expect(result.planId).toBeNull();
+    });
+  });
+
+  // -- Phase 2b: findAllPublic (2.4) ------------------------------------------
+
+  describe("findAllPublic (2.4)", () => {
+    it("returns only PUBLISHED outings mapped to OutingResponse", async () => {
+      const { service } = await buildService({
+        existingOutings: [PUBLISHED_OUTING, DRAFT_OUTING, ARCHIVED_OUTING],
+      });
+
+      const result = await service.findAllPublic();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]!.id).toBe("out-001");
+      expect(result[0]!.slug).toBe("camp-day");
+      expect(result[0]!.status).toBe("PUBLISHED");
+      // OutingResponse shape: no DB-internal fields
+      expect(result[0]!).not.toHaveProperty("createdById");
+      expect(result[0]!).not.toHaveProperty("publishedAt");
+      expect(result[0]!).not.toHaveProperty("createdAt");
+      expect(result[0]!).not.toHaveProperty("updatedAt");
+      // Asset IDs become URL paths
+      expect(result[0]!.mainImageUrl).toBe("/files/img-001");
+      expect(result[0]!.croquisUrl).toBeNull();
+      expect(result[0]!.planUrl).toBeNull();
+    });
+
+    it("returns empty array when no PUBLISHED outings exist", async () => {
+      const { service } = await buildService({
+        existingOutings: [DRAFT_OUTING, ARCHIVED_OUTING],
+      });
+
+      const result = await service.findAllPublic();
+
+      expect(result).toHaveLength(0);
+    });
+
+    it("includes likesCount and dateTime in response", async () => {
+      const { service } = await buildService({
+        existingOutings: [PUBLISHED_OUTING],
+      });
+
+      const result = await service.findAllPublic();
+
+      expect(result[0]!.likesCount).toBe(5);
+      expect(result[0]!.dateTime).toBe("2026-07-15T09:00:00.000Z");
+    });
+  });
+
+  // -- Phase 2b: addLike — transactional dedupe (2.5, 2.6) -------------------
+
+  describe("addLike (2.6)", () => {
+    const IP = "192.168.1.100";
+    const UA = "TestAgent/1.0";
+
+    it("increments likesCount on first like", async () => {
+      const { service, mocks } = await buildService({
+        existingOutings: [{ ...PUBLISHED_OUTING, likesCount: 5 }],
+        findUniqueReturn: { ...PUBLISHED_OUTING, likesCount: 5 },
+      });
+
+      // findUnique for outing + findUnique for like = not found + update
+      const result = await service.addLike("out-001", IP, UA);
+
+      expect(result.likesCount).toBe(6);
+      const updateCalls = mocks.update.mock.calls;
+      const lastCall = updateCalls[updateCalls.length - 1]![0] as unknown as {
+        data: { likesCount: { increment: number } };
+      };
+      expect(lastCall.data.likesCount.increment).toBe(1);
+    });
+
+    it("is idempotent: same visitor hash does not increment twice", async () => {
+      // Pre-create a like for the same outing+hash combo
+      // The hash derivation is deterministic, so same IP+UA produces same hash
+      const { service } = await buildService({
+        existingOutings: [{ ...PUBLISHED_OUTING, likesCount: 5 }],
+        findUniqueReturn: { ...PUBLISHED_OUTING, likesCount: 5 },
+      });
+
+      // First like
+      await service.addLike("out-001", IP, UA);
+
+      // Reset the findUnique return so the outing is found correctly for second call
+      // Second like with same IP/UA
+      const result = await service.addLike("out-001", IP, UA);
+
+      // likesCount should still be 6 (only incremented once)
+      expect(result.likesCount).toBe(6);
+    });
+
+    it("different IP produces different hash (separate like)", async () => {
+      const { service } = await buildService({
+        existingOutings: [{ ...PUBLISHED_OUTING, likesCount: 5 }],
+        findUniqueReturn: { ...PUBLISHED_OUTING, likesCount: 5 },
+      });
+
+      // First like from IP 1
+      await service.addLike("out-001", "192.168.1.100", UA);
+
+      // Reset outing mock for second call
+      // Second like from different IP
+      const result = await service.addLike("out-001", "192.168.1.200", UA);
+
+      // Different hash → separate like → count = 7
+      expect(result.likesCount).toBe(7);
+    });
+
+    it("does not increment when unique constraint is violated (concurrent race)", async () => {
+      // Simulate two concurrent requests: findUnique returns null for both,
+      // but create throws P2002 (the @@unique constraint already committed).
+      const { service } = await buildService({
+        existingOutings: [{ ...PUBLISHED_OUTING, likesCount: 5 }],
+        findUniqueReturn: { ...PUBLISHED_OUTING, likesCount: 5 },
+        existingLikes: [],
+        likeCreateThrowsP2002: true,
+      });
+
+      const result = await service.addLike("out-001", IP, UA);
+
+      // P2002 caught → no increment → count stays at 5
+      expect(result.likesCount).toBe(5);
+    });
+
+    it("rejects non-PUBLISHED outing", async () => {
+      const { service } = await buildService({
+        existingOutings: [DRAFT_OUTING],
+        findUniqueReturn: DRAFT_OUTING,
+      });
+
+      await expect(
+        service.addLike("out-002", IP, UA),
+      ).rejects.toThrow(/PUBLISHED/);
+    });
+
+    it("rejects non-existent outing", async () => {
+      const { service } = await buildService({
+        existingOutings: [],
+      });
+
+      await expect(
+        service.addLike("nonexistent", IP, UA),
+      ).rejects.toThrow();
+    });
+  });
+
+  // -- Phase 2b: hash derivation pure functions (2.5) ------------------------
+
+  describe("hash derivation (2.5)", () => {
+    const SECRET = "test-secret";
+    const VERSION = "1";
+    const IP = "192.168.1.100";
+    const UA = "TestAgent/1.0";
+
+    describe("normalizeIp", () => {
+      it("returns IPv4 addresses unchanged", () => {
+        expect(normalizeIp("192.168.1.100")).toBe("192.168.1.100");
+        expect(normalizeIp("10.0.0.1")).toBe("10.0.0.1");
+      });
+
+      it("strips IPv4-mapped IPv6 prefix", () => {
+        expect(normalizeIp("::ffff:192.168.1.100")).toBe("192.168.1.100");
+        expect(normalizeIp("::ffff:10.0.0.1")).toBe("10.0.0.1");
+        expect(normalizeIp("::FFFF:172.16.0.1")).toBe("172.16.0.1");
+      });
+
+      it("returns non-mapped IPv6 addresses unchanged", () => {
+        expect(normalizeIp("2001:db8::1")).toBe("2001:db8::1");
+        expect(normalizeIp("fe80::1")).toBe("fe80::1");
+      });
+    });
+
+    describe("deriveVisitorHash", () => {
+      it("produces a deterministic hex hash", () => {
+        const hash1 = deriveVisitorHash(SECRET, VERSION, IP, UA);
+        const hash2 = deriveVisitorHash(SECRET, VERSION, IP, UA);
+
+        // Same inputs → same hash
+        expect(hash1).toBe(hash2);
+        // Should be a 64-char hex string (SHA-256)
+        expect(hash1).toMatch(/^[a-f0-9]{64}$/);
+      });
+
+      it("different inputs produce different hashes", () => {
+        const hash1 = deriveVisitorHash(SECRET, VERSION, "192.168.1.100", UA);
+        const hash2 = deriveVisitorHash(SECRET, VERSION, "192.168.1.200", UA);
+        const hash3 = deriveVisitorHash(SECRET, VERSION, IP, "OtherAgent/2.0");
+        const hash4 = deriveVisitorHash("other-secret", VERSION, IP, UA);
+
+        expect(hash1).not.toBe(hash2); // different IP
+        expect(hash1).not.toBe(hash3); // different UA
+        expect(hash1).not.toBe(hash4); // different secret
+      });
+
+      it("version affects the hash", () => {
+        const hashV1 = deriveVisitorHash(SECRET, "1", IP, UA);
+        const hashV2 = deriveVisitorHash(SECRET, "2", IP, UA);
+
+        expect(hashV1).not.toBe(hashV2);
+      });
+    });
+  });
+
+  // -- Phase 2b: featureOuting delegation (2.7) -------------------------------
+
+  describe("featureOuting (2.7)", () => {
+    it("delegates to LandingService for PUBLISHED outing", async () => {
+      const { service, landingServiceMock } = await buildService({
+        existingOutings: [PUBLISHED_OUTING],
+        findUniqueReturn: PUBLISHED_OUTING,
+      });
+
+      await service.featureOuting("out-001");
+
+      expect(landingServiceMock.updateSettings).toHaveBeenCalledWith({
+        featuredOutingId: "out-001",
+      });
+    });
+
+    it("rejects DRAFT outing", async () => {
+      const { service, landingServiceMock } = await buildService({
+        existingOutings: [DRAFT_OUTING],
+        findUniqueReturn: DRAFT_OUTING,
+      });
+
+      await expect(
+        service.featureOuting("out-002"),
+      ).rejects.toThrow(/PUBLISHED/);
+
+      expect(landingServiceMock.updateSettings).not.toHaveBeenCalled();
+    });
+
+    it("rejects ARCHIVED outing", async () => {
+      const { service, landingServiceMock } = await buildService({
+        existingOutings: [ARCHIVED_OUTING],
+        findUniqueReturn: ARCHIVED_OUTING,
+      });
+
+      await expect(
+        service.featureOuting("out-003"),
+      ).rejects.toThrow(/PUBLISHED/);
+
+      expect(landingServiceMock.updateSettings).not.toHaveBeenCalled();
+    });
+
+    it("rejects non-existent outing", async () => {
+      const { service, landingServiceMock } = await buildService({
+        existingOutings: [],
+      });
+
+      await expect(
+        service.featureOuting("nonexistent"),
+      ).rejects.toThrow();
+
+      expect(landingServiceMock.updateSettings).not.toHaveBeenCalled();
     });
   });
 });

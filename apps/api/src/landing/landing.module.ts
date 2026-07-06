@@ -22,5 +22,6 @@ import { LandingPublicController } from "./landing-public.controller.js";
   imports: [AuthModule],
   controllers: [LandingAdminController, LandingPublicController],
   providers: [LandingService],
+  exports: [LandingService],
 })
 export class LandingModule {}

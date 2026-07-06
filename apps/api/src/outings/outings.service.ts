@@ -4,25 +4,32 @@
  * Phase 2a: Core CRUD operations (create, update, archive, findAll, findBySlug)
  * plus publish-readiness enforcement (OUT-02) and asset reference validation (OUT-04).
  *
- * Phase 2b (deferred, next PR slice): findAllPublic, visitor hash derivation,
+ * Phase 2b (this slice): findAllPublic, visitor hash derivation,
  * transactional likes (OUT-07), and featured outing delegation (OUT-05).
  *
  * OUT-01: create/read/update/archive with Prisma.
  * OUT-02: publish-readiness guard rejects PUBLISHED when required fields are empty.
  * OUT-03: slug uniqueness enforced at DB level.
  * OUT-04: asset references validated against FileAsset table.
+ * OUT-05: featureOuting delegates to LandingService for PUBLISHED outings.
+ * OUT-06: findAllPublic returns only PUBLISHED outings as OutingResponse.
+ * OUT-07: addLike uses privacy-safe visitor hash with transactional dedupe.
  *
  * Follows the same pattern as LandingService: minimal Prisma interfaces
  * avoid static @prisma/client imports in apps/api/ (BF-02).
  */
+import { createHash } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { DbService } from "../db/db.service.js";
+import { LandingService } from "../landing/landing.service.js";
 import type { CreateOutingDto } from "./dto/create-outing.dto.js";
 import type { UpdateOutingDto } from "./dto/update-outing.dto.js";
 import type { OutingListQueryDto } from "./dto/outing-list-query.dto.js";
@@ -53,6 +60,14 @@ interface FileAssetRow {
   id: string;
 }
 
+interface OutingLikeRow {
+  id: string;
+  outingId: string;
+  visitorHash: string;
+  fingerprintVersion: number;
+  createdAt: Date;
+}
+
 interface OutingPrismaClient {
   outing: {
     create(args: { data: Record<string, unknown> }): Promise<OutingRow>;
@@ -71,6 +86,76 @@ interface OutingPrismaClient {
   fileAsset: {
     findUnique(args: { where: Record<string, unknown> }): Promise<FileAssetRow | null>;
   };
+  outingLike: {
+    findUnique(args: {
+      where: { outingId_visitorHash: { outingId: string; visitorHash: string } };
+    }): Promise<OutingLikeRow | null>;
+    create(args: { data: { outingId: string; visitorHash: string; fingerprintVersion: number } }): Promise<OutingLikeRow>;
+    upsert(args: {
+      where: { outingId_visitorHash: { outingId: string; visitorHash: string } };
+      create: { outingId: string; visitorHash: string; fingerprintVersion: number };
+      update: Record<string, unknown>;
+    }): Promise<OutingLikeRow>;
+  };
+  $transaction<T>(fn: (tx: OutingPrismaClient) => Promise<T>): Promise<T>;
+}
+
+// ---------------------------------------------------------------------------
+// Public response shape
+// ---------------------------------------------------------------------------
+
+export interface OutingResponse {
+  id: string;
+  slug: string;
+  title: string;
+  dateTime: string;
+  location: string;
+  description: string;
+  status: "PUBLISHED";
+  likesCount: number;
+  mainImageUrl: string | null;
+  croquisUrl: string | null;
+  planUrl: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Pure helpers — privacy-safe visitor fingerprinting
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalizes IP addresses for consistent visitor hashing.
+ *
+ * Strips the IPv4-mapped IPv6 prefix (::ffff:) to canonicalize dual-stack
+ * clients that connect via IPv6 but originate from IPv4 addresses.
+ * Non-mapped addresses pass through unchanged.
+ */
+export function normalizeIp(ip: string): string {
+  // Case-insensitive match against ::ffff: prefix (IPv4-mapped IPv6)
+  if (/^::ffff:/i.test(ip)) {
+    return ip.slice(7);
+  }
+  return ip;
+}
+
+/**
+ * Derives a privacy-safe visitor hash using the required secret.
+ *
+ * Uses SHA-256 with colon-delimited concatenation for unambiguous separation
+ * of the hash inputs: version, secret, normalized IP, and user-agent.
+ * The delimiter prevents collision between adjacent fields (e.g., "v1" +
+ * "secret" vs "v" + "1secret").
+ *
+ * OUT-07: hash stored on OutingLike; raw IP/UA never persisted.
+ */
+export function deriveVisitorHash(
+  secret: string,
+  version: string,
+  ip: string,
+  userAgent: string,
+): string {
+  const normalized = normalizeIp(ip);
+  const input = `${version}:${secret}:${normalized}:${userAgent}`;
+  return createHash("sha256").update(input).digest("hex");
 }
 
 // ---------------------------------------------------------------------------
@@ -81,6 +166,10 @@ interface OutingPrismaClient {
 export class OutingsService {
   constructor(
     @Inject(DbService) private readonly dbService: DbService,
+    @Inject(ConfigService) private readonly configService: ConfigService,
+    @Optional()
+    @Inject(LandingService)
+    private readonly landingService?: LandingService,
   ) {}
 
   // -----------------------------------------------------------------------
@@ -89,6 +178,29 @@ export class OutingsService {
 
   private get client(): OutingPrismaClient {
     return this.dbService.client as unknown as OutingPrismaClient;
+  }
+
+  /** Resolves a file ID to a public URL path, or null if no ID. */
+  private fileUrl(fileId: string | null | undefined): string | null {
+    if (!fileId) return null;
+    return `/files/${fileId}`;
+  }
+
+  /** Maps an internal OutingRow to the public OutingResponse shape. */
+  private toOutingResponse(row: OutingRow): OutingResponse {
+    return {
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      dateTime: row.dateTime.toISOString(),
+      location: row.location,
+      description: row.description,
+      status: "PUBLISHED",
+      likesCount: row.likesCount,
+      mainImageUrl: this.fileUrl(row.mainImageId),
+      croquisUrl: this.fileUrl(row.croquisId),
+      planUrl: this.fileUrl(row.planId),
+    };
   }
 
   /**
@@ -312,5 +424,132 @@ export class OutingsService {
     return this.client.outing.findUnique({
       where: { slug },
     });
+  }
+
+  // -----------------------------------------------------------------------
+  // Public API — OUT-06: findAllPublic
+  // -----------------------------------------------------------------------
+
+  /**
+   * Returns only PUBLISHED outings, mapped to the public OutingResponse shape.
+   *
+   * Internal fields (createdById, publishedAt, createdAt, updatedAt) are
+   * excluded. Asset IDs are resolved to URL paths.
+   */
+  async findAllPublic(): Promise<OutingResponse[]> {
+    const rows = await this.client.outing.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: { dateTime: "desc" },
+    });
+    return rows.map((row) => this.toOutingResponse(row));
+  }
+
+  // -----------------------------------------------------------------------
+  // Public API — OUT-07: Anonymous Likes
+  // -----------------------------------------------------------------------
+
+  /**
+   * Likes a PUBLISHED outing using a privacy-safe visitor hash.
+   *
+   * Derives `visitorHash` from the required VISITOR_HASH_SECRET and request
+   * signals (IP + user-agent). Deduplicates via the `@@unique([outingId,
+   * visitorHash])` constraint — duplicate likes for the same hash are
+   * idempotent and do not increment likesCount.
+   *
+   * Rejects non-PUBLISHED and non-existent outings.
+   * Returns the current (potentially unchanged) likesCount.
+   */
+  async addLike(
+    outingId: string,
+    ip: string,
+    userAgent: string,
+  ): Promise<{ likesCount: number }> {
+    const secret = this.configService.get<string>("VISITOR_HASH_SECRET");
+    if (!secret) {
+      throw new Error("VISITOR_HASH_SECRET is not configured");
+    }
+
+    const visitorHash = deriveVisitorHash(secret, "1", ip, userAgent);
+
+    // Validate the outing exists and is PUBLISHED (read-only — outside transaction)
+    const outing = await this.client.outing.findUnique({
+      where: { id: outingId },
+    });
+    if (!outing) {
+      throw new NotFoundException(`Outing "${outingId}" not found`);
+    }
+    if (outing.status !== "PUBLISHED") {
+      throw new BadRequestException(
+        `Cannot like outing "${outingId}": status is ${outing.status}, must be PUBLISHED`,
+      );
+    }
+
+    // Transactional dedupe: atomic check-then-create with P2002 catch.
+    // The @@unique([outingId, visitorHash]) constraint guarantees at most
+    // one like row per visitor.  findUnique catches the common idempotent
+    // case; the P2002 catch handles concurrent inserts where two requests
+    // both pass findUnique before either create commits.
+    const result = await this.client.$transaction(async (tx) => {
+      const existing = await tx.outingLike.findUnique({
+        where: { outingId_visitorHash: { outingId, visitorHash } },
+      });
+      if (existing) {
+        return { likesCount: outing.likesCount };
+      }
+
+      try {
+        await tx.outingLike.create({
+          data: { outingId, visitorHash, fingerprintVersion: 1 },
+        });
+      } catch (e: unknown) {
+        const err = e as { code?: string };
+        if (err.code === "P2002") {
+          return { likesCount: outing.likesCount };
+        }
+        throw e;
+      }
+
+      const updated = await tx.outing.update({
+        where: { id: outingId },
+        data: { likesCount: { increment: 1 } },
+      });
+      return { likesCount: updated.likesCount };
+    });
+
+    return result;
+  }
+
+  // -----------------------------------------------------------------------
+  // Admin API — OUT-05: Feature Outing
+  // -----------------------------------------------------------------------
+
+  /**
+   * Features a PUBLISHED outing by updating the landing singleton.
+   *
+   * Validates the outing exists and is PUBLISHED, then delegates to
+   * LandingService.updateSettings({ featuredOutingId }). The landing
+   * singleton remains the source of truth for the featured outing.
+   *
+   * Rejects DRAFT, ARCHIVED, and non-existent outings.
+   * Requires LandingService to be available in the DI container.
+   */
+  async featureOuting(id: string): Promise<void> {
+    const outing = await this.client.outing.findUnique({ where: { id } });
+    if (!outing) {
+      throw new NotFoundException(`Outing "${id}" not found`);
+    }
+    if (outing.status !== "PUBLISHED") {
+      throw new BadRequestException(
+        `Cannot feature outing "${id}": status is ${outing.status}, must be PUBLISHED`,
+      );
+    }
+
+    if (!this.landingService) {
+      throw new Error(
+        "LandingService is not available — ensure LandingModule is imported in OutingsModule",
+      );
+    }
+
+    await this.landingService.updateSettings({ featuredOutingId: id });
   }
 }

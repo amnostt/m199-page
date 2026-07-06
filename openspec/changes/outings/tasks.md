@@ -52,12 +52,12 @@ Chain strategy: stacked-to-main
 
 > Deferred from original Phase 2. Code for these methods was fully implemented and tested during the initial Phase 2 implementation, but review is deferred to keep PR 2a scope manageable. The working tree has been reduced to only Phase 2a scope; these methods and their tests will be restored in the Phase 2b apply batch.
 
-- [ ] 2.4 Implement `findAllPublic`: filter only `status: "PUBLISHED"`, map to `OutingResponse` (OUT-02, OUT-06)
-- [ ] 2.5 Implement visitor hash derivation: `sha256(version + VISITOR_HASH_SECRET + normalized_ip + user-agent)`, store only hash/version in `OutingLike`
-- [ ] 2.6 Implement transactional like: upsert on `@@unique([outingId, visitorHash])`, increment `likesCount` on first insert only (OUT-07)
-- [ ] 2.7 Implement `featureOuting(id)`: validate outing is `PUBLISHED`, delegate to `LandingService.updateSettings({ featuredOutingId: id })` (OUT-05)
-- [ ] 2.8 Test: service unit tests for public filter (3), hash derivation (3), like idempotency (5), feature delegation (4) — OUT-05, OUT-06, OUT-07
-- [ ] 2.9 Module wiring: add `LandingModule` import to `OutingsModule`, export `LandingService` from `LandingModule` (deferred from PR 2a)
+- [x] 2.4 Implement `findAllPublic`: filter only `status: "PUBLISHED"`, map to `OutingResponse` (OUT-02, OUT-06)
+- [x] 2.5 Implement visitor hash derivation: `sha256(version:VISITOR_HASH_SECRET:normalized_ip:user-agent)`, store only hash/version in `OutingLike`
+- [x] 2.6 Implement transactional like: upsert on `@@unique([outingId, visitorHash])`, increment `likesCount` on first insert only (OUT-07)
+- [x] 2.7 Implement `featureOuting(id)`: validate outing is `PUBLISHED`, delegate to `LandingService.updateSettings({ featuredOutingId: id })` (OUT-05)
+- [x] 2.8 Test: service unit tests for public filter (3), hash derivation (3), like idempotency (5), feature delegation (4) — OUT-05, OUT-06, OUT-07
+- [x] 2.9 Module wiring: add `LandingModule` import to `OutingsModule`, export `LandingService` from `LandingModule` (deferred from PR 2a)
 
 ## Phase 3: API Controllers (PR 3)
 
