@@ -4,9 +4,9 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Estamos listos para empezar el **paso 7: Salidas**.
+Estamos listos para empezar el **paso 8: Posts**.
 
-Ya está terminada la base técnica completa, incluyendo autenticación, responsables, archivos/uploads y una primera landing pública editable:
+Ya está terminada la base técnica completa, incluyendo autenticación, responsables, archivos/uploads, una primera landing pública editable y la sección de salidas:
 
 ### Base técnica (pasos 1–3)
 - Documento técnico base.
@@ -47,7 +47,25 @@ Ya está terminada la base técnica completa, incluyendo autenticación, respons
 - 191 tests pasando, typecheck y lint limpios.
 - Spec SDD `file-uploads` archivada como `openspec/changes/archive/2026-07-02-file-uploads/`.
 
-En otras palabras: el panel admin ya tiene login, sesiones seguras, CRUD de responsables y una base sólida de archivos para que las próximas entidades puedan referenciar imágenes, croquis, planes y PDFs. Ahora conviene avanzar sobre landing antes de implementar módulos de contenido más grandes.
+### Landing admin y pública (paso 6)
+- Landing settings con misión, visión, descripción, video destacado, contacto minimalista, salida destacada, posts destacados y versículo actual.
+- API pública `GET /landing/public` y endpoints admin protegidos.
+- Home web pública consume el payload de landing y tolera contenido faltante.
+- 226 tests, typecheck y lint pasando al cierre del slice.
+- Spec SDD `landing-admin-public` archivada como `openspec/changes/archive/2026-07-02-landing-admin-public/`.
+
+### Salidas (paso 7)
+- Outings API implementada con CRUD admin, estados `DRAFT`, `PUBLISHED`, `ARCHIVED`, slug y validaciones de publicación.
+- Soporte para imagen principal, croquis, plan, salida destacada en landing y regla de una sola salida destacada.
+- Listado y detalle público de salidas publicados.
+- Likes anónimos implementados con hash de visitante y `VISITOR_HASH_SECRET`.
+- UI web de salidas y hooks de datos incorporados.
+- Landing integrada con salida destacada publicada y cobertura para estados no publicables.
+- 339 tests pasando, typecheck y lint limpios en la verificación final.
+- Spec SDD `outings` archivada como `openspec/changes/archive/2026-07-06-outings/`.
+- Cadena de commits de Outings pusheada manualmente.
+
+En otras palabras: el panel admin ya tiene login, sesiones seguras, CRUD de responsables, uploads sólidos, landing pública editable y la primera entidad de contenido real publicada. Ahora conviene avanzar sobre Posts para completar el segundo gran bloque de contenido público.
 
 ## Camino hasta finalizar el MVP
 
@@ -204,6 +222,8 @@ Avance actual:
 
 ### 7. Salidas
 
+**Estado:** ✅ Completo.
+
 Implementar backend, frontend público y admin:
 
 - CRUD admin
@@ -219,6 +239,18 @@ Implementar backend, frontend público y admin:
 - likes anónimos
 
 **Resultado esperado:** sección `/salidas` completa.
+
+Avance actual:
+
+- ✅ Backend de Outings con CRUD admin, estados, slug, publicación y archivo.
+- ✅ Referencias a imagen principal, croquis y plan usando `FileAsset`.
+- ✅ Regla de una sola salida destacada y payload de landing integrado.
+- ✅ Listado y detalle público de salidas.
+- ✅ Likes anónimos con hash de visitante.
+- ✅ UI web pública/admin inicial para salidas.
+- ✅ 339 tests pasando, typecheck y lint limpios en la verificación final.
+- ✅ Spec SDD `outings` archivada como `openspec/changes/archive/2026-07-06-outings/`.
+- ✅ Cadena de commits de Outings pusheada manualmente.
 
 ### 8. Posts
 
@@ -322,6 +354,6 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser **Salidas**.
+El próximo SDD change debería ser **Posts**.
 
-Con auth, responsables, archivos y la landing base ya resueltos, Salidas es el siguiente slice natural: conecta el primer contenido real del sitio público con el panel admin y aprovecha la base de uploads para imagen principal, croquis y plan.
+Con auth, responsables, archivos, landing y Salidas ya resueltos, Posts es el siguiente slice natural: completa el contenido editorial del sitio público, reutiliza uploads para portadas y descargables, y deja preparada la base para destacar contenido desde landing.
