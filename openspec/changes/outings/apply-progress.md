@@ -1,3 +1,113 @@
+# Apply Progress: Outings — Phase 3 (API Controllers)
+
+## Phase 3 Batch
+
+**Date**: 2026-07-05
+**Mode**: Strict TDD
+**Status**: Complete — tasks 3.1, 3.2, 3.3, 3.4, 3.5, 3.6 (32 new tests after gate remediation) done
+
+### Completed Tasks
+
+- [x] 3.1 Admin controller — `OutingsAdminController` with `@UseGuards(AuthGuard)`, endpoints: GET/POST `/outings/admin`, PATCH `/outings/admin/:id`, POST `/:id/archive`, POST `/:id/feature`
+- [x] 3.2 Public controller — `OutingsPublicController` with GET `/outings`, GET `/outings/:slug`, POST `/outings/:slug/like`
+- [x] 3.3 Admin route tests — 15 tests: CRUD delegation, AuthGuard decorator verification, route-level 401 coverage for GET/POST `/outings/admin`, query parameters, create/update/archive/feature delegation (OUT-01)
+- [x] 3.4 Public list/detail tests — 7 tests: published-only filtering, 404 for DRAFT/ARCHIVED/missing slugs, internal field exclusion (OUT-02, OUT-06)
+- [x] 3.5 Like tests — 7 tests: delegation with IP/UA extraction, idempotent duplicates, IPv6 address handling, missing slug, and DRAFT/ARCHIVED public 404 behavior (OUT-07)
+- [x] 3.6 Feature tests — 2 tests: delegates to service.featureOuting for published and draft outings; service validates status (OUT-05)
+- [x] Module wiring — AuthModule import added for AuthGuard DI resolution
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `apps/api/src/outings/outings-admin.controller.ts` | Created | Admin CRUD + archive + feature endpoints protected by AuthGuard. Follows landing-admin controller pattern. |
+| `apps/api/src/outings/outings-public.controller.ts` | Created | Public list, detail, and like endpoints. No auth guard. Extracts IP/UA from Express request for like endpoint. |
+| `apps/api/src/outings/outings-admin.controller.test.ts` | Created + remediated | 15 tests: CRUD delegation, AuthGuard metadata, module compile smoke, and 2 route-level 401 tests. |
+| `apps/api/src/outings/outings-public.controller.test.ts` | Created + remediated | 17 tests: findAllPublic, findBySlug, like delegation/idempotency, public DRAFT/ARCHIVED like 404 behavior, no-guard check, and smoke. |
+| `apps/api/src/outings/outings.module.ts` | Modified | +5 lines: registered both controllers, added AuthModule import. |
+| `apps/api/src/outings/outings.service.ts` | Modified | +1 line: exported `OutingRow` interface (was private). |
+| `openspec/changes/outings/tasks.md` | Modified | Marked 3.1-3.6 complete. |
+| `openspec/changes/outings/apply-progress.md` | Modified | Phase 3 implementation documentation. |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 3.1 | `outings-admin.controller.test.ts` | Unit + route-level supertest | ✅ 64/64 (Phase 2) | ✅ Written (module not found / unauthorized route gaps) | ✅ 15/15 | ✅ delegation + guard metadata + GET/POST 401 route coverage | ✅ Gate remediation |
+| 3.2 | `outings-public.controller.test.ts` | Unit | ✅ 64/64 (Phase 2) | ✅ Written (module not found / hidden-status leak) | ✅ 17/17 | ✅ list/detail/like + DRAFT/ARCHIVED public 404 behavior | ✅ Gate remediation |
+| 3.3-3.6 | Combined above | Unit + route-level supertest | N/A (new) | ✅ Written | ✅ 32/32 | ✅ Full coverage per remediated spec claims | ✅ Clean |
+
+### Test Summary
+- **Phase 3 tests written**: 32 new (15 admin + 17 public)
+- **Total outings tests passing**: 96 (21 DTO + 43 service + 15 admin controller + 17 public controller)
+- **Full test suite**: 324/324 passing (db: 17 + web: 7 + api: 300)
+- **Typecheck**: Clean across all workspaces
+- **Layers used**: Unit + route-level supertest (32)
+- **Approval tests**: None — no refactoring of existing behavior
+
+### Deviations from Design
+- None. Controllers follow landing controller patterns exactly: admin controller uses `@UseGuards(AuthGuard)` at controller level with overridden guard in tests; public controller has no guard. Both use `@Inject` constructor injection.
+
+### Issues Found
+- **AuthModule import required**: Adding `OutingsAdminController` (with `@UseGuards(AuthGuard)`) caused DI resolution failures in `app.module.test.ts` and `bootstrap.wiring.test.ts`. Fixed by importing `AuthModule` in `OutingsModule`. Every other module using `AuthGuard` (ResponsiblesModule, FileModule, LandingModule) already imports `AuthModule` — this was a missed dependency.
+- **OutingRow type export**: `findBySlug` returns `OutingRow | null` but the interface was private. Exported it to allow controller tests to type mock return values. One-line change — minimal phase-boundary impact.
+
+### Line Budget
+- **Phase 3 diff estimate**: ~970 changed lines after gate remediation
+  - `outings-admin.controller.ts`: ~102 lines
+  - `outings-public.controller.ts`: ~115 lines
+  - `outings-admin.controller.test.ts`: ~273 lines
+  - `outings-public.controller.test.ts`: ~346 lines
+  - `outings.module.ts`: +5 lines
+  - `outings.service.ts`: +1 line
+  - `tasks.md` / `apply-progress.md`: ~120 lines
+  - **Total**: ~970 changed lines — test files and remediation evidence dominate
+  - **Budget**: Over the 400-line review budget. Exception is documented because the controller slice is coherent and NestJS controller tests require per-controller TestingModule/supertest setup.
+  - **Note**: Controller tests with NestJS TestingModule + vitest mocks require boilerplate per controller. Like Phase 2's Prisma mock infrastructure, this is a one-time cost. Future outings tests (e.g., adding new endpoints) will be ~15-20 lines each.
+
+### Remaining Tasks (Phase 4: Web UI)
+- [ ] 4.1-4.6 Web routing and components
+
+### Workload / PR Boundary
+- **Mode**: Chained PR slice 3 / Phase 3
+- **Chain strategy**: stacked-to-main (base: PR 2b branch)
+- **Current work unit**: Admin + Public controllers with 32 controller tests
+- **Boundary**: Admin CRUD + archive + feature → public list/detail/like → 32 controller tests
+- **Budget**: ~970 changed lines — over the 400-line target but within the expected range for a NestJS controller layer with full test coverage and gate remediation
+
+---
+
+# Phase 3 Gate Remediation (2026-07-05)
+
+**Trigger**: Phase 3 controllers failed fresh gate review. Targeted remediation only.
+
+### Fixes Applied
+
+1. **CRITICAL — Public like endpoint exposed non-PUBLISHED outing status**: `OutingsPublicController.like()` only checked for missing outings, then delegated to `addLike` which threw status-specific `BadRequestException` for DRAFT/ARCHIVED. Added `|| outing.status !== "PUBLISHED"` guard so non-public slugs return `NotFoundException` at the controller boundary — matching the behavior of `findBySlug`.
+
+2. **CRITICAL — OUT-01 unauthorized route scenario not covered by passing route test**: `tasks.md` claimed "admin routes return 401 without auth, 200 with auth" but `outings-admin.controller.test.ts` only verified `@UseGuards(AuthGuard)` metadata and direct method delegation. Added two supertest-based route-level 401 tests (GET and POST `/outings/admin`) that override `AuthGuard` to deny with `UnauthorizedException` and assert HTTP 401 response.
+
+3. **WARNING — Artifacts overstated route-level verification**: Updated `tasks.md` task 3.3 description and `apply-progress.md` test counts to accurately reflect what is tested (metadata check + route-level 401 via supertest). Public like endpoint now has DRAFT/ARCHIVED rejection tests at the controller boundary.
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `apps/api/src/outings/outings-public.controller.ts` | Modified (+2) | Added `|| outing.status !== "PUBLISHED"` guard in `like()` method so DRAFT/ARCHIVED outings return 404 at the public boundary. |
+| `apps/api/src/outings/outings-public.controller.test.ts` | Modified (+24) | Added 2 tests: DRAFT like → NotFoundException, ARCHIVED like → NotFoundException. |
+| `apps/api/src/outings/outings-admin.controller.test.ts` | Modified (+40) | Added imports (`INestApplication`, `UnauthorizedException`, `supertest`, `beforeAll`, `afterAll`). Added "Route-level 401" describe block with supertest-based GET and POST 401 tests where AuthGuard is overridden to deny. |
+| `openspec/changes/outings/tasks.md` | Modified | Clarified task 3.3 description: "route-level supertest" instead of overstated "200 with auth". |
+| `openspec/changes/outings/apply-progress.md` | Modified | Added Phase 3 gate remediation documentation. |
+
+### Test Summary (Post-Remediation)
+- New tests added: 4 (2 public like status-guard + 2 admin route-level 401)
+- Public controller: 17 tests (was 15, +2 DRAFT/ARCHIVED like)
+- Admin controller: 15 tests (was 13, +2 route-level 401)
+- Total outings tests: 96/96 passing
+- Full suite: 324/324 passing (db: 17 + web: 7 + api: 300)
+
+---
+
 # Apply Progress: Outings — Phase 2b (Public Filter + Visitor Hash + Likes + Feature)
 
 ## Phase 2b Batch

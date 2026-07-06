@@ -38,7 +38,7 @@ import type { OutingListQueryDto } from "./dto/outing-list-query.dto.js";
 // Minimal Prisma-model interfaces
 // ---------------------------------------------------------------------------
 
-interface OutingRow {
+export interface OutingRow {
   id: string;
   slug: string;
   title: string;

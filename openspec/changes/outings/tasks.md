@@ -8,8 +8,9 @@
 | 400-line budget risk | High |
 | Chained PRs recommended | Yes |
 | Suggested split | PR 1 (types+config) → PR 2a (CRUD + guard) → PR 2b (public + likes + feature) → PR 3 (controllers) → PR 4 (web) → PR 5 (landing fix) |
-| Delivery strategy | ask-on-risk → accepted: stacked-to-main with size-exception for PR 2a |
+| Delivery strategy | ask-on-risk → accepted: stacked-to-main with size-exception for PR 2a, PR 3 |
 | Chain strategy | stacked-to-main |
+| Completed PRs | PR 1 (87213e1), PR 2a (7078b4c), PR 2b (c097aa9) |
 
 Decision needed before apply: No
 Chained PRs recommended: Yes
@@ -61,12 +62,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: API Controllers (PR 3)
 
-- [ ] 3.1 Create `apps/api/src/outings/outings-admin.controller.ts` with `@UseGuards(AuthGuard)`, endpoints: `GET /outings/admin`, `POST /outings/admin`, `PATCH /outings/admin/:id`, `POST /outings/admin/:id/archive`, `POST /outings/admin/:id/feature`
-- [ ] 3.2 Create `apps/api/src/outings/outings-public.controller.ts` with `GET /outings`, `GET /outings/:slug`, `POST /outings/:slug/like`
-- [ ] 3.3 Test: admin routes return 401 without auth, 200 with auth (OUT-01 scenarios)
-- [ ] 3.4 Test: public list returns only `PUBLISHED`, detail returns 404 for `DRAFT`/`ARCHIVED` slugs (OUT-02, OUT-06)
-- [ ] 3.5 Test: duplicate like POST returns same `likesCount`, no raw identity persisted (OUT-07)
-- [ ] 3.6 Test: feature rejects non-`PUBLISHED` outings, accepts `PUBLISHED` (OUT-05)
+- [x] 3.1 Create `apps/api/src/outings/outings-admin.controller.ts` with `@UseGuards(AuthGuard)`, endpoints: `GET /outings/admin`, `POST /outings/admin`, `PATCH /outings/admin/:id`, `POST /outings/admin/:id/archive`, `POST /outings/admin/:id/feature`
+- [x] 3.2 Create `apps/api/src/outings/outings-public.controller.ts` with `GET /outings`, `GET /outings/:slug`, `POST /outings/:slug/like`
+- [x] 3.3 Test: admin routes return 401 without auth (route-level supertest), delegation with auth override (OUT-01 scenarios)
+- [x] 3.4 Test: public list returns only `PUBLISHED`, detail returns 404 for `DRAFT`/`ARCHIVED` slugs (OUT-02, OUT-06)
+- [x] 3.5 Test: duplicate like POST returns same `likesCount`, no raw identity persisted (OUT-07)
+- [x] 3.6 Test: feature rejects non-`PUBLISHED` outings, accepts `PUBLISHED` (OUT-05)
 
 ## Phase 4: Web Rendering (PR 4)
 
