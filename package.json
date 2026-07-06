@@ -21,7 +21,8 @@
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d db",
-    "db:status": "docker compose ps db"
+    "db:status": "docker compose ps db",
+    "db:seed": "pnpm --filter @m199/db run db:seed"
   },
   "devDependencies": {
     "vitest": "^3.2.4",

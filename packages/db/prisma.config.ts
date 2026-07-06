@@ -11,12 +11,14 @@ config({ path: "../../.env" });
  * - Loads DATABASE_URL from the environment (via dotenv, from root `.env`).
  * - Points to the hardened `prisma/schema.prisma` artifact.
  * - Migration history is stored under `prisma/migrations/`.
- * - No seed path is configured; seed belongs in a later change.
+ * - Seed command is declared here because Prisma 7 uses `migrations.seed`
+ *   when a prisma.config.ts file is present.
  */
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    seed: "tsx prisma/seed.ts",
   },
   datasource: {
     url: env("DATABASE_URL"),
