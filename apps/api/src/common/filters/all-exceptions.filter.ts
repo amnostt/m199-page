@@ -10,6 +10,7 @@ import {
   type ExceptionFilter,
   HttpException,
   HttpStatus,
+  Inject,
 } from "@nestjs/common";
 import { HttpAdapterHost } from "@nestjs/core";
 
@@ -59,7 +60,10 @@ function multerErrorToHttpStatus(code: string): HttpStatus {
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
+  constructor(
+    @Inject(HttpAdapterHost)
+    private readonly httpAdapterHost: HttpAdapterHost,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const { httpAdapter } = this.httpAdapterHost;
