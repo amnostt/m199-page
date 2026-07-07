@@ -61,6 +61,7 @@ interface VerseRow {
   text: string;
   reference: string;
   date: Date;
+  publishedAt: Date | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
 }
 
@@ -87,7 +88,7 @@ interface LandingPrismaClient {
   verse: {
     findFirst(args?: {
       where?: { status?: string };
-      orderBy?: { date?: string };
+      orderBy?: { publishedAt?: string } | { publishedAt?: string; id?: string }[];
     }): Promise<VerseRow | null>;
   };
 }
@@ -234,10 +235,11 @@ export class LandingService {
       });
     }
 
-    // Fetch the most recent published verse (LP-02).
+    // Fetch the most recent published verse by publishedAt (server UTC instant),
+    // with id desc as deterministic tiebreaker.
     const verse = await this.client.verse.findFirst({
       where: { status: "PUBLISHED" },
-      orderBy: { date: "desc" },
+      orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
     });
 
     return {

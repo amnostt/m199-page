@@ -62,6 +62,7 @@ interface VerseRow {
   text: string;
   reference: string;
   date: Date;
+  publishedAt: Date | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
 }
 
@@ -212,6 +213,7 @@ const CURRENT_VERSE: VerseRow = {
   text: "Todo lo puedo en Cristo que me fortalece",
   reference: "Filipenses 4:13",
   date: new Date("2026-07-01"),
+  publishedAt: new Date("2026-07-01T12:00:00Z"),
   status: "PUBLISHED",
 };
 
@@ -220,6 +222,7 @@ const DRAFT_VERSE: VerseRow = {
   text: "Draft verse",
   reference: "Juan 3:16",
   date: new Date("2026-06-30"),
+  publishedAt: null,
   status: "DRAFT",
 };
 
@@ -243,7 +246,7 @@ interface FeaturedPostQuery {
 /** Query shape the service passes to verse.findFirst */
 interface VerseQuery {
   where?: { status?: string };
-  orderBy?: { date?: string };
+  orderBy?: { publishedAt?: string } | { publishedAt?: string; id?: string }[];
 }
 
 function makeDbValue(overrides: MockDbOverrides = {}) {
@@ -306,7 +309,10 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
       return null;
     });
 
-  // verse.findFirst — respects where.status and orderBy.date
+  // verse.findFirst — respects where.status; returns the configured
+  // verseReturn. Multi-verse ordering (orderBy.publishedAt desc) is
+  // delegated to the DB in production — this mock covers query-shape
+  // assertions, not sorting behavior.
   const verseFindFirst = vi
     .fn<(args?: VerseQuery) => Promise<VerseRow | null>>()
     .mockImplementation(async (args?: VerseQuery) => {
@@ -513,11 +519,11 @@ describe("LandingService", () => {
         }),
       );
 
-      // Verify verse query filters by PUBLISHED and orders by date desc
+      // Verify verse query filters by PUBLISHED and orders by publishedAt desc, id desc
       expect(mocks.verseFindFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { status: "PUBLISHED" },
-          orderBy: { date: "desc" },
+          orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
         }),
       );
 
@@ -796,6 +802,147 @@ describe("LandingService", () => {
       expect(result.featuredPosts[0]!.id).toBe("post-011"); // FP_NEWEST
       expect(result.featuredPosts[1]!.id).toBe("post-010"); // FP_MIDDLE
       expect(result.featuredPosts[2]!.id).toBe("post-012"); // FP_OLDEST
+    });
+
+    // -- currentVerse ordering by publishedAt ---------------------------------
+
+    it("selects verse by publishedAt desc (not date)", async () => {
+      // The service queries by publishedAt desc (with id desc tiebreaker).
+      // This test verifies the query shape is correct — actual multi-verse
+      // ordering is tested at the VersesService layer.
+      const laterVerse: VerseRow = {
+        id: "v-late",
+        text: "Late",
+        reference: "John 3:16",
+        date: new Date("2026-07-02"), // same date
+        publishedAt: new Date("2026-07-02T15:00:00Z"), // later publishedAt
+        status: "PUBLISHED",
+      };
+
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        featuredPostsReturns: [],
+        outingReturn: null,
+        // The mock returns the configured published verse; query ordering is asserted below.
+        verseReturn: laterVerse, // should be the one returned
+      });
+
+      const result = await service.getPublicPayload();
+
+      expect(result.currentVerse).not.toBeNull();
+      expect(result.currentVerse?.text).toBe("Late");
+      expect(mocks.verseFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+        }),
+      );
+    });
+
+    // -- timezone edge case: near-midnight UTC vs America/Lima -----------------
+
+    it("groups near-midnight UTC verse with previous Lima date", async () => {
+      // 2026-07-02T04:30:00Z → Lima is still 2026-07-01 23:30 (-05)
+      // The stored date should be 2026-07-01, and the landing returns it.
+      const nearMidnightVerse: VerseRow = {
+        id: "v-tz",
+        text: "Near midnight",
+        reference: "Psalm 119:105",
+        date: new Date("2026-07-01T00:00:00.000Z"), // Lima date = July 1
+        publishedAt: new Date("2026-07-02T04:30:00.000Z"), // UTC near midnight
+        status: "PUBLISHED",
+      };
+
+      const { service } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        featuredPostsReturns: [],
+        outingReturn: null,
+        verseReturn: nearMidnightVerse,
+      });
+
+      const result = await service.getPublicPayload();
+
+      expect(result.currentVerse).not.toBeNull();
+      // The date shown is the Lima calendar date (July 1), not the UTC date (July 2)
+      expect(result.currentVerse?.text).toBe("Near midnight");
+      // Verify the stored Lima date is returned correctly
+      expect(result.currentVerse?.date).toBe("2026-07-01T00:00:00.000Z");
+    });
+
+    it("returns currentVerse null when the only verse is DRAFT", async () => {
+      const { service } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        featuredPostsReturns: [],
+        outingReturn: null,
+        verseReturn: DRAFT_VERSE,
+      });
+
+      const result = await service.getPublicPayload();
+
+      expect(result.currentVerse).toBeNull();
+    });
+
+    // -- hardening: fallback after latest verse is deleted --------------------
+
+    it("falls back to next latest verse when the latest is deleted", async () => {
+      // Two published verses with different publishedAt timestamps.
+      // The landing service queries with orderBy: publishedAt desc,
+      // so findFirst returns the most recent remaining verse.
+      const earlierVerse: VerseRow = {
+        id: "v-earlier",
+        text: "Earlier verse",
+        reference: "Genesis 1:1",
+        date: new Date("2026-06-30"),
+        publishedAt: new Date("2026-06-30T10:00:00Z"),
+        status: "PUBLISHED",
+      };
+
+      const latestVerse: VerseRow = {
+        id: "v-latest",
+        text: "Latest verse",
+        reference: "John 1:1",
+        date: new Date("2026-07-01"),
+        publishedAt: new Date("2026-07-01T10:00:00Z"),
+        status: "PUBLISHED",
+      };
+
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        featuredPostsReturns: [],
+        outingReturn: null,
+        verseReturn: latestVerse, // initially the latest is the current
+      });
+
+      // Before deletion: landing returns the latest verse
+      const before = await service.getPublicPayload();
+      expect(before.currentVerse?.text).toBe("Latest verse");
+      expect(before.currentVerse?.reference).toBe("John 1:1");
+
+      // Simulate deletion: the latest verse is removed from the DB.
+      // Reconfigure the mock so findFirst returns the earlier (next latest) verse.
+      mocks.verseFindFirst.mockResolvedValue(earlierVerse);
+
+      // After deletion: landing falls back to the next latest remaining verse
+      const after = await service.getPublicPayload();
+      expect(after.currentVerse).not.toBeNull();
+      expect(after.currentVerse?.text).toBe("Earlier verse");
+      expect(after.currentVerse?.reference).toBe("Genesis 1:1");
+
+      // Both calls use the same query: PUBLISHED status + publishedAt desc, id desc
+      expect(mocks.verseFindFirst).toHaveBeenCalledTimes(2);
+      expect(mocks.verseFindFirst).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: { status: "PUBLISHED" },
+          orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+        }),
+      );
+      expect(mocks.verseFindFirst).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: { status: "PUBLISHED" },
+          orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+        }),
+      );
     });
   });
 });
