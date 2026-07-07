@@ -232,11 +232,14 @@ model PostDownload {
 }
 
 model Verse {
-  // DB: @@unique([date]) — one verse per date, @@index([status, date]), @@index([createdById])
+  // DB: multiple verses per date allowed; publishedAt is the UTC instant of creation;
+  //     date is the Peru business-day date derived from publishedAt (America/Lima).
+  //     @@index([status, publishedAt]) for latest-remaining ordering; @@index([createdById]).
   id          String        @id @default(uuid())
   text        String
   reference   String
   date        DateTime
+  publishedAt DateTime?
   status      ContentStatus @default(PUBLISHED)
   createdById String?
   createdAt   DateTime      @default(now())
@@ -245,8 +248,7 @@ model Verse {
   createdBy ResponsibleUser? @relation(fields: [createdById], references: [id])
   revisions VerseRevision[]
 
-  @@unique([date])
-  @@index([status, date])
+  @@index([status, publishedAt])
   @@index([createdById])
 }
 
@@ -259,7 +261,7 @@ model VerseRevision {
   changedAt   DateTime @default(now())
   changedById String?
 
-  verse     Verse            @relation(fields: [verseId], references: [id])
+  verse     Verse            @relation(fields: [verseId], references: [id], onDelete: Cascade)
   changedBy ResponsibleUser? @relation(fields: [changedById], references: [id])
 
   @@index([verseId, changedAt])

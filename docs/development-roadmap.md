@@ -4,9 +4,9 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Estamos listos para empezar el **paso 8: Posts**.
+Estamos listos para empezar el **paso 9: Versículo diario**.
 
-Ya está terminada la base técnica completa, incluyendo autenticación, responsables, archivos/uploads, una primera landing pública editable y la sección de salidas:
+Ya está terminada la base técnica completa, incluyendo autenticación, responsables, archivos/uploads, una primera landing pública editable, salidas y posts:
 
 ### Base técnica (pasos 1–3)
 - Documento técnico base.
@@ -65,7 +65,18 @@ Ya está terminada la base técnica completa, incluyendo autenticación, respons
 - Spec SDD `outings` archivada como `openspec/changes/archive/2026-07-06-outings/`.
 - Cadena de commits de Outings pusheada manualmente.
 
-En otras palabras: el panel admin ya tiene login, sesiones seguras, CRUD de responsables, uploads sólidos, landing pública editable y la primera entidad de contenido real publicada. Ahora conviene avanzar sobre Posts para completar el segundo gran bloque de contenido público.
+### Posts (paso 8)
+- Posts API implementada con CRUD admin, estados `DRAFT`, `PUBLISHED`, `ARCHIVED`, slug, tags simples, portada y archivos descargables.
+- HTML sanitizado en backend antes de persistir y sanitizado nuevamente en frontend antes de renderizar.
+- Links externos públicos se renderizan con `target="_blank"` y `rel="noopener noreferrer"`.
+- Imágenes embebidas, tablas, estilos inline, colores, iframes y scripts quedan fuera del editor MVP.
+- Máximo 3 posts destacados, ordenados por `FeaturedPost.featuredAt desc` y no por `Post.updatedAt`.
+- Listado y detalle público de posts publicados en `/posts` y `/posts/:slug`.
+- Landing integrada con posts destacados publicados, cap de 3 y orden por timestamp de destacado.
+- 515 tests pasando, typecheck, lint y estado de migraciones limpios en la verificación final.
+- Spec SDD `posts` archivada como `openspec/changes/archive/2026-07-06-posts/`.
+
+En otras palabras: el panel admin ya tiene login, sesiones seguras, CRUD de responsables, uploads sólidos, landing pública editable y dos entidades de contenido reales publicadas: Salidas y Posts. Ahora conviene avanzar sobre Versículo diario para completar el contenido espiritual recurrente del sitio.
 
 ## Camino hasta finalizar el MVP
 
@@ -254,6 +265,8 @@ Avance actual:
 
 ### 8. Posts
 
+**Estado:** ✅ Completo.
+
 Implementar backend, frontend público y admin:
 
 - CRUD admin
@@ -268,6 +281,20 @@ Implementar backend, frontend público y admin:
 - sin imágenes embebidas
 
 **Resultado esperado:** sección `/posts` completa.
+
+Avance actual:
+
+- ✅ Backend de Posts con CRUD admin, estados, slug y validaciones.
+- ✅ HTML sanitizado en backend antes de persistir.
+- ✅ Sanitización defensiva en frontend antes de renderizar contenido público.
+- ✅ Tags simples, portada y archivos descargables.
+- ✅ Máximo 3 posts destacados con orden por `FeaturedPost.featuredAt desc`.
+- ✅ Listado y detalle público en `/posts` y `/posts/:slug`.
+- ✅ Links externos seguros con nueva pestaña y `noopener noreferrer`.
+- ✅ Imágenes embebidas y HTML peligroso fuera del MVP.
+- ✅ Landing actualizada para mostrar hasta 3 posts destacados publicados.
+- ✅ 515 tests pasando, typecheck, lint y migraciones al día en verificación final.
+- ✅ Spec SDD `posts` archivada como `openspec/changes/archive/2026-07-06-posts/`.
 
 ### 9. Versículo diario
 
@@ -354,6 +381,6 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser **Posts**.
+El próximo SDD change debería ser **Versículo diario**.
 
-Con auth, responsables, archivos, landing y Salidas ya resueltos, Posts es el siguiente slice natural: completa el contenido editorial del sitio público, reutiliza uploads para portadas y descargables, y deja preparada la base para destacar contenido desde landing.
+Con auth, responsables, archivos, landing, Salidas y Posts ya resueltos, Versículo diario es el siguiente slice natural: completa el contenido espiritual recurrente, alimenta la landing con el versículo actual y prepara el historial público de `/versiculos`.
