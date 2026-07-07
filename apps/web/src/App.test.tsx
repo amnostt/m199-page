@@ -786,3 +786,67 @@ describe("Posts routing precedence (3.3)", () => {
     expectNoSection("post-detail-section");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Admin route detection (Task 1.4) — PR1
+// ---------------------------------------------------------------------------
+
+describe("Admin route (1.4)", () => {
+  it("renders AdminApp at /admin (bootstrap loading state)", () => {
+    // Never-resolving fetch keeps the bootstrap pending
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() => new Promise<Response>(() => {}));
+
+    render(<App pathname="/admin" />);
+
+    // Should render admin loading, not landing shell or public routes
+    expect(screen.getByTestId("admin-loading")).toBeTruthy();
+    expectNoSection("hero-section");
+    expectNoSection("shell-fallback");
+  });
+
+  it("renders AdminApp at /admin/some-subpath", () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() => new Promise<Response>(() => {}));
+
+    render(<App pathname="/admin/landing" />);
+
+    // Admin subpath should still render admin (loading state)
+    expect(screen.getByTestId("admin-loading")).toBeTruthy();
+  });
+
+  it("/administrator does NOT match admin route (triangulate)", async () => {
+    // /administrator is a public path — should NOT render admin loading/login/shell
+    globalThis.fetch = mockFetchOk(FULL_PAYLOAD) as unknown as typeof fetch;
+
+    render(<App pathname="/administrator" />);
+
+    // Wait for landing to load (not admin)
+    await waitFor(() => {
+      expectSection("hero-section");
+    });
+
+    // Admin artifacts must NOT be present
+    expectNoSection("admin-loading");
+    expectNoSection("admin-login");
+    expectNoSection("admin-shell");
+
+    // Landing content should render normally
+    expect(screen.getByText("Misión 1-99")).toBeTruthy();
+  });
+
+  it("public routes are NOT affected by admin route insertion", async () => {
+    // Landing still works
+    globalThis.fetch = mockFetchOk(FULL_PAYLOAD) as unknown as typeof fetch;
+
+    render(<App pathname="/" />);
+
+    await waitFor(() => {
+      expectSection("hero-section");
+    });
+
+    expect(screen.getByText("Misión 1-99")).toBeTruthy();
+  });
+});

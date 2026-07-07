@@ -12,7 +12,7 @@
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
-Chain strategy: pending
+Chain strategy: stacked-to-main (resolved by orchestrator)
 400-line budget risk: Medium
 
 ### Suggested Work Units
@@ -24,17 +24,17 @@ Chain strategy: pending
 
 ## Phase 1: Foundation — Types, Session, Proxy
 
-- [ ] 1.1 Create `apps/web/src/admin/adminTypes.ts` with `AuthUser` and `LandingSettings` interfaces per design
-- [ ] 1.2 Create `apps/web/src/admin/session.ts` with `login()`, `refreshSession()`, `logout()`, `adminFetch()` — credentials include, one 401 refresh retry, 403 logout redirect
-- [ ] 1.3 Add `/auth` proxy entry to `apps/web/vite.config.ts` targeting `API_TARGET` with `changeOrigin: true`
-- [ ] 1.4 Add `/admin` route detection in `apps/web/src/App.tsx` before public routes — render `<AdminApp>` for `/admin*`
+- [x] 1.1 Create `apps/web/src/admin/adminTypes.ts` with `AuthUser` and `LandingSettings` interfaces per design
+- [x] 1.2 Create `apps/web/src/admin/session.ts` with `login()`, `refreshSession()`, `logout()`, `adminFetch()` — credentials include, one 401 refresh retry, 403 logout redirect
+- [x] 1.3 Add `/auth` proxy entry to `apps/web/vite.config.ts` targeting `API_TARGET` with `changeOrigin: true`
+- [x] 1.4 Add `/admin` route detection in `apps/web/src/App.tsx` before public routes — render `<AdminApp>` for `/admin*`
 
 ## Phase 2: Admin Shell & Login
 
-- [ ] 2.1 Create `apps/web/src/admin/AdminApp.tsx` — on mount: `POST /auth/refresh` bootstrap → AuthUser sets shell; 401/403 shows login; no refresh on login screen
-- [ ] 2.2 Implement `AdminLogin` inline — email/password form calls `login()`, error state on failure
-- [ ] 2.3 Implement `AdminShell` with sidebar nav: Landing Settings active, placeholder entries (disabled/hidden) for Posts, Outings, Verses, Responsibles, Files
-- [ ] 2.4 Implement expired-session redirect: 401 on protected fetch → retry refresh → fail → clear state → show login
+- [x] 2.1 Create `apps/web/src/admin/AdminApp.tsx` — on mount: `POST /auth/refresh` bootstrap → AuthUser sets shell; 401/403 shows login; no refresh on login screen
+- [x] 2.2 Implement `AdminLogin` inline — email/password form calls `login()`, error state on failure
+- [x] 2.3 Implement `AdminShell` with sidebar nav: Landing Settings active, placeholder entries (disabled/hidden) for Posts, Outings, Verses, Responsibles, Files
+- [x] 2.4 Implement expired-session redirect: 401 on protected fetch → retry refresh → fail → clear state → show login
 
 ## Phase 3: Landing Settings Editor (PR 2)
 
@@ -45,11 +45,11 @@ Chain strategy: pending
 
 ## Phase 4: Testing
 
-- [ ] 4.1 Create `apps/web/src/admin/session.test.ts` — unit tests for `login` POST body/credentials, `refreshSession` POST, `logout` POST, `adminFetch` 401 retry, `adminFetch` 403 redirect path
-- [ ] 4.2 Write admin component tests in `apps/web/src/admin/AdminApp.test.tsx` — bootstrap refresh success/failure, login submit success/error, shell navigation renders placeholders, expired session clears to login
+- [x] 4.1 Create `apps/web/src/admin/session.test.ts` — unit tests for `login` POST body/credentials, `refreshSession` POST, `logout` POST, `adminFetch` 401 retry, `adminFetch` 403 redirect path
+- [x] 4.2 Write admin component tests in `apps/web/src/admin/AdminApp.test.tsx` — bootstrap refresh success/failure, login submit success/error, shell navigation renders placeholders, expired session clears to login
 - [ ] 4.3 Write Landing Settings tests — null response normalizes to empty form, confirm triggers before PUT, save success updates UI, save error shows message, loading state blocks interaction
 
 ## Phase 5: Cleanup
 
-- [ ] 5.1 Remove any temporary debug logs or inline TODO markers
-- [ ] 5.2 Verify existing public route tests in `App.test.tsx` still pass after `/admin` route insertion
+- [x] 5.1 Remove any temporary debug logs or inline TODO markers
+- [x] 5.2 Verify existing public route tests in `App.test.tsx` still pass after `/admin` route insertion

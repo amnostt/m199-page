@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PostsList } from "./components/PostsList.js";
 import { PostDetail } from "./components/PostDetail.js";
+import { AdminApp } from "./admin/AdminApp.js";
 
 // ---------------------------------------------------------------------------
 // Types — mirrors LandingPublicPayload from the API design contract
@@ -468,6 +469,11 @@ function LandingPage() {
 
 export function App({ pathname }: { pathname?: string }) {
   const rawPath = pathname ?? window.location.pathname;
+
+  // Admin route: /admin exactly, or /admin/* (excludes /administrator etc.)
+  if (rawPath === "/admin" || rawPath.startsWith("/admin/")) {
+    return <AdminApp />;
+  }
 
   // Post detail: /posts/:slug (check before /posts list)
   const postSlug = matchPostSlug(rawPath);
