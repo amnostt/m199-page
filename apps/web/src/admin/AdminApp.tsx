@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 import type { AuthUser } from "./adminTypes.js";
 import { login, logout, refreshSession } from "./session.js";
+import { LandingSettingsPage } from "./LandingSettingsPage.js";
 
 // ---------------------------------------------------------------------------
 // Timeout constants — prevent permanent loading/submitting when auth
@@ -150,7 +151,7 @@ function AdminShell({
         </ul>
       </nav>
       <main data-testid="admin-content">
-        <p>Select a section from the sidebar.</p>
+        <LandingSettingsPage />
       </main>
       <footer>
         <button

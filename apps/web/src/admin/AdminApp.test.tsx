@@ -246,14 +246,10 @@ describe("AdminApp shell navigation", () => {
 
   it("renders Landing Settings nav item as active link", async () => {
     await renderShell();
-    const landingLink = screen.getByText(/landing settings/i);
+    const landingLink = screen.getByTestId("nav-landing-settings");
     expect(landingLink).toBeTruthy();
     // Should be navigable (not disabled)
-    const linkEl = landingLink.closest("a") ?? landingLink.closest("button");
-    expect(linkEl).toBeTruthy();
-    if (linkEl instanceof HTMLButtonElement) {
-      expect(linkEl.disabled).toBe(false);
-    }
+    expect(landingLink.tagName).toBe("A");
   });
 
   it("renders placeholder nav items for out-of-scope sections as disabled", async () => {
@@ -350,10 +346,30 @@ describe("AdminApp expired session", () => {
 // ---------------------------------------------------------------------------
 
 describe("AdminApp triangulation", () => {
-  it("shows placeholder content in main area when no section is selected", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(AUTH_USER),
+  it("renders Landing Settings editor by default in content area", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(AUTH_USER),
+        });
+      }
+      // Landing settings GET
+      if (url === "/landing/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              mission: "m",
+              vision: "v",
+              description: "d",
+              featuredVideoUrl: null,
+              contactEmail: null,
+              contactPhone: null,
+            }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
     render(<AdminApp />);
@@ -362,8 +378,12 @@ describe("AdminApp triangulation", () => {
       expect(screen.getByTestId("admin-shell")).toBeTruthy();
     });
 
+    // Landing Settings editor should be visible inside the shell
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
     expect(screen.getByTestId("admin-content")).toBeTruthy();
-    expect(screen.getByText(/select a section/i)).toBeTruthy();
   });
 
   it("login submit button is disabled while submitting", async () => {

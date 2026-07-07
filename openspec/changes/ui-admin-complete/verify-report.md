@@ -94,3 +94,59 @@ Post-remediation: **588/588 monorepo tests pass** (96 web + 470 api + 22 db). Ty
 | Tests: 4 new tests | Bootstrap timeout → login fallback, login timeout → error state, adminFetch retry-500 surface, adminFetch retry-network surface. |
 
 Post-remediation: **104 web tests pass** (session: 18, AdminApp: 17, App: 33 + existing component tests). Typecheck and lint clean.
+
+---
+
+# Verification Report: ui-admin-complete — PR2 Landing Settings Editor
+
+## Status
+
+PASS
+
+## Scope
+
+Verified PR2 only on branch `feat/ui-admin-landing-settings`: Landing Settings editor for LP-01 base fields, integrated into the existing admin shell/navigation.
+
+Out-of-scope features remain absent from the PR2 implementation: CRUD screens, roles, custom preview, hero image, featured outing management, featured posts management, and new heavy dependencies.
+
+## Runtime Evidence
+
+| Command | Result | Evidence |
+|---|---:|---|
+| `pnpm --filter @m199/web exec vitest run src/admin/LandingSettingsPage.test.tsx src/admin/AdminApp.test.tsx` | PASS | 2 files / 32 tests passed |
+| `pnpm test` | PASS | web: 7 files / 119 tests; api: 35 files / 470 tests; db: 3 files / 22 tests |
+| `pnpm typecheck` | PASS | web, api, and db `tsc --noEmit` passed |
+| `pnpm lint` | PASS | `eslint .` exited cleanly |
+
+## PR2 Compliance
+
+| Criterion | Result | Evidence |
+|---|---:|---|
+| Landing Settings editor is integrated into existing admin shell/navigation | PASS | `AdminApp.tsx` imports `LandingSettingsPage` and renders it inside `admin-content`; `AdminApp.test.tsx` covers default editor rendering. |
+| LP-01 base fields only | PASS | `LandingSettings`/`LandingSettingsForm` include only `mission`, `vision`, `description`, `featuredVideoUrl`, `contactEmail`, and `contactPhone`; form renders only those fields. |
+| `GET /landing/admin` loads via `adminFetch` | PASS | `LandingSettingsPage.tsx` calls `adminFetch<LandingSettings | null>("/landing/admin")` on mount; test asserts fetch receives credentials through `adminFetch`. |
+| `null` response normalized to empty form values | PASS | `normalizeLandingSettings(null)` path returns empty strings; `LandingSettingsPage.test.tsx` covers full null and partial-null responses. |
+| Native `window.confirm` before every save | PASS | `handleSave()` returns before PUT when `window.confirm(...)` is false; tests cover confirm call and cancel path. |
+| `PUT /landing/admin` sends only LP-01 base fields | PASS | Save body serializes the normalized form object containing only the six LP-01 fields; test parses the PUT body and asserts each base field. |
+| Loading/error/success states for load and save | PASS | Component renders load spinner, load error, save success, save error, and disables form/button while saving; tests cover each behavior. |
+| Required tests present | PASS | Tests cover load success, null normalization, load error, editing, confirm cancel, save success, and save error. |
+| Out-of-scope features excluded | PASS | Changed PR2 files only add Landing Settings editor/types/tests and shell integration; no preview, hero image, roles, CRUD screens, featured outing/posts management, or dependencies added. |
+
+## Strict TDD Compliance
+
+| Check | Result | Details |
+|---|---:|---|
+| TDD evidence reported | PASS | Engram `sdd/ui-admin-complete/apply-progress` includes a TDD Cycle Evidence table for tasks 3.1-3.4. |
+| RED confirmed | PASS | Reported test file `apps/web/src/admin/LandingSettingsPage.test.tsx` exists and imports the production component. |
+| GREEN confirmed | PASS | Targeted PR2 web tests passed: `LandingSettingsPage.test.tsx` 15/15 and `AdminApp.test.tsx` 17/17. |
+| Triangulation adequate | PASS | Landing Settings tests cover success, full null, partial null, rejected and non-OK load failures, confirm cancel, confirm accept, save success, save failure, loading, and saving-disabled states. |
+| Safety net | PASS | Apply-progress reports 104/104 baseline tests before PR2; current full suite passes 611/611 total tests across web/api/db. |
+| Assertion quality | PASS | Assertions check user-visible form values, request URL/method/body/credentials, confirm behavior, and UI state; no tautologies, ghost loops, or CSS-class assertions found in PR2 tests. |
+
+## Risks
+
+- The PR2 work is currently present as uncommitted working-tree changes on `feat/ui-admin-landing-settings`; `HEAD` is still `699bbc0` and `main...HEAD` is empty until these files are committed.
+
+## Verdict
+
+PASS — PR2 implementation matches the Landing Settings editor acceptance criteria, all required tests/typecheck/lint are clean, and the change stays within the declared PR2 scope. Commit the working tree before opening or comparing the PR.

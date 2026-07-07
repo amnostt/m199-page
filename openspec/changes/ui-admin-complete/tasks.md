@@ -53,16 +53,16 @@ This PR (PR1) targets `main`. PR2 (Landing Settings editor) will target the `fea
 
 ## Phase 3: Landing Settings Editor (PR 2)
 
-- [ ] 3.1 Create `apps/web/src/admin/LandingSettingsPage.tsx` — `GET /landing/admin` on mount; normalize null response to empty string form values for all LP-01 fields
-- [ ] 3.2 Render editable fields for mission, vision, description, featuredVideoUrl, contactEmail, contactPhone
-- [ ] 3.3 Implement save flow: `window.confirm` gate → `PUT /landing/admin` with credentials → success toast/inline message; error state on failure
-- [ ] 3.4 Loading state during fetch/save, disabled form during save, error banner on load/save failure
+- [x] 3.1 Create `apps/web/src/admin/LandingSettingsPage.tsx` — `GET /landing/admin` on mount; normalize null response to empty string form values for all LP-01 fields
+- [x] 3.2 Render editable fields for mission, vision, description, featuredVideoUrl, contactEmail, contactPhone
+- [x] 3.3 Implement save flow: `window.confirm` gate → `PUT /landing/admin` with credentials → success toast/inline message; error state on failure
+- [x] 3.4 Loading state during fetch/save, disabled form during save, error banner on load/save failure
 
 ## Phase 4: Testing
 
 - [x] 4.1 Create `apps/web/src/admin/session.test.ts` — unit tests for `login` POST body/credentials, `refreshSession` POST, `logout` POST, `adminFetch` 401 retry, `adminFetch` 403 redirect path
 - [x] 4.2 Write admin component tests in `apps/web/src/admin/AdminApp.test.tsx` — bootstrap refresh success/failure, login submit success/error, shell navigation renders placeholders, expired session clears to login
-- [ ] 4.3 Write Landing Settings tests — null response normalizes to empty form, confirm triggers before PUT, save success updates UI, save error shows message, loading state blocks interaction
+- [x] 4.3 Write Landing Settings tests — null response normalizes to empty form, confirm triggers before PUT, save success updates UI, save error shows message, loading state blocks interaction
 
 ## Phase 5: Cleanup
 
