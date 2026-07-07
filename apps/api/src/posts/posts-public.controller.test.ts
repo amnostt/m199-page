@@ -1,0 +1,191 @@
+/**
+ * PostsPublicController tests — PR 2 (Task 2.2).
+ *
+ * Proves public routes return only PUBLISHED posts, 404 for DRAFT/ARCHIVED/
+ * missing. Follows outings-public.controller.test.ts pattern.
+ */
+import { Test } from "@nestjs/testing";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
+import type { INestApplication } from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
+import request from "supertest";
+import { PostsPublicController } from "./posts-public.controller.js";
+import { PostsService } from "./posts.service.js";
+
+// ---- test data ------------------------------------------------------------
+
+const NOW = new Date("2026-07-06T12:00:00.000Z");
+
+const PUBLISHED_POST = {
+  id: "post-001",
+  slug: "my-post",
+  title: "My Post",
+  description: "A test post",
+  coverImageId: "img-001",
+  content: "<p>Hello <strong>world</strong></p>",
+  status: "PUBLISHED" as const,
+  tags: ["ministry"],
+  createdById: "user-1",
+  publishedAt: NOW,
+  createdAt: NOW,
+  updatedAt: NOW,
+};
+
+const DRAFT_POST = {
+  id: "post-002",
+  slug: "draft-post",
+  title: "Draft Post",
+  description: "",
+  coverImageId: null,
+  content: "<p>Draft content</p>",
+  status: "DRAFT" as const,
+  tags: [],
+  createdById: "user-1",
+  publishedAt: null,
+  createdAt: NOW,
+  updatedAt: NOW,
+};
+
+const PUBLIC_RESPONSE = {
+  id: "post-001",
+  slug: "my-post",
+  title: "My Post",
+  description: "A test post",
+  coverImageUrl: "/files/img-001",
+  content: "<p>Hello <strong>world</strong></p>",
+  status: "PUBLISHED" as const,
+  tags: ["ministry"],
+  publishedAt: "2026-07-06T12:00:00.000Z",
+};
+
+// ---- helpers --------------------------------------------------------------
+
+function mockPostsService(): PostsService {
+  return {
+    findAllPublic: vi.fn().mockResolvedValue([PUBLIC_RESPONSE]),
+    findBySlug: vi.fn().mockResolvedValue(PUBLISHED_POST),
+    findAll: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    publish: vi.fn(),
+    archive: vi.fn(),
+    delete: vi.fn(),
+    feature: vi.fn(),
+    unfeature: vi.fn(),
+  } as unknown as PostsService;
+}
+
+// ---- tests ----------------------------------------------------------------
+
+describe("PostsPublicController", () => {
+  let controller: PostsPublicController;
+  let service: PostsService;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+
+    service = mockPostsService();
+
+    const module = await Test.createTestingModule({
+      controllers: [PostsPublicController],
+      providers: [{ provide: PostsService, useValue: service }],
+    }).compile();
+
+    controller = module.get(PostsPublicController);
+  });
+
+  // ---- GET /posts ----------------------------------------------------------
+
+  describe("GET /posts", () => {
+    it("delegates to service.findAllPublic and returns published posts", async () => {
+      const result = await controller.findAllPublic();
+
+      expect(service.findAllPublic).toHaveBeenCalledOnce();
+      expect(result).toEqual([PUBLIC_RESPONSE]);
+    });
+
+    it("returns empty array when no published posts", async () => {
+      (service.findAllPublic as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
+
+      const result = await controller.findAllPublic();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ---- GET /posts/:slug ----------------------------------------------------
+
+  describe("GET /posts/:slug", () => {
+    it("returns a published post by slug", async () => {
+      const result = await controller.findBySlug("my-post");
+
+      expect(service.findBySlug).toHaveBeenCalledWith("my-post");
+      expect(result.slug).toBe("my-post");
+      expect(result.title).toBe("My Post");
+      expect(result.coverImageUrl).toBe("/files/img-001");
+    });
+
+    it("returns 404 for a DRAFT post", async () => {
+      (service.findBySlug as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        DRAFT_POST,
+      );
+
+      await expect(
+        controller.findBySlug("draft-post"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("returns 404 for an ARCHIVED post", async () => {
+      const archivedPost = { ...DRAFT_POST, status: "ARCHIVED" as const };
+      (service.findBySlug as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        archivedPost,
+      );
+
+      await expect(
+        controller.findBySlug("archived-post"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("returns 404 for a missing post", async () => {
+      (service.findBySlug as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+
+      await expect(
+        controller.findBySlug("non-existent"),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ---- Route-level 404 for non-published via HTTP ---------------------------
+
+  describe("Route-level 404 for non-published posts via HTTP", () => {
+    let app: INestApplication;
+
+    beforeAll(async () => {
+      const svc = mockPostsService();
+      // findBySlug returns null (missing post)
+      (svc.findBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+      const module = await Test.createTestingModule({
+        controllers: [PostsPublicController],
+        providers: [{ provide: PostsService, useValue: svc }],
+      }).compile();
+
+      app = module.createNestApplication();
+      await app.init();
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it("returns 404 for GET /posts/non-existent", async () => {
+      const res = await request(app.getHttpServer()).get("/posts/non-existent");
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 200 for GET /posts (list is always allowed)", async () => {
+      const res = await request(app.getHttpServer()).get("/posts");
+      expect(res.status).toBe(200);
+    });
+  });
+});

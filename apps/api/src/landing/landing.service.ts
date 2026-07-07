@@ -52,6 +52,7 @@ interface FeaturedPostRow {
   id: string;
   slot: string;
   postId: string;
+  featuredAt: Date;
   post: PostRow;
 }
 
@@ -76,6 +77,8 @@ interface LandingPrismaClient {
     findMany(args?: {
       where?: { post?: { status?: string } };
       include?: { post?: boolean };
+      orderBy?: { featuredAt?: string };
+      take?: number;
     }): Promise<FeaturedPostRow[]>;
   };
   outing: {
@@ -215,10 +218,12 @@ export class LandingService {
   async getPublicPayload(): Promise<LandingPublicPayload> {
     const settings = await this.client.landingSettings.findFirst();
 
-    // Fetch featured posts filtered to PUBLISHED at DB level (LP-02).
+    // Fetch featured posts filtered to PUBLISHED, ordered by featuredAt desc, capped at 3 (LP-02).
     const featuredPosts = await this.client.featuredPost.findMany({
       where: { post: { status: "PUBLISHED" } },
       include: { post: true },
+      orderBy: { featuredAt: "desc" },
+      take: 3,
     });
 
     // Fetch featured outing only if featuredOutingId is set.

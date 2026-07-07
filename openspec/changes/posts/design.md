@@ -76,7 +76,7 @@ Admin routes, all guarded by `AuthGuard`:
 | Route | Behavior |
 |---|---|
 | `GET /posts/admin` | List posts with optional status/pagination. |
-| `GET /posts/admin/:id` | Read one post for editing. |
+| `GET /posts/admin/slug/:slug` | Read one post for editing by slug. |
 | `POST /posts/admin` | Create post; sanitize content; validate cover/download file categories. |
 | `PATCH /posts/admin/:id` | Update post; normal edits never touch `FeaturedPost.featuredAt`. |
 | `POST /posts/admin/:id/publish` | Set `PUBLISHED`, setting `publishedAt` when first published. |

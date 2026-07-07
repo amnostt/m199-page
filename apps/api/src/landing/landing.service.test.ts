@@ -53,6 +53,7 @@ interface FeaturedPostRow {
   id: string;
   slot: string;
   postId: string;
+  featuredAt: Date;
   post: PostRow;
 }
 
@@ -125,6 +126,7 @@ const FEATURED_PUBLISHED: FeaturedPostRow = {
   id: "fp-1",
   slot: "SLOT_1",
   postId: "post-001",
+  featuredAt: new Date("2026-07-01T12:00:00Z"),
   post: PUBLISHED_POST,
 };
 
@@ -132,7 +134,77 @@ const FEATURED_DRAFT: FeaturedPostRow = {
   id: "fp-2",
   slot: "SLOT_2",
   postId: "post-002",
+  featuredAt: new Date("2026-07-02T12:00:00Z"),
   post: DRAFT_POST,
+};
+
+// Multiple featured posts with different timestamps for ordering tests
+const POST_B: PostRow = {
+  id: "post-010",
+  slug: "post-beta",
+  title: "Post Beta",
+  status: "PUBLISHED",
+  coverImageId: "img-beta",
+};
+
+const POST_A: PostRow = {
+  id: "post-011",
+  slug: "post-alpha",
+  title: "Post Alpha",
+  status: "PUBLISHED",
+  coverImageId: "img-alpha",
+};
+
+const POST_C: PostRow = {
+  id: "post-012",
+  slug: "post-gamma",
+  title: "Post Gamma",
+  status: "PUBLISHED",
+  coverImageId: "img-gamma",
+};
+
+const POST_D: PostRow = {
+  id: "post-013",
+  slug: "post-delta",
+  title: "Post Delta",
+  status: "PUBLISHED",
+  coverImageId: null,
+};
+
+// Newest featuredAt = most recently featured
+const FP_NEWEST: FeaturedPostRow = {
+  id: "fp-newest",
+  slot: "SLOT_1",
+  postId: "post-011",
+  featuredAt: new Date("2026-07-05T12:00:00Z"),
+  post: POST_A,
+};
+
+// Middle featuredAt
+const FP_MIDDLE: FeaturedPostRow = {
+  id: "fp-middle",
+  slot: "SLOT_2",
+  postId: "post-010",
+  featuredAt: new Date("2026-07-03T12:00:00Z"),
+  post: POST_B,
+};
+
+// Oldest featuredAt
+const FP_OLDEST: FeaturedPostRow = {
+  id: "fp-oldest",
+  slot: "SLOT_3",
+  postId: "post-012",
+  featuredAt: new Date("2026-07-01T12:00:00Z"),
+  post: POST_C,
+};
+
+// Fourth post (should be excluded by take:3)
+const FP_FOURTH: FeaturedPostRow = {
+  id: "fp-fourth",
+  slot: "SLOT_1",
+  postId: "post-013",
+  featuredAt: new Date("2026-06-01T12:00:00Z"),
+  post: POST_D,
 };
 
 const CURRENT_VERSE: VerseRow = {
@@ -164,6 +236,8 @@ interface MockDbOverrides {
 interface FeaturedPostQuery {
   where?: { post?: { status?: string } };
   include?: { post?: boolean };
+  orderBy?: { featuredAt?: string };
+  take?: number;
 }
 
 /** Query shape the service passes to verse.findFirst */
@@ -196,7 +270,7 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
       },
     );
 
-  // featuredPost.findMany — respects where.post.status filter like real Prisma
+  // featuredPost.findMany — respects where, orderBy.featuredAt desc, and take
   const findMany = vi
     .fn<(args?: FeaturedPostQuery) => Promise<FeaturedPostRow[]>>()
     .mockImplementation(async (args?: FeaturedPostQuery) => {
@@ -205,6 +279,17 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
         results = results.filter(
           (fp) => fp.post.status === args.where!.post!.status,
         );
+      }
+      // Respect orderBy.featuredAt desc
+      const orderBy = args?.orderBy;
+      if (orderBy?.featuredAt === "desc") {
+        results = [...results].sort(
+          (a, b) => b.featuredAt.getTime() - a.featuredAt.getTime(),
+        );
+      }
+      // Respect take
+      if (args?.take != null) {
+        results = results.slice(0, args.take);
       }
       return results;
     });
@@ -419,10 +504,12 @@ describe("LandingService", () => {
       expect(result.currentVerse?.text).toContain("Todo lo puedo");
       expect(result.currentVerse?.reference).toBe("Filipenses 4:13");
 
-      // Verify featuredPosts query filters by PUBLISHED at DB level
+      // Verify featuredPosts query filters by PUBLISHED, ordered by featuredAt desc, capped at 3
       expect(mocks.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { post: { status: "PUBLISHED" } },
+          orderBy: { featuredAt: "desc" },
+          take: 3,
         }),
       );
 
@@ -661,6 +748,54 @@ describe("LandingService", () => {
 
       expect(result.featuredPosts).toHaveLength(1);
       expect(result.featuredPosts[0]!.coverImageUrl).toBeNull();
+    });
+    it("orders featured posts by featuredAt desc (newest first)", async () => {
+      // FP_NEWEST (Jul 5) > FP_MIDDLE (Jul 3) > FP_OLDEST (Jul 1)
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        featuredPostsReturns: [FP_MIDDLE, FP_OLDEST, FP_NEWEST], // unsorted input
+        outingReturn: null,
+        verseReturn: null,
+      });
+
+      const result = await service.getPublicPayload();
+
+      // Should be ordered newest → oldest
+      expect(result.featuredPosts).toHaveLength(3);
+      expect(result.featuredPosts[0]!.id).toBe("post-011"); // FP_NEWEST — Jul 5
+      expect(result.featuredPosts[1]!.id).toBe("post-010"); // FP_MIDDLE — Jul 3
+      expect(result.featuredPosts[2]!.id).toBe("post-012"); // FP_OLDEST — Jul 1
+
+      // Verify query uses orderBy and take
+      expect(mocks.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: { featuredAt: "desc" },
+          take: 3,
+        }),
+      );
+    });
+
+    it("caps featured posts at 3 (take: 3)", async () => {
+      // 4 featured published posts — only first 3 by featuredAt desc should appear
+      const { service } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        featuredPostsReturns: [
+          FP_FOURTH, // Jun 1 (oldest)
+          FP_OLDEST, // Jul 1
+          FP_MIDDLE, // Jul 3
+          FP_NEWEST, // Jul 5 (newest)
+        ],
+        outingReturn: null,
+        verseReturn: null,
+      });
+
+      const result = await service.getPublicPayload();
+
+      expect(result.featuredPosts).toHaveLength(3);
+      // Should be newest 3: FP_NEWEST, FP_MIDDLE, FP_OLDEST (FP_FOURTH excluded)
+      expect(result.featuredPosts[0]!.id).toBe("post-011"); // FP_NEWEST
+      expect(result.featuredPosts[1]!.id).toBe("post-010"); // FP_MIDDLE
+      expect(result.featuredPosts[2]!.id).toBe("post-012"); // FP_OLDEST
     });
   });
 });

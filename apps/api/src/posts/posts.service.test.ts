@@ -937,4 +937,239 @@ describe("PostsService (PR 1)", () => {
       expect(result[0]!.coverImageUrl).toBeNull();
     });
   });
+
+  // -- 2.4: feature ----------------------------------------------------------
+
+  describe("feature (2.4)", () => {
+    it("features a PUBLISHED post by creating a FeaturedPost row with first free slot", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        existingFeatured: [], // no featured posts yet
+      });
+
+      const result = await service.feature(PUBLISHED_POST.id);
+
+      // Should have created a FeaturedPost row
+      expect(mocks.featuredCreate).toHaveBeenCalledOnce();
+      const createArgs = mocks.featuredCreate.mock.calls[0]![0] as {
+        data: Record<string, unknown>;
+      };
+      expect(createArgs.data.postId).toBe(PUBLISHED_POST.id);
+      expect(createArgs.data.slot).toBe("SLOT_1"); // first free slot
+      expect(createArgs.data.featuredAt).toBeDefined();
+
+      expect(result.success).toBe(true);
+    });
+
+    it("assigns SLOT_2 when SLOT_1 is taken", async () => {
+      const existingFeatured: FeaturedPostRow[] = [
+        {
+          id: "fp-A",
+          slot: "SLOT_1",
+          postId: "other-post-1",
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+      ];
+
+      const { service, mocks } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        existingFeatured,
+      });
+
+      await service.feature(PUBLISHED_POST.id);
+
+      const createArgs = mocks.featuredCreate.mock.calls[0]![0] as {
+        data: Record<string, unknown>;
+      };
+      expect(createArgs.data.slot).toBe("SLOT_2");
+    });
+
+    it("assigns SLOT_3 when SLOT_1 and SLOT_2 are taken", async () => {
+      const existingFeatured: FeaturedPostRow[] = [
+        {
+          id: "fp-A",
+          slot: "SLOT_1",
+          postId: "other-post-1",
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+        {
+          id: "fp-B",
+          slot: "SLOT_2",
+          postId: "other-post-2",
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+      ];
+
+      const { service, mocks } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        existingFeatured,
+      });
+
+      await service.feature(PUBLISHED_POST.id);
+
+      const createArgs = mocks.featuredCreate.mock.calls[0]![0] as {
+        data: Record<string, unknown>;
+      };
+      expect(createArgs.data.slot).toBe("SLOT_3");
+    });
+
+    it("rejects feature when max 3 are already active (feature cap)", async () => {
+      const existingFeatured: FeaturedPostRow[] = [
+        {
+          id: "fp-A",
+          slot: "SLOT_1",
+          postId: "other-post-1",
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+        {
+          id: "fp-B",
+          slot: "SLOT_2",
+          postId: "other-post-2",
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+        {
+          id: "fp-C",
+          slot: "SLOT_3",
+          postId: "other-post-3",
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+      ];
+
+      const { service, mocks } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        existingFeatured,
+      });
+
+      await expect(
+        service.feature(PUBLISHED_POST.id),
+      ).rejects.toThrow("Maximum 3 featured");
+
+      // Should NOT have created a new featured row
+      expect(mocks.featuredCreate).not.toHaveBeenCalled();
+    });
+
+    it("updates featuredAt when re-featuring an already featured post", async () => {
+      const existingFeatured: FeaturedPostRow[] = [
+        {
+          id: "fp-A",
+          slot: "SLOT_1",
+          postId: PUBLISHED_POST.id,
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+      ];
+
+      const { service, mocks } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        existingFeatured,
+        findUniqueReturn: PUBLISHED_POST,
+      });
+
+      await service.feature(PUBLISHED_POST.id);
+
+      // Re-feature uses delete + create pattern to update featuredAt
+      expect(mocks.featuredDelete).toHaveBeenCalledOnce();
+      expect(mocks.featuredDelete).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { postId: PUBLISHED_POST.id } }),
+      );
+      expect(mocks.featuredCreate).toHaveBeenCalledOnce();
+      const createArgs = mocks.featuredCreate.mock.calls[0]![0] as {
+        data: Record<string, unknown>;
+      };
+      expect(createArgs.data.postId).toBe(PUBLISHED_POST.id);
+      expect(createArgs.data.slot).toBe("SLOT_1"); // preserves existing slot
+      // featuredAt should be a new Date() (later than EARLIER)
+      expect(createArgs.data.featuredAt).toBeDefined();
+    });
+
+    it("rejects featuring a DRAFT post", async () => {
+      const { service } = await buildService({
+        existingPosts: [DRAFT_POST],
+      });
+
+      await expect(
+        service.feature(DRAFT_POST.id),
+      ).rejects.toThrow("Only PUBLISHED posts can be featured");
+    });
+
+    it("rejects featuring an ARCHIVED post", async () => {
+      const { service } = await buildService({
+        existingPosts: [ARCHIVED_POST],
+      });
+
+      await expect(
+        service.feature(ARCHIVED_POST.id),
+      ).rejects.toThrow("Only PUBLISHED posts can be featured");
+    });
+
+    it("rejects featuring a non-existent post", async () => {
+      const { service } = await buildService();
+
+      await expect(
+        service.feature("non-existent-id"),
+      ).rejects.toThrow("not found");
+    });
+  });
+
+  // -- 2.5: unfeature --------------------------------------------------------
+
+  describe("unfeature (2.5)", () => {
+    it("unfeatures a post by deleting the FeaturedPost row", async () => {
+      const existingFeatured: FeaturedPostRow[] = [
+        {
+          id: "fp-A",
+          slot: "SLOT_1",
+          postId: PUBLISHED_POST.id,
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+      ];
+
+      const { service, mocks } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        existingFeatured,
+      });
+
+      const result = await service.unfeature(PUBLISHED_POST.id);
+
+      expect(mocks.featuredDelete).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { postId: PUBLISHED_POST.id } }),
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it("is idempotent when post is not featured (no error)", async () => {
+      const { service } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        existingFeatured: [],
+      });
+
+      // Should not throw even though there's no FeaturedPost row
+      const result = await service.unfeature(PUBLISHED_POST.id);
+
+      expect(result.success).toBe(true);
+    });
+
+    it("is idempotent when post does not exist", async () => {
+      const { service } = await buildService();
+
+      const result = await service.unfeature("non-existent-id");
+
+      expect(result.success).toBe(true);
+    });
+  });
 });

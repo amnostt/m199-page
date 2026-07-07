@@ -42,13 +42,13 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: Controllers + Featured + Landing (PR 2)
 
-- [ ] 2.1 Create `PostsAdminController` (`/posts/admin`) with `@UseGuards(AuthGuard)`, all routes per design; write RED→GREEN controller tests (401 unauthenticated, CRUD wiring)
-- [ ] 2.2 Create `PostsPublicController` (`/posts`) with `GET /` and `GET /:slug` returning only PUBLISHED; write RED→GREEN tests (published visible, 404 for DRAFT/ARCHIVED/missing)
-- [ ] 2.3 Register `PostsModule` in `apps/api/src/app.module.ts`
-- [ ] 2.4 Write RED test for feature cap (max 3 active, rejects 4th); implement `feature()` in PostsService with transaction (count < 3, assign first free SLOT_1..SLOT_3, set/update `featuredAt=now()`, require PUBLISHED)
-- [ ] 2.5 Write RED test for unfeature (deletes FeaturedPost row, idempotent); implement `unfeature()` in PostsService
-- [ ] 2.6 Write RED test for landing `getPublicPayload` featured ordering by `featuredAt desc`, take 3, PUBLISHED-only filter; update `LandingService` query with `orderBy: { featuredAt: "desc" }`, `take: 3`
-- [ ] 2.7 Update `LandingPrismaClient.featuredPost` interface to include `featuredAt` field; update existing landing tests for new ordering assertions
+- [x] 2.1 Create `PostsAdminController` (`/posts/admin`) with `@UseGuards(AuthGuard)`, all routes per design; write RED→GREEN controller tests (401 unauthenticated, CRUD wiring)
+- [x] 2.2 Create `PostsPublicController` (`/posts`) with `GET /` and `GET /:slug` returning only PUBLISHED; write RED→GREEN tests (published visible, 404 for DRAFT/ARCHIVED/missing)
+- [x] 2.3 Register `PostsModule` in `apps/api/src/app.module.ts`
+- [x] 2.4 Write RED test for feature cap (max 3 active, rejects 4th); implement `feature()` in PostsService with transaction (count < 3, assign first free SLOT_1..SLOT_3, set/update `featuredAt=now()`, require PUBLISHED)
+- [x] 2.5 Write RED test for unfeature (deletes FeaturedPost row, idempotent); implement `unfeature()` in PostsService
+- [x] 2.6 Write RED test for landing `getPublicPayload` featured ordering by `featuredAt desc`, take 3, PUBLISHED-only filter; update `LandingService` query with `orderBy: { featuredAt: "desc" }`, `take: 3`
+- [x] 2.7 Update `LandingPrismaClient.featuredPost` interface to include `featuredAt` field; update existing landing tests for new ordering assertions
 
 ## Phase 3: Web Public Posts (PR 3)
 

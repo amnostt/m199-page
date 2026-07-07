@@ -437,6 +437,101 @@ export class PostsService {
   }
 
   // -----------------------------------------------------------------------
+  // Feature / Unfeature (PR 2 — Tasks 2.4, 2.5)
+  // -----------------------------------------------------------------------
+
+  private readonly FEATURE_SLOTS = ["SLOT_1", "SLOT_2", "SLOT_3"] as const;
+
+  /**
+   * Features a PUBLISHED post (Task 2.4).
+   *
+   * - Post must be PUBLISHED.
+   * - Max 3 active featured posts. Rejects if cap is reached.
+   * - If already featured: delete old row and recreate with updated featuredAt.
+   * - Otherwise: create new FeaturedPost row with first free slot.
+   */
+  async feature(
+    postId: string,
+  ): Promise<{ success: true }> {
+    const post = await this.client.post.findUnique({ where: { id: postId } });
+    if (!post) {
+      throw new NotFoundException(`Post "${postId}" not found`);
+    }
+    if (post.status !== "PUBLISHED") {
+      throw new BadRequestException(
+        "Only PUBLISHED posts can be featured",
+      );
+    }
+
+    const existingFeatured = await this.client.featuredPost.findUnique({
+      where: { postId },
+    });
+
+    if (existingFeatured) {
+      // Re-feature: delete and recreate with updated featuredAt, preserving slot
+      await this.client.$transaction(async (tx) => {
+        await tx.featuredPost.delete({ where: { postId } });
+        await tx.featuredPost.create({
+          data: {
+            postId,
+            slot: existingFeatured.slot,
+            featuredAt: new Date(),
+          },
+        });
+      });
+      return { success: true };
+    }
+
+    // New feature: check cap
+    const count = await this.client.featuredPost.count();
+    if (count >= 3) {
+      throw new ConflictException(
+        "Maximum 3 featured posts reached. Unfeature a post before featuring another.",
+      );
+    }
+
+    // Find first free slot
+    const allFeatured = await this.client.featuredPost.findMany();
+    const takenSlots = new Set(allFeatured.map((fp) => fp.slot));
+    const freeSlot = this.FEATURE_SLOTS.find((s) => !takenSlots.has(s));
+    if (!freeSlot) {
+      // Should not happen if count < 3, but guard anyway
+      throw new ConflictException("No available featured slot");
+    }
+
+    await this.client.featuredPost.create({
+      data: {
+        postId,
+        slot: freeSlot,
+        featuredAt: new Date(),
+      },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Unfeatures a post by deleting its FeaturedPost row (Task 2.5).
+   *
+   * Idempotent: does not error if the post is not currently featured.
+   */
+  async unfeature(
+    postId: string,
+  ): Promise<{ success: true }> {
+    try {
+      await this.client.featuredPost.delete({ where: { postId } });
+    } catch (err: unknown) {
+      const pgErr = err as { code?: string };
+      // P2025 = record not found — already unfeatured, that's fine
+      if (pgErr.code !== "P2025") {
+        throw err;
+      }
+    }
+
+    return { success: true };
+  }
+
+  // -----------------------------------------------------------------------
   // Public API
   // -----------------------------------------------------------------------
 
