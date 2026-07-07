@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { PostsList } from "./components/PostsList.js";
+import { PostDetail } from "./components/PostDetail.js";
 
 // ---------------------------------------------------------------------------
 // Types — mirrors LandingPublicPayload from the API design contract
@@ -389,6 +391,7 @@ function OutingDetail({ slug }: { slug: string }) {
 // ---------------------------------------------------------------------------
 
 const ROUTE_OUTINGS = "/outings";
+const ROUTE_POSTS = "/posts";
 
 function isOutingsList(path: string): boolean {
   return path === ROUTE_OUTINGS;
@@ -397,6 +400,18 @@ function isOutingsList(path: string): boolean {
 function matchOutingSlug(path: string): string | null {
   if (!path.startsWith(`${ROUTE_OUTINGS}/`)) return null;
   const slug = path.slice(ROUTE_OUTINGS.length + 1);
+  // Reject empty slugs and slugs containing another slash
+  if (slug.length === 0 || slug.includes("/")) return null;
+  return slug;
+}
+
+function isPostsList(path: string): boolean {
+  return path === ROUTE_POSTS;
+}
+
+function matchPostSlug(path: string): string | null {
+  if (!path.startsWith(`${ROUTE_POSTS}/`)) return null;
+  const slug = path.slice(ROUTE_POSTS.length + 1);
   // Reject empty slugs and slugs containing another slash
   if (slug.length === 0 || slug.includes("/")) return null;
   return slug;
@@ -453,6 +468,25 @@ function LandingPage() {
 
 export function App({ pathname }: { pathname?: string }) {
   const rawPath = pathname ?? window.location.pathname;
+
+  // Post detail: /posts/:slug (check before /posts list)
+  const postSlug = matchPostSlug(rawPath);
+  if (postSlug !== null) {
+    return (
+      <main>
+        <PostDetail slug={postSlug} />
+      </main>
+    );
+  }
+
+  // Posts list: /posts
+  if (isPostsList(rawPath)) {
+    return (
+      <main>
+        <PostsList />
+      </main>
+    );
+  }
 
   // Outing detail: /outings/:slug
   const outingSlug = matchOutingSlug(rawPath);

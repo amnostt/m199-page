@@ -608,3 +608,181 @@ describe("Outing detail triangulation", () => {
     expectNoSection("outing-main-image");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Task 3.3: Posts web routes integration tests
+// ---------------------------------------------------------------------------
+
+const POSTS_LIST = [
+  {
+    id: "post-1",
+    slug: "primer-post",
+    title: "Un testimonio de fe",
+    description: "Un breve resumen",
+    coverImageUrl: "/files/img-post-1",
+    content: "<p>Contenido seguro</p>",
+    status: "PUBLISHED" as const,
+    tags: ["fe", "testimonio"],
+    publishedAt: "2025-06-15T10:00:00.000Z",
+    downloads: [],
+  },
+  {
+    id: "post-2",
+    slug: "reflexion-semanal",
+    title: "Reflexión Semanal",
+    description: "Otra reflexión",
+    coverImageUrl: null,
+    content: "<p>Contenido de reflexión</p>",
+    status: "PUBLISHED" as const,
+    tags: ["reflexion"],
+    publishedAt: "2025-06-10T10:00:00.000Z",
+    downloads: [],
+  },
+];
+
+const POST_DETAIL = {
+  id: "post-1",
+  slug: "primer-post",
+  title: "Un testimonio de fe",
+  description: "Un breve resumen del testimonio",
+  coverImageUrl: "/files/img-post-1",
+  content:
+    "<h2>Introducción</h2><p>Contenido del post con <strong>énfasis</strong>.</p>",
+  status: "PUBLISHED" as const,
+  tags: ["fe", "testimonio", "reflexion"],
+  publishedAt: "2025-06-15T10:00:00.000Z",
+  downloads: [],
+};
+
+describe("Posts list route (3.3)", () => {
+  it("renders posts list at /posts pathname", async () => {
+    globalThis.fetch = mockFetchOk(POSTS_LIST) as unknown as typeof fetch;
+
+    render(<App pathname="/posts" />);
+
+    await waitFor(() => {
+      expectSection("posts-list-section");
+    });
+
+    expect(screen.getByText("Un testimonio de fe")).toBeTruthy();
+    expect(screen.getByText("Reflexión Semanal")).toBeTruthy();
+  });
+
+  it("shows loading state on /posts while fetch is in-flight", () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+
+    render(<App pathname="/posts" />);
+
+    expect(screen.getByTestId("posts-loading")).toBeTruthy();
+  });
+
+  it("shows error state on /posts when fetch fails", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Network error")) as unknown as typeof fetch;
+
+    render(<App pathname="/posts" />);
+
+    await waitFor(() => {
+      expectSection("posts-error");
+    });
+
+    expect(
+      screen.getByText(/no se pudo cargar la lista/i),
+    ).toBeTruthy();
+  });
+});
+
+describe("Post detail route (3.3)", () => {
+  it("renders post detail at /posts/:slug pathname", async () => {
+    globalThis.fetch = mockFetchOk(POST_DETAIL) as unknown as typeof fetch;
+
+    render(<App pathname="/posts/primer-post" />);
+
+    await waitFor(() => {
+      expectSection("post-detail-section");
+    });
+
+    expect(screen.getByText("Un testimonio de fe")).toBeTruthy();
+    expect(screen.getByText("Un breve resumen del testimonio")).toBeTruthy();
+
+    // Content sanitized and rendered
+    const contentEl = screen.getByTestId("post-detail-content");
+    expect(contentEl.innerHTML).toContain("Contenido del post");
+  });
+
+  it("shows not found on /posts/:slug when API returns 404", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () => Promise.resolve({ message: "Not Found" }),
+    }) as unknown as typeof fetch;
+
+    render(<App pathname="/posts/no-existe" />);
+
+    await waitFor(() => {
+      expectSection("post-detail-not-found");
+    });
+
+    expect(
+      screen.getByText(/post no encontrado/i),
+    ).toBeTruthy();
+  });
+
+  it("shows loading state on /posts/:slug while fetch is in-flight", () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+
+    render(<App pathname="/posts/primer-post" />);
+
+    expect(screen.getByTestId("post-detail-loading")).toBeTruthy();
+  });
+
+  it("shows error state on /posts/:slug when fetch fails", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Network error")) as unknown as typeof fetch;
+
+    render(<App pathname="/posts/primer-post" />);
+
+    await waitFor(() => {
+      expectSection("post-detail-error");
+    });
+
+    expect(
+      screen.getByText(/no se pudo cargar el post/i),
+    ).toBeTruthy();
+  });
+});
+
+describe("Posts routing precedence (3.3)", () => {
+  it("/posts/:slug matches post detail, not posts list", async () => {
+    globalThis.fetch = mockFetchOk(POST_DETAIL) as unknown as typeof fetch;
+
+    render(<App pathname="/posts/primer-post" />);
+
+    await waitFor(() => {
+      expectSection("post-detail-section");
+    });
+
+    // Posts list section should NOT be rendered
+    expectNoSection("posts-list-section");
+  });
+
+  it("landing still renders at / when posts routes exist", async () => {
+    globalThis.fetch = mockFetchOk(FULL_PAYLOAD) as unknown as typeof fetch;
+
+    render(<App pathname="/" />);
+
+    await waitFor(() => {
+      expectSection("hero-section");
+    });
+
+    // Posts sections should NOT be rendered
+    expectNoSection("posts-list-section");
+    expectNoSection("post-detail-section");
+  });
+});

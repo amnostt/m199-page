@@ -31,6 +31,7 @@ function toPublicResponse(row: {
   status: string;
   tags: string[];
   publishedAt: Date | null;
+  downloads?: { label: string | null; fileId: string }[];
 }): PostPublicResponse {
   const fileUrl = (fileId: string | null): string | null =>
     fileId ? `/files/${fileId}` : null;
@@ -45,6 +46,10 @@ function toPublicResponse(row: {
     status: "PUBLISHED",
     tags: row.tags,
     publishedAt: row.publishedAt?.toISOString() ?? null,
+    downloads: (row.downloads ?? []).map((dl) => ({
+      label: dl.label,
+      fileUrl: `/files/${dl.fileId}`,
+    })),
   };
 }
 

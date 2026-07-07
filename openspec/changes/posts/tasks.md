@@ -52,7 +52,7 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Web Public Posts (PR 3)
 
-- [ ] 3.1 Create `apps/web/src/components/PostsList.tsx` with fetch(`/posts`), loading/empty/error states, content sanitization via dompurify; write RED→GREEN React Testing Library tests
-- [ ] 3.2 Create `apps/web/src/components/PostDetail.tsx` with fetch(`/posts/:slug`), loading/404/error states, dompurify sanitization, external links with `target="_blank" rel="noopener noreferrer"`, download links via existing file routes; write RED→GREEN tests
-- [ ] 3.3 Add PostPayload types, `/posts` and `/posts/:slug` routing to `apps/web/src/App.tsx`; write RED→GREEN integration tests in `App.test.tsx`
-- [ ] 3.4 Verify full flow: run `pnpm test` (all packages), `pnpm lint`, `pnpm typecheck`
+- [x] 3.1 Create `apps/web/src/components/PostsList.tsx` with fetch(`/posts`), loading/empty/error states, content sanitization via dompurify; write RED→GREEN React Testing Library tests
+- [x] 3.2 Create `apps/web/src/components/PostDetail.tsx` with fetch(`/posts/:slug`), loading/404/error states, dompurify sanitization, external links with `target="_blank" rel="noopener noreferrer"`, download links via existing file routes; write RED→GREEN tests
+- [x] 3.3 Add PostPayload types, `/posts` and `/posts/:slug` routing to `apps/web/src/App.tsx`; write RED→GREEN integration tests in `App.test.tsx`
+- [x] 3.4 Verify full flow: run `pnpm test` (all packages), `pnpm lint`, `pnpm typecheck`

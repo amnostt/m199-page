@@ -43,6 +43,7 @@ export interface PostRow {
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  downloads?: PostDownloadRow[];
 }
 
 export interface FeaturedPostRow {
@@ -71,12 +72,16 @@ interface FileAssetRow {
 interface PostPrismaClient {
   post: {
     create(args: { data: Record<string, unknown> }): Promise<PostRow>;
-    findUnique(args: { where: Record<string, unknown> }): Promise<PostRow | null>;
+    findUnique(args: {
+      where: Record<string, unknown>;
+      include?: Record<string, unknown>;
+    }): Promise<PostRow | null>;
     findMany(args?: {
       where?: Record<string, unknown>;
       skip?: number;
       take?: number;
       orderBy?: Record<string, unknown>;
+      include?: Record<string, unknown>;
     }): Promise<PostRow[]>;
     update(args: {
       where: Record<string, unknown>;
@@ -115,6 +120,11 @@ interface PostPrismaClient {
 // Public response shape
 // ---------------------------------------------------------------------------
 
+export interface PostPublicDownload {
+  label: string | null;
+  fileUrl: string;
+}
+
 export interface PostPublicResponse {
   id: string;
   slug: string;
@@ -125,6 +135,7 @@ export interface PostPublicResponse {
   status: "PUBLISHED";
   tags: string[];
   publishedAt: string | null;
+  downloads: PostPublicDownload[];
 }
 
 // ---------------------------------------------------------------------------
@@ -163,6 +174,10 @@ export class PostsService {
       status: "PUBLISHED",
       tags: row.tags,
       publishedAt: row.publishedAt?.toISOString() ?? null,
+      downloads: (row.downloads ?? []).map((dl) => ({
+        label: dl.label,
+        fileUrl: `/files/${dl.fileId}`,
+      })),
     };
   }
 
@@ -433,6 +448,7 @@ export class PostsService {
   async findBySlug(slug: string): Promise<PostRow | null> {
     return this.client.post.findUnique({
       where: { slug },
+      include: { downloads: true },
     });
   }
 
@@ -545,6 +561,7 @@ export class PostsService {
     const rows = await this.client.post.findMany({
       where: { status: "PUBLISHED" },
       orderBy: { publishedAt: "desc" },
+      include: { downloads: true },
     });
     return rows.map((row) => this.toPublicResponse(row));
   }
