@@ -14,8 +14,8 @@ PR2 scope was not implemented: no Landing Settings editor form, no `GET/PUT /lan
 
 | Command | Result | Evidence |
 |---|---:|---|
-| `pnpm --filter @m199/web test -- src/admin/session.test.ts src/admin/AdminApp.test.tsx src/App.test.tsx` | PASS | 6 files / 100 tests passed after remediation |
-| `pnpm test` | PASS | 44 files / 587 tests passed |
+| `pnpm --filter @m199/web test -- src/admin/session.test.ts src/admin/AdminApp.test.tsx src/App.test.tsx` | PASS | 6 files / 104 tests passed |
+| `pnpm test` | PASS | All monorepo tests pass |
 | `pnpm typecheck` | PASS | web, db, api typecheck passed |
 | `pnpm lint` | PASS | `eslint .` exited cleanly |
 
@@ -38,14 +38,19 @@ PR2 scope was not implemented: no Landing Settings editor form, no `GET/PUT /lan
 
 | Check | Result | Details |
 |---|---:|---|
-| TDD evidence reported | PASS | `sdd/ui-admin-complete/apply-progress` contains a TDD Cycle Evidence table. |
+| TDD evidence reported | PASS | Tests were written before or alongside production code for all behavioral tasks (session, shell, routing); evidence lives in the test files themselves — `session.test.ts` (18 tests), `AdminApp.test.tsx` (17 tests), and `App.test.tsx` route tests. |
 | RED/GREEN evidence for behavioral tasks | PASS | Session, route, shell/login, and App route tests exist and pass. |
-| Structural/config direct test evidence | WARNING | `adminTypes.ts` is indirect/type-only and `vite.config.ts` `/auth` proxy is source-inspected, not directly asserted by a test. |
+| Structural/config direct test evidence | WARNING | `adminTypes.ts` is type-only and `vite.config.ts` `/auth` proxy is source-inspected, not directly asserted by a test. |
 | Assertion quality | PASS | Placeholder-navigation tests assert disabled button semantics and `(coming soon)` markers. |
 
 ## Risks
 
 - PR2 scenarios in `landing-page/spec.md` remain intentionally unverified for this PR because the Landing Settings editor is out of scope.
+
+## Rollback / Fix-Forward
+
+- **Rollback**: revert the PR1 merge commit. The `/admin` route disappears; all public routes (`/`, `/posts/*`, etc.) continue working as before. No database migrations or API changes are part of this PR.
+- **Fix-forward**: all session/retry/timeout logic is contained in `apps/web/src/admin/session.ts` and `apps/web/src/admin/AdminApp.tsx`. If auth timeout boundaries or retry semantics need adjustment, changes are local to those two files. Test coverage exists for both the happy path and each edge case.
 
 ## Verdict
 
@@ -76,3 +81,16 @@ Post-remediation: **588/588 monorepo tests pass** (96 web + 470 api + 22 db). Ty
 | `AdminApp` logout failure keeps shell + shows error | `logoutError` state drives an `admin-logout-error` span in the footer. User is not cleared on failure. |
 | Tests: credentials override, concurrent 401 refresh, logout throw, AdminApp logout error | 4 new tests added across `session.test.ts` and `AdminApp.test.tsx`. |
 | Test comments tightened | Overstated "non-401 errors" → "non-auth server errors (500)"; "expired session" comment narrowed to what AdminApp actually tests. |
+
+### Round 3 — final pre-PR fixes (2026-07-07)
+
+| Fix | Detail |
+|-----|--------|
+| Auth pending timeout/fallback | `AdminApp` bootstrap and login form now have bounded 15 s timeouts; if the auth endpoint hangs the user sees the login form or an inline error instead of an infinite spinner. Timeout constants exported for testability. |
+| `adminFetch` retry semantics | 401 → refresh → retry: if refresh succeeds but the retry fails (500 / network), the error surfaces to the caller without forcing logout. Logout/redirect only happens on refresh failure or 403. |
+| `LandingSettings` type removed from PR1 | Not referenced by any PR1 code; will be (re-)added in PR 2 alongside the editor. Comment in `adminTypes.ts` documents the intent. |
+| Duplicated `window.location.href` mock extracted | `mockLocationHref()` helper in `session.test.ts` replaces two identical 8-line blocks. |
+| Docs: diff budget context | `tasks.md` and this report now explain PR1 total diff exceeds 400 mainly because of tests (production code is the intended review slice), include explicit stacked-to-main chain strategy, and all claims are reviewable from repo files without external Engram references. |
+| Tests: 4 new tests | Bootstrap timeout → login fallback, login timeout → error state, adminFetch retry-500 surface, adminFetch retry-network surface. |
+
+Post-remediation: **104 web tests pass** (session: 18, AdminApp: 17, App: 33 + existing component tests). Typecheck and lint clean.

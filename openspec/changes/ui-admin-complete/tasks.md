@@ -15,6 +15,21 @@ Chained PRs recommended: Yes
 Chain strategy: stacked-to-main (resolved by orchestrator)
 400-line budget risk: Medium
 
+### PR1 Diff Context
+
+The PR1 total diff exceeds 400 lines primarily because of test code (session.test.ts ~396 lines, AdminApp.test.tsx ~480 lines, App.test.tsx admin route tests ~52 lines). Production code is the intended review slice:
+- `adminTypes.ts`: ~10 lines
+- `session.ts`: ~110 lines
+- `AdminApp.tsx`: ~220 lines
+- `App.tsx` (admin route): ~3 lines
+- `vite.config.ts` (proxy): ~4 lines
+
+Total production diff: ~347 lines. Tests verify every behavioral path and edge case, which is the correct balance for auth/session infrastructure.
+
+### Stacked-to-main Context
+
+This PR (PR1) targets `main`. PR2 (Landing Settings editor) will target the `feat/ui-admin-session-shell` branch so it inherits the session helpers and admin shell from PR1. Once PR1 is merged to `main`, PR2 will be retargeted to `main` and its diff will only show the Landing Settings editor work — not the session/shell foundation from PR1.
+
 ### Suggested Work Units
 
 | Unit | Goal | Likely PR | Notes |
@@ -24,7 +39,7 @@ Chain strategy: stacked-to-main (resolved by orchestrator)
 
 ## Phase 1: Foundation — Types, Session, Proxy
 
-- [x] 1.1 Create `apps/web/src/admin/adminTypes.ts` with `AuthUser` and `LandingSettings` interfaces per design
+- [x] 1.1 Create `apps/web/src/admin/adminTypes.ts` with the `AuthUser` interface needed by PR1; defer `LandingSettings` typing to PR2 with the editor implementation
 - [x] 1.2 Create `apps/web/src/admin/session.ts` with `login()`, `refreshSession()`, `logout()`, `adminFetch()` — credentials include, one 401 refresh retry, 403 logout redirect
 - [x] 1.3 Add `/auth` proxy entry to `apps/web/vite.config.ts` targeting `API_TARGET` with `changeOrigin: true`
 - [x] 1.4 Add `/admin` route detection in `apps/web/src/App.tsx` before public routes — render `<AdminApp>` for `/admin*`

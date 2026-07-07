@@ -16,7 +16,7 @@ import {
   cleanup,
   fireEvent,
 } from "@testing-library/react";
-import { AdminApp } from "./AdminApp.js";
+import { AdminApp, TIMEOUTS } from "./AdminApp.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -110,6 +110,28 @@ describe("AdminApp bootstrap", () => {
     await waitFor(() => {
       expect(screen.getByTestId("admin-login")).toBeTruthy();
     });
+  });
+
+  it("shows login form after bootstrap timeout (no infinite loading)", async () => {
+    // Set timeout to 0 so it fires immediately; keep fetch hung
+    TIMEOUTS.bootstrap = 0;
+
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() => new Promise<Response>(() => {}));
+
+    render(<AdminApp />);
+
+    // The zero-delay setTimeout fires before the hung promise resolves;
+    // loading ends and login form appears.
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-login")).toBeTruthy();
+    });
+
+    expect(screen.queryByTestId("admin-loading")).toBeNull();
+
+    // Restore
+    TIMEOUTS.bootstrap = 15_000;
   });
 });
 
@@ -385,6 +407,56 @@ describe("AdminApp triangulation", () => {
     expect(
       (screen.getByLabelText(/email/i) as HTMLInputElement).disabled,
     ).toBe(true);
+  });
+
+  // -----------------------------------------------------------------------
+  // TRIANGULATE — login timeout shows error instead of permanent submitting
+  // -----------------------------------------------------------------------
+
+  it("shows error after login timeout instead of staying submitting forever", async () => {
+    // Set login timeout to 0 so it fires immediately after submit
+    TIMEOUTS.login = 0;
+
+    // Refresh fails → login form shown; login fetch never resolves (hung endpoint)
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((url: string) => {
+        if (url === "/auth/refresh") {
+          return Promise.resolve({ ok: false, status: 401 });
+        }
+        if (url === "/auth/login") {
+          return new Promise<Response>(() => {}); // hung
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+
+    render(<AdminApp />);
+
+    // Wait for login form to appear (refresh fails)
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-login")).toBeTruthy();
+    });
+
+    // Fill and submit
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: "a@b.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: "pw" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    // The zero-delay timeout fires: error shown, submitting cleared
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-login-error")).toBeTruthy();
+    });
+
+    // Sign In button should be re-enabled
+    const btn = screen.getByRole("button", { name: /sign in/i });
+    expect((btn as HTMLButtonElement).disabled).toBe(false);
+
+    // Restore
+    TIMEOUTS.login = 15_000;
   });
 
   // -----------------------------------------------------------------------

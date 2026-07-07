@@ -75,22 +75,26 @@ export async function adminFetch<T = unknown>(
 
     try {
       await refreshInFlight;
-      // Retry the original request
-      const retryRes = await fetch(url, {
-        ...init,
-        credentials: "include",
-      });
-
-      if (!retryRes.ok) throw new Error("Admin request failed");
-      return retryRes.json() as Promise<T>;
     } catch {
-      // Refresh failed — clear session and redirect to login
+      // Refresh itself failed — session is expired
       await logout().catch(() => {
         /* best-effort */
       });
       window.location.href = "/admin";
       throw new Error("Session expired");
     }
+
+    // Refresh succeeded — retry the original request
+    const retryRes = await fetch(url, {
+      ...init,
+      credentials: "include",
+    });
+
+    // If retry fails after a successful refresh the failure is not
+    // session-related (500, network, etc.). Surface it to the caller
+    // without logging out or redirecting.
+    if (!retryRes.ok) throw new Error("Admin request failed");
+    return retryRes.json() as Promise<T>;
   }
 
   // 403 — not authorized, clear session and redirect

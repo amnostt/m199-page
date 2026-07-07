@@ -15,6 +15,20 @@ import type { AuthUser } from "./adminTypes.js";
 import { login, logout, refreshSession } from "./session.js";
 
 // ---------------------------------------------------------------------------
+// Timeout constants — prevent permanent loading/submitting when auth
+// endpoints hang. After the timeout the user sees a recoverable fallback
+// (login form or inline error) instead of an infinite spinner.
+//
+// Exported as a writable object so tests can set them to 0 without
+// needing fake timers.
+// ---------------------------------------------------------------------------
+
+export const TIMEOUTS = {
+  bootstrap: 15_000,
+  login: 15_000,
+};
+
+// ---------------------------------------------------------------------------
 // AdminLogin — inline email/password form
 // ---------------------------------------------------------------------------
 
@@ -35,13 +49,23 @@ function AdminLogin({
     setError(false);
     setSubmitting(true);
 
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      setSubmitting(false);
+      setError(true);
+    }, TIMEOUTS.login);
+
     try {
       const user = await login(email, password);
+      if (timedOut) return;
       onLogin(user);
     } catch {
+      if (timedOut) return;
       setError(true);
     } finally {
-      setSubmitting(false);
+      clearTimeout(timeoutId);
+      if (!timedOut) setSubmitting(false);
     }
   };
 
@@ -155,23 +179,33 @@ export function AdminApp() {
   const [loading, setLoading] = useState(true);
   const [logoutError, setLogoutError] = useState(false);
 
-  // Bootstrap: attempt refresh on mount
+  // Bootstrap: attempt refresh on mount with bounded timeout.
+  // If the auth endpoint hangs the timeout clears the loading state
+  // so the user sees the login form instead of an infinite spinner.
   useEffect(() => {
     let cancelled = false;
+    let timedOut = false;
+
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      if (!cancelled) setLoading(false);
+    }, TIMEOUTS.bootstrap);
 
     refreshSession()
       .then((data) => {
-        if (!cancelled) setUser(data);
+        if (!cancelled && !timedOut) setUser(data);
       })
       .catch(() => {
         // Refresh failed — user stays null (login shown)
       })
       .finally(() => {
+        clearTimeout(timeoutId);
         if (!cancelled) setLoading(false);
       });
 
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, []);
 

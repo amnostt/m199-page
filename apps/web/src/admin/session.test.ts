@@ -20,7 +20,28 @@ import { login, refreshSession, logout, adminFetch } from "./session.js";
 const MOCK_USER = { id: "u1", email: "admin@m199.org", displayName: "Admin" };
 
 // ---------------------------------------------------------------------------
-// Setup / teardown
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Set up a writable window.location.href mock so redirect assertions
+ * work in JSDOM. Returns the href setter spy; cleanup is handled by
+ * beforeEach's vi.restoreAllMocks() + the JSDOM environment reset.
+ */
+function mockLocationHref(): ReturnType<typeof vi.fn> {
+  const hrefSetter = vi.fn();
+  const originalHref = window.location.href;
+  delete (window as { location?: Location }).location;
+  (window as { location: Partial<Location> }).location = {
+    href: originalHref,
+  } as Location;
+  Object.defineProperty(window.location, "href", {
+    set: hrefSetter,
+    get: () => originalHref,
+  });
+  return hrefSetter;
+}
+
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
@@ -186,18 +207,7 @@ describe("adminFetch", () => {
   });
 
   it("on 403, clears session (logout) and redirects to /admin", async () => {
-    // Mock location.href as a writable property
-    const hrefSetter = vi.fn();
-    // Capture current href before reassigning location
-    const originalHref = window.location.href;
-    delete (window as { location?: Location }).location;
-    (window as { location: Partial<Location> }).location = {
-      href: originalHref,
-    } as Location;
-    Object.defineProperty(window.location, "href", {
-      set: hrefSetter,
-      get: () => originalHref,
-    });
+    const hrefSetter = mockLocationHref();
 
     // Mock fetch: first call returns 403, then logout call succeeds
     let calledLogout = false;
@@ -252,16 +262,7 @@ describe("adminFetch", () => {
   // -----------------------------------------------------------------------
 
   it("on 401: if refresh fails, logs out and redirects to /admin", async () => {
-    const hrefSetter = vi.fn();
-    const originalHref = window.location.href;
-    delete (window as { location?: Location }).location;
-    (window as { location: Partial<Location> }).location = {
-      href: originalHref,
-    } as Location;
-    Object.defineProperty(window.location, "href", {
-      set: hrefSetter,
-      get: () => originalHref,
-    });
+    const hrefSetter = mockLocationHref();
 
     let logoutCalled = false;
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
@@ -281,6 +282,65 @@ describe("adminFetch", () => {
 
     expect(logoutCalled).toBe(true);
     expect(hrefSetter).toHaveBeenCalledWith("/admin");
+  });
+
+  // -----------------------------------------------------------------------
+  // TRIANGULATE — 401 refresh succeeds but retry fails (500 / network)
+  //   Refresh is NOT a session problem → surface the request error without
+  //   logging out or redirecting.
+  // -----------------------------------------------------------------------
+
+  it("on 401: after successful refresh, retry 500 throws request error (no logout/redirect)", async () => {
+    let callCount = 0;
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      callCount++;
+      if (url === "/admin/some-endpoint" && callCount === 1) {
+        return Promise.resolve({ ok: false, status: 401 });
+      }
+      if (url === "/auth/refresh") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(MOCK_USER),
+        });
+      }
+      // Retry of /admin/some-endpoint → 500
+      return Promise.resolve({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ message: "Server error" }),
+      });
+    });
+
+    await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
+      "Admin request failed",
+    );
+
+    // 3 calls total: original, refresh, retry — no logout
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("on 401: after successful refresh, retry network error throws (no logout/redirect)", async () => {
+    let callCount = 0;
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      callCount++;
+      if (url === "/admin/some-endpoint" && callCount === 1) {
+        return Promise.resolve({ ok: false, status: 401 });
+      }
+      if (url === "/auth/refresh") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(MOCK_USER),
+        });
+      }
+      // Retry of /admin/some-endpoint → network error
+      return Promise.reject(new Error("Network error"));
+    });
+
+    await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
+      "Network error",
+    );
+
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   // -----------------------------------------------------------------------
