@@ -4,9 +4,9 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Estamos listos para empezar el **paso 9: Versículo diario**.
+Estamos listos para empezar el **paso 10: UI admin completa**.
 
-Ya está terminada la base técnica completa, incluyendo autenticación, responsables, archivos/uploads, una primera landing pública editable, salidas y posts:
+Ya está terminada la base técnica completa, incluyendo autenticación, responsables, archivos/uploads, una primera landing pública editable, salidas, posts y versículo diario:
 
 ### Base técnica (pasos 1–3)
 - Documento técnico base.
@@ -76,7 +76,7 @@ Ya está terminada la base técnica completa, incluyendo autenticación, respons
 - 515 tests pasando, typecheck, lint y estado de migraciones limpios en la verificación final.
 - Spec SDD `posts` archivada como `openspec/changes/archive/2026-07-06-posts/`.
 
-En otras palabras: el panel admin ya tiene login, sesiones seguras, CRUD de responsables, uploads sólidos, landing pública editable y dos entidades de contenido reales publicadas: Salidas y Posts. Ahora conviene avanzar sobre Versículo diario para completar el contenido espiritual recurrente del sitio.
+En otras palabras: el panel admin ya tiene login, sesiones seguras, CRUD de responsables, uploads sólidos, landing pública editable y tres entidades de contenido reales publicadas: Salidas, Posts y Versículo diario. Ahora conviene avanzar sobre la UI admin completa para unificar la experiencia operativa del panel.
 
 ## Camino hasta finalizar el MVP
 
@@ -298,6 +298,8 @@ Avance actual:
 
 ### 9. Versículo diario
 
+**Estado:** ✅ Completo.
+
 Implementar gestión e historial:
 
 - carga manual desde admin
@@ -307,6 +309,17 @@ Implementar gestión e historial:
 - listado `/versiculos`
 
 **Resultado esperado:** sección de versículos completa.
+
+Avance actual:
+
+- ✅ Backend de Versículo diario con endpoints admin y públicos.
+- ✅ Carga manual desde admin con publicación al crear.
+- ✅ Historial público de versículos anteriores.
+- ✅ Versículo actual integrado en el payload público de landing.
+- ✅ Orden determinístico por `publishedAt desc, id desc`.
+- ✅ Migraciones Prisma para `Verse` y `VerseRevision`.
+- ✅ Tests, typecheck, lint y validación Prisma limpios en la verificación final.
+- ✅ PR #2 mergeado y ramas de feature limpiadas.
 
 ### 10. UI admin completa
 
@@ -381,6 +394,6 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser **Versículo diario**.
+El próximo SDD change debería ser **UI admin completa**.
 
-Con auth, responsables, archivos, landing, Salidas y Posts ya resueltos, Versículo diario es el siguiente slice natural: completa el contenido espiritual recurrente, alimenta la landing con el versículo actual y prepara el historial público de `/versiculos`.
+Con auth, responsables, archivos, landing, Salidas, Posts y Versículo diario ya resueltos, UI admin completa es el siguiente slice natural: convierte las capacidades backend en una experiencia operativa usable de punta a punta para responsables.
