@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 import type { AuthUser } from "./adminTypes.js";
-import { login, logout } from "./session.js";
+import { login, logout, refreshSession } from "./session.js";
 
 // ---------------------------------------------------------------------------
 // AdminLogin — inline email/password form
@@ -94,9 +94,11 @@ const PLACEHOLDER_SECTIONS = [
 function AdminShell({
   user,
   onLogout,
+  logoutError,
 }: {
   user: AuthUser;
   onLogout: () => void;
+  logoutError: boolean;
 }) {
   return (
     <div data-testid="admin-shell">
@@ -134,6 +136,11 @@ function AdminShell({
         >
           Logout
         </button>
+        {logoutError && (
+          <span data-testid="admin-logout-error">
+            Logout failed. Please try again.
+          </span>
+        )}
       </footer>
     </div>
   );
@@ -146,18 +153,14 @@ function AdminShell({
 export function AdminApp() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [logoutError, setLogoutError] = useState(false);
 
   // Bootstrap: attempt refresh on mount
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/auth/refresh", {
-      method: "POST",
-      credentials: "include",
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as AuthUser;
+    refreshSession()
+      .then((data) => {
         if (!cancelled) setUser(data);
       })
       .catch(() => {
@@ -173,10 +176,13 @@ export function AdminApp() {
   }, []);
 
   const handleLogout = async () => {
-    await logout().catch(() => {
-      /* best-effort */
-    });
-    setUser(null);
+    setLogoutError(false);
+    try {
+      await logout();
+      setUser(null);
+    } catch {
+      setLogoutError(true);
+    }
   };
 
   // Loading state
@@ -194,5 +200,5 @@ export function AdminApp() {
   }
 
   // Authenticated — show shell
-  return <AdminShell user={user} onLogout={handleLogout} />;
+  return <AdminShell user={user} onLogout={handleLogout} logoutError={logoutError} />;
 }

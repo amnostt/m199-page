@@ -3,7 +3,8 @@
 // cookie API contract. Uses credentials: "include" on every call.
 //
 // adminFetch centralises protected fetch with one 401 refresh retry and
-// 403 → logout + redirect behaviour.
+// 403 → logout + redirect behaviour. Concurrent 401 calls share one refresh
+// via an in-flight promise pattern instead of a global boolean flag.
 // ---------------------------------------------------------------------------
 
 import type { AuthUser } from "./adminTypes.js";
@@ -38,49 +39,51 @@ export async function refreshSession(): Promise<AuthUser> {
 }
 
 export async function logout(): Promise<void> {
-  await fetch("/auth/logout", {
+  const res = await fetch("/auth/logout", {
     method: "POST",
     credentials: "include",
   });
+  if (!res.ok) throw new Error("Logout failed");
 }
 
 // ---------------------------------------------------------------------------
 // adminFetch — protected fetch with 401 refresh retry and 403 redirect
+//
+// Concurrent 401 calls share the same in-flight refresh promise so that
+// multiple simultaneous 401 responses trigger only one refresh cycle.
 // ---------------------------------------------------------------------------
 
-let retrying = false;
+let refreshInFlight: Promise<AuthUser> | null = null;
 
 export async function adminFetch<T = unknown>(
   url: string,
   init?: RequestInit,
 ): Promise<T> {
   const res = await fetch(url, {
-    credentials: "include",
     ...init,
+    credentials: "include",
   });
 
   // 401 — attempt one refresh, then retry the original request
   if (res.status === 401) {
-    if (retrying) {
-      // Already attempted a refresh — avoid infinite loop
-      retrying = false;
-      throw new Error("Session expired");
+    // Start a refresh if one is not already in flight; otherwise share it.
+    if (!refreshInFlight) {
+      refreshInFlight = refreshSession().finally(() => {
+        refreshInFlight = null;
+      });
     }
 
-    retrying = true;
     try {
-      await refreshSession();
+      await refreshInFlight;
       // Retry the original request
       const retryRes = await fetch(url, {
-        credentials: "include",
         ...init,
+        credentials: "include",
       });
-      retrying = false;
 
       if (!retryRes.ok) throw new Error("Admin request failed");
       return retryRes.json() as Promise<T>;
     } catch {
-      retrying = false;
       // Refresh failed — clear session and redirect to login
       await logout().catch(() => {
         /* best-effort */
@@ -101,9 +104,4 @@ export async function adminFetch<T = unknown>(
 
   if (!res.ok) throw new Error("Admin request failed");
   return res.json() as Promise<T>;
-}
-
-/** Reset the internal retrying flag (for tests). */
-export function __resetRetrying(): void {
-  retrying = false;
 }

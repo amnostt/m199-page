@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------
 // AdminApp component tests (Task 4.2)
 //
-// Tests admin bootstrap, login, shell navigation, and expired session:
-// - Bootstrap: POST /auth/refresh success → shell; failure → login
+// Tests admin bootstrap, login, shell navigation, and logout behavior:
+// - Bootstrap: refreshSession success → shell; failure → login
 // - Login: submit success → shell; error on failure
-// - Shell: Landing Settings active, placeholders disabled/hidden
-// - Expired session: 401 on protected resource → retry → fail → clear → login
+// - Shell: Landing Settings active, placeholders disabled, logout button
+// - Logout failure: keeps shell visible and shows error message
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -300,11 +300,11 @@ describe("AdminApp shell navigation", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Expired session redirect
+// Expired session — bootstrap refresh failure shows login
 // ---------------------------------------------------------------------------
 
 describe("AdminApp expired session", () => {
-  it("shows login when bootstrap refresh returns 401 (primary component-level expired session)", async () => {
+  it("shows login when bootstrap refresh returns 401", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 401,
@@ -385,5 +385,43 @@ describe("AdminApp triangulation", () => {
     expect(
       (screen.getByLabelText(/email/i) as HTMLInputElement).disabled,
     ).toBe(true);
+  });
+
+  // -----------------------------------------------------------------------
+  // TRIANGULATE — logout failure keeps shell visible with error
+  // -----------------------------------------------------------------------
+
+  it("keeps shell visible and shows error when logout fails", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(AUTH_USER),
+        });
+      }
+      if (url === "/auth/logout") {
+        return Promise.resolve({ ok: false, status: 500 });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    render(<AdminApp />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-shell")).toBeTruthy();
+    });
+
+    // Click logout
+    fireEvent.click(screen.getByRole("button", { name: /logout/i }));
+
+    // Shell should still be visible (user not cleared)
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-logout-error")).toBeTruthy();
+    });
+
+    expect(screen.getByTestId("admin-shell")).toBeTruthy();
+    expect(screen.getByTestId("admin-user-name")).toBeTruthy();
+    // Login form should NOT appear
+    expect(screen.queryByTestId("admin-login")).toBeNull();
   });
 });
