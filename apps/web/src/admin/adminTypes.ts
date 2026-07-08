@@ -27,3 +27,54 @@ export interface LandingSettingsForm {
   contactEmail: string;
   contactPhone: string;
 }
+
+// ---------------------------------------------------------------------------
+// Posts admin types — mirrors API response shapes
+// ---------------------------------------------------------------------------
+
+export type PostStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
+export interface PostDownload {
+  id: string;
+  fileId: string;
+  label: string | null;
+  sortOrder: number;
+}
+
+export interface PostListItem {
+  id: string;
+  slug: string;
+  title: string;
+  status: PostStatus;
+  coverImageId: string | null;
+  publishedAt: string | null;
+}
+
+export interface Post extends PostListItem {
+  description: string;
+  content: string;
+  tags: string[];
+  downloads: PostDownload[];
+}
+
+export interface PostForm {
+  title: string;
+  slug: string;
+  content: string;
+  description: string;
+  tagsInput: string;
+  status: PostStatus;
+  coverImageId: string | null;
+  downloadIds: string[];
+}
+
+export interface FileAssetResponse {
+  id: string;
+  url: string;
+  thumbnailUrl: string | null;
+  mimeType: string;
+  fileSize: number;
+  originalFilename: string;
+  category: string;
+  createdAt: string;
+}

@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import type { AuthUser } from "./adminTypes.js";
 import { login, logout, refreshSession } from "./session.js";
 import { LandingSettingsPage } from "./LandingSettingsPage.js";
+import { PostsPage } from "./PostsPage.js";
 
 // ---------------------------------------------------------------------------
 // Timeout constants — prevent permanent loading/submitting when auth
@@ -104,12 +105,12 @@ function AdminLogin({
 }
 
 // ---------------------------------------------------------------------------
-// AdminShell — sidebar navigation with active Landing Settings and
-// placeholder entries for out-of-scope sections.
+// AdminShell — sidebar navigation with active section switching.
 // ---------------------------------------------------------------------------
 
+export type AdminSection = "landing" | "posts";
+
 const PLACEHOLDER_SECTIONS = [
-  "Posts",
   "Outings",
   "Verses",
   "Responsibles",
@@ -118,10 +119,14 @@ const PLACEHOLDER_SECTIONS = [
 
 function AdminShell({
   user,
+  activeSection,
+  onNavigate,
   onLogout,
   logoutError,
 }: {
   user: AuthUser;
+  activeSection: AdminSection;
+  onNavigate: (section: AdminSection) => void;
   onLogout: () => void;
   logoutError: boolean;
 }) {
@@ -133,9 +138,24 @@ function AdminShell({
       <nav data-testid="admin-sidebar">
         <ul>
           <li>
-            <a href="/admin" data-testid="nav-landing-settings">
+            <button
+              type="button"
+              data-testid="nav-landing-settings"
+              onClick={() => onNavigate("landing")}
+              disabled={activeSection === "landing"}
+            >
               Landing Settings
-            </a>
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              data-testid="nav-posts"
+              onClick={() => onNavigate("posts")}
+              disabled={activeSection === "posts"}
+            >
+              Posts
+            </button>
           </li>
           {PLACEHOLDER_SECTIONS.map((label) => (
             <li key={label}>
@@ -151,7 +171,11 @@ function AdminShell({
         </ul>
       </nav>
       <main data-testid="admin-content">
-        <LandingSettingsPage />
+        {activeSection === "landing" ? (
+          <LandingSettingsPage />
+        ) : (
+          <PostsPage />
+        )}
       </main>
       <footer>
         <button
@@ -179,6 +203,7 @@ export function AdminApp() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoutError, setLogoutError] = useState(false);
+  const [activeSection, setActiveSection] = useState<AdminSection>("landing");
 
   // Bootstrap: attempt refresh on mount with bounded timeout.
   // If the auth endpoint hangs the timeout clears the loading state
@@ -235,5 +260,13 @@ export function AdminApp() {
   }
 
   // Authenticated — show shell
-  return <AdminShell user={user} onLogout={handleLogout} logoutError={logoutError} />;
+  return (
+    <AdminShell
+      user={user}
+      activeSection={activeSection}
+      onNavigate={setActiveSection}
+      onLogout={handleLogout}
+      logoutError={logoutError}
+    />
+  );
 }

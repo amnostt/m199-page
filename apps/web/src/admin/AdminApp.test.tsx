@@ -288,9 +288,36 @@ describe("AdminApp login", () => {
 
 describe("AdminApp shell navigation", () => {
   async function renderShell() {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(AUTH_USER),
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(AUTH_USER),
+        });
+      }
+      // Posts list API (called when PostsPage mounts)
+      if (url === "/posts/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        });
+      }
+      // Landing settings GET
+      if (url === "/landing/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              mission: "m",
+              vision: "v",
+              description: "d",
+              featuredVideoUrl: null,
+              contactEmail: null,
+              contactPhone: null,
+            }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
     render(<AdminApp />);
@@ -300,25 +327,115 @@ describe("AdminApp shell navigation", () => {
     });
   }
 
-  it("renders Landing Settings nav item as active link", async () => {
+  it("renders Landing Settings nav item (disabled when active by default)", async () => {
     await renderShell();
     const landingLink = screen.getByTestId("nav-landing-settings");
     expect(landingLink).toBeTruthy();
-    // Should be navigable (not disabled)
-    expect(landingLink.tagName).toBe("A");
+    // Landing is the default active section — button is present but disabled
+    expect(landingLink.tagName).toBe("BUTTON");
+    expect((landingLink as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("renders Posts nav item as active (not disabled placeholder)", async () => {
+    await renderShell();
+
+    // Posts should now be a navigable button, not a disabled placeholder
+    const postsNav = screen.getByTestId("nav-posts");
+    expect(postsNav).toBeTruthy();
+    expect(postsNav.tagName).toBe("BUTTON");
+    expect((postsNav as HTMLButtonElement).disabled).toBe(false);
+    // Should NOT have the "(coming soon)" suffix
+    expect(postsNav.textContent).not.toMatch(/coming soon/i);
+  });
+
+  it("clicking Posts nav shows PostsListPage and hides LandingSettings", async () => {
+    // Override fetch to handle both auth and posts API
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(AUTH_USER),
+        });
+      }
+      if (url === "/posts/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: "p1",
+                slug: "hello",
+                title: "Hello",
+                status: "DRAFT",
+                coverImageId: null,
+                publishedAt: null,
+              },
+            ]),
+        });
+      }
+      // Landing settings GET
+      if (url === "/landing/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              mission: "m",
+              vision: "v",
+              description: "d",
+              featuredVideoUrl: null,
+              contactEmail: null,
+              contactPhone: null,
+            }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    render(<AdminApp />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-shell")).toBeTruthy();
+    });
+
+    // Landing Settings should be visible by default
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
+    // Click Posts nav
+    const postsNav = screen.getByTestId("nav-posts");
+    fireEvent.click(postsNav);
+
+    // Posts list should now be visible
+    await waitFor(() => {
+      expect(screen.getByTestId("posts-list-table")).toBeTruthy();
+    });
+
+    // Landing Settings should be hidden
+    expect(screen.queryByTestId("landing-settings-form")).toBeNull();
+
+    // Click Landing Settings nav to switch back
+    const landingNav = screen.getByTestId("nav-landing-settings");
+    fireEvent.click(landingNav);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
+    // Posts list should be hidden
+    expect(screen.queryByTestId("posts-list-table")).toBeNull();
+
+    // Shell should still be intact
+    expect(screen.getByTestId("admin-shell")).toBeTruthy();
+    expect(screen.getByTestId("admin-user-name")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /logout/i })).toBeTruthy();
   });
 
   it("renders placeholder nav items for out-of-scope sections as disabled", async () => {
     await renderShell();
 
-    // Each placeholder should exist as a disabled button with "(coming soon)" label
-    const placeholders = [
-      "Posts",
-      "Outings",
-      "Verses",
-      "Responsibles",
-      "Files",
-    ];
+    // Posts is now an active nav section (not a placeholder)
+    const placeholders = ["Outings", "Verses", "Responsibles", "Files"];
 
     for (const label of placeholders) {
       const testId = `nav-placeholder-${label.toLowerCase()}`;

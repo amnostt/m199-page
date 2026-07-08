@@ -97,6 +97,7 @@ export async function adminFetch<T = unknown>(
     // session-related (500, network, etc.). Surface it to the caller
     // without logging out or redirecting.
     if (!retryRes.ok) throw new Error("Admin request failed");
+    if (retryRes.status === 204) return undefined as T;
     return retryRes.json() as Promise<T>;
   }
 
@@ -110,5 +111,6 @@ export async function adminFetch<T = unknown>(
   }
 
   if (!res.ok) throw new Error("Admin request failed");
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }

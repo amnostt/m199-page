@@ -57,6 +57,14 @@ export default defineConfig({
         target: API_TARGET,
         changeOrigin: true,
       },
+      // /files proxy — serves uploaded post cover images, thumbnails,
+      // and downloadable files from the API during local development.
+      // No bypass: all /files requests (including browser page loads)
+      // should reach the API server.
+      "/files": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
     },
   },
 });
