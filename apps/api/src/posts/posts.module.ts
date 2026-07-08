@@ -1,8 +1,7 @@
 /**
- * PostsModule — post management module (PR 1: foundation skeleton, PR 2: controllers).
+ * PostsModule — post management module.
  *
- * Phase 1: Module skeleton with PostsService provider (no controllers).
- * Phase 2 (PR 2): Admin and public controllers wired.
+ * Wires PostsService, admin controller, and public controller.
  *
  * Imports AuthModule for controller guards. DbModule is @Global()
  * so PostsService injection works without explicit import.

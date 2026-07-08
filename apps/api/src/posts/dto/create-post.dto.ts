@@ -1,5 +1,5 @@
 /**
- * CreatePostDto — validated input for post creation (Task 1.4).
+ * CreatePostDto — validated input for post creation.
  *
  * Required: title, slug, content.
  * Optional: coverImageId, description, tags, downloadIds, status.

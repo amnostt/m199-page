@@ -1,7 +1,6 @@
 /**
- * PostsService — CRUD, lifecycle, and sanitization for posts (PR 1).
+ * PostsService — CRUD, lifecycle, sanitization, and featured post management.
  *
- * Task 1.8-1.13: Core service logic following the OutingsService pattern.
  * Minimal Prisma interfaces avoid static @prisma/client imports (BF-02).
  *
  * - create: sanitizes content, validates FileAsset categories, handles slug conflicts.
@@ -207,7 +206,7 @@ export class PostsService {
   // -----------------------------------------------------------------------
 
   /**
-   * Creates a post with sanitized content (Task 1.9).
+   * Creates a post with sanitized content.
    *
    * Validates coverImageId (POST_COVER_IMAGE) and downloadIds (POST_DOWNLOAD)
    * FileAsset categories. Defaults status to DRAFT.
@@ -231,32 +230,35 @@ export class PostsService {
     const sanitizedContent = sanitizePostContent(dto.content);
 
     try {
-      const post = await this.client.post.create({
-        data: {
-          title: dto.title,
-          slug: dto.slug,
-          content: sanitizedContent,
-          description: dto.description ?? "",
-          coverImageId: dto.coverImageId ?? null,
-          tags: dto.tags ?? [],
-          status,
-        },
-      });
+      return await this.client.$transaction(async (tx) => {
+        const post = await tx.post.create({
+          data: {
+            title: dto.title,
+            slug: dto.slug,
+            content: sanitizedContent,
+            description: dto.description ?? "",
+            coverImageId: dto.coverImageId ?? null,
+            tags: dto.tags ?? [],
+            status,
+          },
+        });
 
-      // Wire download rows
-      if (dto.downloadIds && dto.downloadIds.length > 0) {
-        for (let i = 0; i < dto.downloadIds.length; i++) {
-          await this.client.postDownload.create({
-            data: {
-              postId: post.id,
-              fileId: dto.downloadIds[i]!,
-              sortOrder: i,
-            },
-          });
+        // Wire download rows — inside transaction so post and downloads
+        // are committed atomically or not at all.
+        if (dto.downloadIds && dto.downloadIds.length > 0) {
+          for (let i = 0; i < dto.downloadIds.length; i++) {
+            await tx.postDownload.create({
+              data: {
+                postId: post.id,
+                fileId: dto.downloadIds[i]!,
+                sortOrder: i,
+              },
+            });
+          }
         }
-      }
 
-      return post;
+        return post;
+      });
     } catch (err: unknown) {
       const pgErr = err as { code?: string };
       if (pgErr.code === "P2002") {
@@ -267,7 +269,7 @@ export class PostsService {
   }
 
   /**
-   * Partially updates a post (Task 1.10).
+   * Partially updates a post.
    *
    * Normal edits never touch FeaturedPost.featuredAt. Sanitizes content
    * when provided.
@@ -305,28 +307,31 @@ export class PostsService {
     }
 
     try {
-      const updated = await this.client.post.update({
-        where: { id },
-        data,
-      });
-
-      // Replace download rows when downloadIds is provided
-      if (dto.downloadIds !== undefined) {
-        await this.client.postDownload.deleteMany({
-          where: { postId: id },
+      return await this.client.$transaction(async (tx) => {
+        const updated = await tx.post.update({
+          where: { id },
+          data,
         });
-        for (let i = 0; i < dto.downloadIds.length; i++) {
-          await this.client.postDownload.create({
-            data: {
-              postId: id,
-              fileId: dto.downloadIds[i]!,
-              sortOrder: i,
-            },
-          });
-        }
-      }
 
-      return updated;
+        // Replace download rows — inside transaction so post update
+        // and download sync are committed atomically or not at all.
+        if (dto.downloadIds !== undefined) {
+          await tx.postDownload.deleteMany({
+            where: { postId: id },
+          });
+          for (let i = 0; i < dto.downloadIds.length; i++) {
+            await tx.postDownload.create({
+              data: {
+                postId: id,
+                fileId: dto.downloadIds[i]!,
+                sortOrder: i,
+              },
+            });
+          }
+        }
+
+        return updated;
+      });
     } catch (err: unknown) {
       const pgErr = err as { code?: string };
       if (pgErr.code === "P2002") {
@@ -340,7 +345,7 @@ export class PostsService {
   }
 
   /**
-   * Publishes a post (Task 1.11).
+   * Publishes a post.
    *
    * Sets status to PUBLISHED. Sets publishedAt now only when first
    * published; preserves existing publishedAt on republish.
@@ -364,7 +369,7 @@ export class PostsService {
   }
 
   /**
-   * Archives a post (Task 1.11).
+   * Archives a post.
    *
    * Sets status to ARCHIVED and deletes the FeaturedPost row if it exists.
    * Uses a transaction to ensure both operations succeed or fail together.
@@ -395,7 +400,7 @@ export class PostsService {
   }
 
   /**
-   * Deletes a post and its related downloads + featured row (Task 1.11).
+   * Deletes a post and its related downloads + featured row.
    *
    * All deletions run in a single transaction so cleanup always completes
    * or rolls back together.
@@ -426,7 +431,7 @@ export class PostsService {
   }
 
   /**
-   * Lists posts with optional status filter and pagination (Task 1.12).
+   * Lists posts with optional status filter and pagination.
    */
   async findAll(query: PostListQueryDto): Promise<PostRow[]> {
     const where: Record<string, unknown> = {};
@@ -443,7 +448,7 @@ export class PostsService {
   }
 
   /**
-   * Finds a single post by slug (Task 1.12).
+   * Finds a single post by slug.
    */
   async findBySlug(slug: string): Promise<PostRow | null> {
     return this.client.post.findUnique({
@@ -453,16 +458,16 @@ export class PostsService {
   }
 
   // -----------------------------------------------------------------------
-  // Feature / Unfeature (PR 2 — Tasks 2.4, 2.5)
+  // Feature / Unfeature
   // -----------------------------------------------------------------------
 
   private readonly FEATURE_SLOTS = ["SLOT_1", "SLOT_2", "SLOT_3"] as const;
 
   /**
-   * Features a PUBLISHED post (Task 2.4).
+   * Features a PUBLISHED post.
    *
    * - Post must be PUBLISHED.
-   * - Max 3 active featured posts. Rejects if cap is reached.
+   * - Max FEATURE_SLOTS.length active featured posts. Rejects if cap is reached.
    * - If already featured: delete old row and recreate with updated featuredAt.
    * - Otherwise: create new FeaturedPost row with first free slot.
    */
@@ -498,11 +503,11 @@ export class PostsService {
       return { success: true };
     }
 
-    // New feature: check cap
+    // Check if feature cap is reached
     const count = await this.client.featuredPost.count();
-    if (count >= 3) {
+    if (count >= this.FEATURE_SLOTS.length) {
       throw new ConflictException(
-        "Maximum 3 featured posts reached. Unfeature a post before featuring another.",
+        `Maximum ${this.FEATURE_SLOTS.length} featured posts reached. Unfeature a post before featuring another.`,
       );
     }
 
@@ -511,7 +516,7 @@ export class PostsService {
     const takenSlots = new Set(allFeatured.map((fp) => fp.slot));
     const freeSlot = this.FEATURE_SLOTS.find((s) => !takenSlots.has(s));
     if (!freeSlot) {
-      // Should not happen if count < 3, but guard anyway
+      // Should not happen if count < FEATURE_SLOTS.length, but guard anyway
       throw new ConflictException("No available featured slot");
     }
 
@@ -527,7 +532,7 @@ export class PostsService {
   }
 
   /**
-   * Unfeatures a post by deleting its FeaturedPost row (Task 2.5).
+   * Unfeatures a post by deleting its FeaturedPost row.
    *
    * Idempotent: does not error if the post is not currently featured.
    */
@@ -548,11 +553,24 @@ export class PostsService {
   }
 
   // -----------------------------------------------------------------------
+  // Featured list
+  // -----------------------------------------------------------------------
+
+  /**
+   * Returns the IDs of all currently featured posts so the admin UI can
+   * represent pre-existing featured state without inventing it locally.
+   */
+  async listFeatured(): Promise<{ postIds: string[] }> {
+    const rows = await this.client.featuredPost.findMany();
+    return { postIds: rows.map((r) => r.postId) };
+  }
+
+  // -----------------------------------------------------------------------
   // Public API
   // -----------------------------------------------------------------------
 
   /**
-   * Returns only PUBLISHED posts mapped to PostPublicResponse (Task 1.13).
+   * Returns only PUBLISHED posts mapped to PostPublicResponse.
    *
    * Internal fields (createdById, createdAt, updatedAt) are excluded.
    * coverImageId is resolved to a public URL path.

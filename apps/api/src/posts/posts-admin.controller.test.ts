@@ -1,5 +1,5 @@
 /**
- * PostsAdminController tests — PR 2 (Task 2.1).
+ * PostsAdminController tests.
  *
  * Proves admin routes are behind AuthGuard, delegate correctly to PostsService,
  * and validate inputs. Follows outings-admin.controller.test.ts pattern:
@@ -56,6 +56,7 @@ function mockPostsService(): PostsService {
     delete: vi.fn().mockResolvedValue(undefined),
     feature: vi.fn().mockResolvedValue({ success: true }),
     unfeature: vi.fn().mockResolvedValue({ success: true }),
+    listFeatured: vi.fn().mockResolvedValue({ postIds: [] }),
     findAllPublic: vi.fn(),
   } as unknown as PostsService;
 }
@@ -233,6 +234,21 @@ describe("PostsAdminController", () => {
 
       expect(service.unfeature).toHaveBeenCalledWith("post-002");
       expect(result.success).toBe(true);
+    });
+  });
+
+  // ---- GET /posts/admin/featured --------------------------------------
+
+  describe("GET /posts/admin/featured", () => {
+    it("delegates to service.listFeatured and returns postIds array", async () => {
+      (service.listFeatured as ReturnType<typeof vi.fn>).mockResolvedValue({
+        postIds: ["p1", "p2"],
+      });
+
+      const result = await controller.listFeatured();
+
+      expect(service.listFeatured).toHaveBeenCalledOnce();
+      expect(result).toEqual({ postIds: ["p1", "p2"] });
     });
   });
 

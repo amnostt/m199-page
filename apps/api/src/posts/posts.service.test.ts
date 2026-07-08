@@ -523,6 +523,56 @@ describe("PostsService (PR 1)", () => {
 
       expect(mocks.downloadCreate).toHaveBeenCalledTimes(2);
     });
+
+    it("wraps post creation and download wiring in a transaction", async () => {
+      const { service, mocks } = await buildService({
+        existingFiles: [{ id: "dl-001", category: "POST_DOWNLOAD" }],
+      });
+
+      await service.create({
+        title: "Atomic",
+        slug: "atomic",
+        content: "<p>test</p>",
+        downloadIds: ["dl-001"],
+      });
+
+      // MUST use $transaction to keep post creation and download wiring atomic
+      expect(mocks.$transaction).toHaveBeenCalledOnce();
+    });
+
+    it("errors propagate out when a download creation fails inside create", async () => {
+      const { service, mocks } = await buildService({
+        existingFiles: [
+          { id: "dl-good", category: "POST_DOWNLOAD" },
+          { id: "dl-bad", category: "POST_DOWNLOAD" },
+        ],
+      });
+
+      // First download succeeds, second fails — simulate partial failure
+      mocks.downloadCreate
+        .mockResolvedValueOnce({
+          id: "dl-0",
+          postId: "any",
+          fileId: "dl-good",
+          label: null,
+          sortOrder: 0,
+          createdAt: new Date(),
+        } as PostDownloadRow)
+        .mockRejectedValueOnce(new Error("DB error during download creation"));
+
+      await expect(
+        service.create({
+          title: "Fail",
+          slug: "partial-fail",
+          content: "<p>test</p>",
+          downloadIds: ["dl-good", "dl-bad"],
+        }),
+      ).rejects.toThrow("DB error during download creation");
+
+      // The post.create call must have been inside the transaction,
+      // so the error propagates and nothing is committed.
+      expect(mocks.$transaction).toHaveBeenCalledOnce();
+    });
   });
 
   // -- 1.10: update --------------------------------------------------------
@@ -681,6 +731,54 @@ describe("PostsService (PR 1)", () => {
       });
       // New downloads must be created
       expect(mocks.downloadCreate).toHaveBeenCalledTimes(2);
+    });
+
+    it("wraps post update and download replacement in a transaction", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [DRAFT_POST],
+        findUniqueReturn: DRAFT_POST,
+        existingFiles: [{ id: "dl-001", category: "POST_DOWNLOAD" }],
+      });
+
+      await service.update("post-001", { downloadIds: ["dl-001"] });
+
+      // update with downloads must use $transaction for atomicity
+      expect(mocks.$transaction).toHaveBeenCalledOnce();
+    });
+
+    it("errors propagate when download replacement fails inside update", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [DRAFT_POST],
+        findUniqueReturn: DRAFT_POST,
+        existingFiles: [
+          { id: "dl-good", category: "POST_DOWNLOAD" },
+          { id: "dl-bad", category: "POST_DOWNLOAD" },
+        ],
+        existingDownloads: [
+          { ...DOWNLOAD_ROW, postId: "post-001", fileId: "old-dl" },
+        ],
+      });
+
+      // Second download creation fails
+      mocks.downloadCreate
+        .mockResolvedValueOnce({
+          id: "dl-0",
+          postId: "post-001",
+          fileId: "dl-good",
+          label: null,
+          sortOrder: 0,
+          createdAt: new Date(),
+        } as PostDownloadRow)
+        .mockRejectedValueOnce(new Error("DB error during download replacement"));
+
+      await expect(
+        service.update("post-001", {
+          downloadIds: ["dl-good", "dl-bad"],
+        }),
+      ).rejects.toThrow("DB error during download replacement");
+
+      // Must use $transaction so the post update is rolled back
+      expect(mocks.$transaction).toHaveBeenCalledOnce();
     });
   });
 
@@ -1019,7 +1117,7 @@ describe("PostsService (PR 1)", () => {
       expect(createArgs.data.slot).toBe("SLOT_3");
     });
 
-    it("rejects feature when max 3 are already active (feature cap)", async () => {
+    it("rejects feature when all FEATURE_SLOTS are occupied (derived cap)", async () => {
       const existingFeatured: FeaturedPostRow[] = [
         {
           id: "fp-A",
@@ -1170,6 +1268,61 @@ describe("PostsService (PR 1)", () => {
       const result = await service.unfeature("non-existent-id");
 
       expect(result.success).toBe(true);
+    });
+  });
+
+  // -- listFeatured -------------------------------------------------------
+
+  describe("listFeatured", () => {
+    it("returns empty array when no posts are featured", async () => {
+      const { service } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        existingFeatured: [],
+      });
+
+      const result = await service.listFeatured();
+
+      expect(result.postIds).toEqual([]);
+    });
+
+    it("returns all featured post IDs", async () => {
+      const existingFeatured: FeaturedPostRow[] = [
+        {
+          id: "fp-A",
+          slot: "SLOT_1",
+          postId: "post-alpha",
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+        {
+          id: "fp-B",
+          slot: "SLOT_2",
+          postId: "post-beta",
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+        {
+          id: "fp-C",
+          slot: "SLOT_3",
+          postId: "post-gamma",
+          featuredAt: EARLIER,
+          createdAt: EARLIER,
+          updatedAt: EARLIER,
+        },
+      ];
+      const { service } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        existingFeatured,
+      });
+
+      const result = await service.listFeatured();
+
+      expect(result.postIds).toEqual(
+        expect.arrayContaining(["post-alpha", "post-beta", "post-gamma"]),
+      );
+      expect(result.postIds).toHaveLength(3);
     });
   });
 });

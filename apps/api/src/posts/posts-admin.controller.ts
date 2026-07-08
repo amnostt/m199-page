@@ -120,9 +120,9 @@ export class PostsAdminController {
     await this.postsService.delete(id);
   }
 
-  /**
-   * Features a PUBLISHED post (max 3 active, first-free slot).
-   */
+   /**
+    * Features a PUBLISHED post (adheres to the configured feature-slot cap, first-free slot).
+    */
   @Post(":id/feature")
   async feature(@Param("id") id: string) {
     return this.postsService.feature(id);
@@ -134,5 +134,14 @@ export class PostsAdminController {
   @Delete(":id/feature")
   async unfeature(@Param("id") id: string) {
     return this.postsService.unfeature(id);
+  }
+
+   /**
+    * Lists currently featured post IDs so the admin UI can enforce the
+    * configured feature-slot cap before sending a Feature request.
+    */
+  @Get("featured")
+  async listFeatured() {
+    return this.postsService.listFeatured();
   }
 }

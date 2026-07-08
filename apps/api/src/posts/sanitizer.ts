@@ -1,5 +1,5 @@
 /**
- * Posts HTML sanitizer — Task 1.3.
+ * Posts HTML sanitizer.
  *
  * Backend defense-in-depth: sanitizes post HTML content before persistence.
  * Strips disallowed tags, attributes, events, and unsafe URL schemes.
