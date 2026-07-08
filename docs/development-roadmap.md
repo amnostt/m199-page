@@ -4,9 +4,9 @@ Este documento resume el camino completo para llevar el MVP de Misión 1 - 99 de
 
 ## Estado actual
 
-Estamos listos para empezar el **paso 10: UI admin completa**.
+Estamos en el **paso 10: UI admin completa**, con la base del panel y el CRUD admin de Posts ya entregados. Falta completar el resto de pantallas operativas del admin.
 
-Ya está terminada la base técnica completa, incluyendo autenticación, responsables, archivos/uploads, una primera landing pública editable, salidas, posts y versículo diario:
+Ya está terminada la base técnica completa, incluyendo autenticación, responsables, archivos/uploads, una primera landing pública editable, salidas, posts y versículo diario. Además, la UI admin ya tiene base navegable y gestión de Posts desde el panel:
 
 ### Base técnica (pasos 1–3)
 - Documento técnico base.
@@ -76,7 +76,19 @@ Ya está terminada la base técnica completa, incluyendo autenticación, respons
 - 515 tests pasando, typecheck, lint y estado de migraciones limpios en la verificación final.
 - Spec SDD `posts` archivada como `openspec/changes/archive/2026-07-06-posts/`.
 
-En otras palabras: el panel admin ya tiene login, sesiones seguras, CRUD de responsables, uploads sólidos, landing pública editable y tres entidades de contenido reales publicadas: Salidas, Posts y Versículo diario. Ahora conviene avanzar sobre la UI admin completa para unificar la experiencia operativa del panel.
+### UI admin — slices entregados (paso 10, en curso)
+- Cliente de sesión web sobre el flujo de cookies httpOnly existente (login/refresh/logout).
+- Rutas `/admin` protegidas: usuarios no autenticados o con sesión expirada caen al login.
+- Shell admin con sidebar y navegación base, más patrones compartidos de loading, error y confirmación.
+- Editor de Landing Settings LP-01 (misión, visión, descripción, video destacado y contacto) con confirmación obligatoria en cada guardado.
+- Fix de estabilidad del flujo de refresh admin (`3aca863 fix(auth): stabilize admin refresh flow`): validación estricta de `API_ORIGIN`, limpieza de cookie legacy `refresh_token`, tolerancia a refresh concurrentes sin borrar cookies y deduplicación del refresh en el bootstrap de React StrictMode.
+- Spec SDD `ui-admin-complete` archivada como `openspec/changes/archive/2026-07-07-ui-admin-complete/`.
+- CRUD admin de Posts completo: listado, creación/edición, publicación/archivo/borrado, confirmación de cambio de slug publicado, portada, descargables y toggle de destacados con cap de 3.
+- Endpoint admin de posts destacados (`GET /posts/admin/featured`) para que el panel respete destacados preexistentes antes de habilitar nuevos toggles.
+- Spec SDD `posts-admin-crud` archivada como `openspec/changes/archive/2026-07-08-posts-admin-crud/`.
+- Fuera de estos slices: CRUD completo de salidas, versículos, responsables y archivos; roles/permisos; preview de landing, hero image, salida destacada y posts destacados desde Landing Settings.
+
+En otras palabras: el panel admin ya tiene login, sesiones seguras, CRUD de responsables (vía API), uploads sólidos, landing pública editable, Posts gestionables desde UI y tres entidades de contenido reales publicadas: Salidas, Posts y Versículo diario. Falta cablear el resto de pantallas CRUD en el panel para completar el paso 10.
 
 ## Camino hasta finalizar el MVP
 
@@ -323,6 +335,8 @@ Avance actual:
 
 ### 10. UI admin completa
 
+**Estado:** 🚧 En curso (base admin + Posts CRUD completos).
+
 Unificar la experiencia del panel:
 
 - layout admin
@@ -335,6 +349,20 @@ Unificar la experiencia del panel:
 - sesión expirada/refresh
 
 **Resultado esperado:** panel usable de punta a punta.
+
+Avance actual:
+
+- ✅ Cliente de sesión web sobre cookies httpOnly con login, refresh y logout.
+- ✅ Protección de rutas `/admin` con redirect a login en sesión inexistente o expirada.
+- ✅ Shell admin con layout, sidebar y navegación base.
+- ✅ Patrones compartidos de loading, error y confirmación (guardado con confirmación obligatoria).
+- ✅ Editor de Landing Settings LP-01 (misión, visión, descripción, video destacado, contacto).
+- ✅ Estabilización del refresh admin: `API_ORIGIN` estricto, limpieza de cookie legacy, refresh concurrente sin borrar cookies y dedupe en bootstrap StrictMode.
+- ✅ Spec SDD `ui-admin-complete` archivada como `openspec/changes/archive/2026-07-07-ui-admin-complete/`.
+- ✅ CRUD admin de Posts: listado con filtros, formulario create/edit, lifecycle actions, portada, descargables y destacados.
+- ✅ Spec SDD `posts-admin-crud` archivada como `openspec/changes/archive/2026-07-08-posts-admin-crud/`.
+- 🔲 Pantallas CRUD admin para responsables, salidas, versículos y archivos.
+- 🔲 Gestión desde admin de hero image, salida destacada y posts destacados en Landing Settings.
 
 ### 11. UI pública polish
 
@@ -394,6 +422,6 @@ Cerrar el ciclo contra los requisitos originales:
 
 ## Próximo paso recomendado
 
-El próximo SDD change debería ser **UI admin completa**.
+El próximo SDD change debería ser **el siguiente slice de UI admin completa**: completar las pantallas CRUD restantes del panel.
 
-Con auth, responsables, archivos, landing, Salidas, Posts y Versículo diario ya resueltos, UI admin completa es el siguiente slice natural: convierte las capacidades backend en una experiencia operativa usable de punta a punta para responsables.
+La base admin y Posts CRUD ya están entregados. El siguiente slice natural es cablear las pantallas de gestión que todavía existen sólo a nivel API o de forma parcial —responsables, salidas, versículos y archivos— más la gestión desde admin de hero image, salida destacada y posts destacados en Landing Settings, para que el panel sea usable de punta a punta.
