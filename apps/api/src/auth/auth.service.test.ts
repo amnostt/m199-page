@@ -202,6 +202,10 @@ describe("AuthService", () => {
         "raw-refresh-token",
         expect.objectContaining({ httpOnly: true, path: "/" }),
       );
+      expect(res.clearCookie).toHaveBeenCalledWith(
+        REFRESH_TOKEN,
+        expect.objectContaining({ path: "/auth/refresh" }),
+      );
       expect(dbValue.client.refreshSession.create).toHaveBeenCalled();
     });
 
@@ -290,6 +294,38 @@ describe("AuthService", () => {
       expect(res.cookie).toHaveBeenCalledTimes(2);
     });
 
+    it("emits legacy refresh cookie deletion before the new root refresh cookie", async () => {
+      const { service } = await buildService({
+        user: ACTIVE_USER,
+        session: ACTIVE_SESSION,
+      });
+
+      const req = mockReq({ refresh_token: "raw-refresh-token" });
+      const res = mockRes();
+
+      await service.refresh(req, res as unknown as import("express").Response);
+
+      expect(res.clearCookie).toHaveBeenCalledWith(
+        REFRESH_TOKEN,
+        expect.objectContaining({ path: "/auth/refresh" }),
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        REFRESH_TOKEN,
+        "raw-refresh-token",
+        expect.objectContaining({ path: "/" }),
+      );
+
+      const legacyDeleteOrder = res.clearCookie.mock.invocationCallOrder[0];
+      const rootRefreshSetOrder = res.cookie.mock.invocationCallOrder[1];
+
+      expect(legacyDeleteOrder).toBeDefined();
+      expect(rootRefreshSetOrder).toBeDefined();
+
+      expect(legacyDeleteOrder as number).toBeLessThan(
+        rootRefreshSetOrder as number,
+      );
+    });
+
     it("rejects a concurrent rotation when another request already revoked the session", async () => {
       const { service, dbValue } = await buildService({
         user: ACTIVE_USER,
@@ -308,9 +344,10 @@ describe("AuthService", () => {
 
       expect(dbValue.client.$transaction).toHaveBeenCalledTimes(1);
       expect(dbValue.client.refreshSession.create).not.toHaveBeenCalled();
+      expect(res.clearCookie).not.toHaveBeenCalled();
     });
 
-    it("throws 401 and clears cookies for revoked token", async () => {
+    it("throws 401 without clearing cookies for revoked token", async () => {
       const revokedSession = {
         ...ACTIVE_SESSION,
         status: "REVOKED" as const,
@@ -327,14 +364,27 @@ describe("AuthService", () => {
         service.refresh(req, res as unknown as import("express").Response),
       ).rejects.toThrow("Invalid or revoked token");
 
-      expect(res.clearCookie).toHaveBeenCalledWith(
-        ACCESS_TOKEN,
-        expect.any(Object),
-      );
-      expect(res.clearCookie).toHaveBeenCalledWith(
-        REFRESH_TOKEN,
-        expect.any(Object),
-      );
+      expect(res.clearCookie).not.toHaveBeenCalled();
+    });
+
+    it("throws 401 without clearing newer cookies for expired token", async () => {
+      const expiredSession = {
+        ...ACTIVE_SESSION,
+        expiresAt: new Date(Date.now() - 1_000),
+      };
+      const { service } = await buildService({
+        user: ACTIVE_USER,
+        session: expiredSession,
+      });
+
+      const req = mockReq({ refresh_token: "old-token" });
+      const res = mockRes();
+
+      await expect(
+        service.refresh(req, res as unknown as import("express").Response),
+      ).rejects.toThrow("Refresh token expired");
+
+      expect(res.clearCookie).not.toHaveBeenCalled();
     });
 
     it("throws 401 and clears cookies when cookie is missing", async () => {
@@ -402,6 +452,10 @@ describe("AuthService", () => {
         REFRESH_TOKEN,
         expect.objectContaining({ path: "/" }),
       );
+      expect(res.clearCookie).toHaveBeenCalledWith(
+        REFRESH_TOKEN,
+        expect.objectContaining({ path: "/auth/refresh" }),
+      );
     });
 
     it("uses a root-scoped refresh cookie so browser logout sends the current session token", async () => {
@@ -429,7 +483,7 @@ describe("AuthService", () => {
 
       await service.logout(req, res as unknown as import("express").Response);
 
-      expect(res.clearCookie).toHaveBeenCalledTimes(2);
+      expect(res.clearCookie).toHaveBeenCalledTimes(3);
     });
   });
 

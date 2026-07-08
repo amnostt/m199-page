@@ -31,9 +31,22 @@ const nextHandle: CallHandler = {
   handle: () => ({}) as Observable<unknown>,
 };
 
-function makeInterceptor(port?: number): AuthInterceptor {
+function makeInterceptor(values?: {
+  port?: number;
+  apiOrigin?: string;
+}): AuthInterceptor {
   const config = {
-    get: vi.fn().mockReturnValue(port ?? 3000),
+    get: vi.fn((key: string, defaultValue?: unknown) => {
+      if (key === "PORT") {
+        return values?.port ?? defaultValue ?? 3000;
+      }
+
+      if (key === "API_ORIGIN") {
+        return values?.apiOrigin;
+      }
+
+      return defaultValue;
+    }),
   } as unknown as ConfigService;
   return new AuthInterceptor(config);
 }
@@ -103,29 +116,25 @@ describe("AuthInterceptor", () => {
     );
   });
 
-  // ---- custom API_ORIGIN env ----------------------------------------------
+  // ---- custom API_ORIGIN config -------------------------------------------
 
-  it("uses API_ORIGIN env var when set", () => {
-    vi.stubEnv("API_ORIGIN", "https://admin.example.com");
-
-    const interceptor = makeInterceptor();
+  it("uses API_ORIGIN config value when set", () => {
+    const interceptor = makeInterceptor({
+      apiOrigin: "https://admin.example.com",
+    });
     const ctx = makeContext("POST", "https://admin.example.com");
 
     expect(() => interceptor.intercept(ctx, nextHandle)).not.toThrow();
-
-    vi.unstubAllEnvs();
   });
 
   it("rejects when Origin does not match API_ORIGIN", () => {
-    vi.stubEnv("API_ORIGIN", "https://admin.example.com");
-
-    const interceptor = makeInterceptor();
+    const interceptor = makeInterceptor({
+      apiOrigin: "https://admin.example.com",
+    });
     const ctx = makeContext("POST", "http://localhost:3000");
 
     expect(() => interceptor.intercept(ctx, nextHandle)).toThrow(
       new ForbiddenException("Invalid origin"),
     );
-
-    vi.unstubAllEnvs();
   });
 });

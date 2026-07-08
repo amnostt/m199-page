@@ -9,6 +9,7 @@
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { StrictMode } from "react";
 import {
   render,
   screen,
@@ -46,15 +47,25 @@ afterEach(() => {
 
 describe("AdminApp bootstrap", () => {
   it("shows loading state while refreshing session", () => {
-    // Never-resolving fetch keeps the bootstrap pending
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation(() => new Promise<Response>(() => {}));
+    let resolveRefresh!: () => void;
+    const refreshDeferred = new Promise<void>((resolve) => {
+      resolveRefresh = resolve;
+    });
+
+    // Pending fetch keeps the bootstrap loading long enough to assert it.
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      refreshDeferred.then(() => ({
+        ok: true,
+        json: () => Promise.resolve(AUTH_USER),
+      })),
+    );
 
     render(<AdminApp />);
 
     expect(screen.getByTestId("admin-loading")).toBeTruthy();
     expect(screen.getByText(/loading/i)).toBeTruthy();
+
+    resolveRefresh();
   });
 
   it("renders admin shell on successful refresh bootstrap", async () => {
@@ -116,9 +127,17 @@ describe("AdminApp bootstrap", () => {
     // Set timeout to 0 so it fires immediately; keep fetch hung
     TIMEOUTS.bootstrap = 0;
 
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation(() => new Promise<Response>(() => {}));
+    let resolveRefresh!: () => void;
+    const refreshDeferred = new Promise<void>((resolve) => {
+      resolveRefresh = resolve;
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      refreshDeferred.then(() => ({
+        ok: true,
+        json: () => Promise.resolve(AUTH_USER),
+      })),
+    );
 
     render(<AdminApp />);
 
@@ -130,8 +149,45 @@ describe("AdminApp bootstrap", () => {
 
     expect(screen.queryByTestId("admin-loading")).toBeNull();
 
+    resolveRefresh();
+
     // Restore
     TIMEOUTS.bootstrap = 15_000;
+  });
+
+  it("shares one bootstrap refresh under StrictMode duplicate mount", async () => {
+    let resolveRefresh!: () => void;
+    const refreshDeferred = new Promise<void>((resolve) => {
+      resolveRefresh = resolve;
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") {
+        return refreshDeferred.then(() => ({
+          ok: true,
+          json: () => Promise.resolve(AUTH_USER),
+        }));
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    render(
+      <StrictMode>
+        <AdminApp />
+      </StrictMode>,
+    );
+
+    await Promise.resolve();
+
+    expect(
+      vi.mocked(fetch).mock.calls.filter(([url]) => url === "/auth/refresh"),
+    ).toHaveLength(1);
+
+    resolveRefresh();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-shell")).toBeTruthy();
+    });
   });
 });
 

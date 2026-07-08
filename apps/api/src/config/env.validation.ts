@@ -24,6 +24,29 @@ const DEFAULT_UPLOAD_DIR = "./uploads";
 /** Default max file size in bytes (10 MB). */
 const DEFAULT_MAX_FILE_SIZE = 10485760;
 
+function normalizeOrigin(value: unknown, port: number): string {
+  const originValue =
+    value != null && value !== ""
+      ? String(value)
+      : `http://localhost:${String(port)}`;
+
+  try {
+    const url = new URL(originValue);
+    if (
+      (url.protocol !== "http:" && url.protocol !== "https:") ||
+      originValue !== url.origin
+    ) {
+      throw new Error();
+    }
+
+    return url.origin;
+  } catch {
+    throw new Error(
+      `API_ORIGIN must be a valid URL origin, got: ${String(value)}`,
+    );
+  }
+}
+
 export function validate(config: Record<string, unknown>): EnvConfig {
   for (const key of REQUIRED_KEYS) {
     if (config[key] == null || config[key] === "") {
@@ -49,6 +72,7 @@ export function validate(config: Record<string, unknown>): EnvConfig {
   return {
     NODE_ENV: String(config["NODE_ENV"]),
     PORT: port,
+    API_ORIGIN: normalizeOrigin(config["API_ORIGIN"], port),
     DATABASE_URL: String(config["DATABASE_URL"]),
     JWT_SECRET: String(config["JWT_SECRET"]),
     VISITOR_HASH_SECRET: String(config["VISITOR_HASH_SECRET"]),

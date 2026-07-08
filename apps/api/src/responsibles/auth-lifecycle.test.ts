@@ -246,6 +246,10 @@ describe("Auth lifecycle (AR-02, AR-03, AR-04)", () => {
 
     expect(user.email).toBe("alice@test.com");
     expect(loginRes.cookie).toHaveBeenCalledTimes(2);
+    expect(loginRes.clearCookie).toHaveBeenCalledWith(
+      REFRESH_TOKEN,
+      expect.objectContaining({ path: "/auth/refresh" }),
+    );
 
     // 2. Refresh with raw-token-1 → should rotate to new tokens,
     //    revoking the old session and creating a new one with raw-token-2.
@@ -259,6 +263,10 @@ describe("Auth lifecycle (AR-02, AR-03, AR-04)", () => {
 
     expect(refreshedUser.email).toBe("alice@test.com");
     expect(refreshRes.cookie).toHaveBeenCalledTimes(2);
+    expect(refreshRes.clearCookie).toHaveBeenCalledWith(
+      REFRESH_TOKEN,
+      expect.objectContaining({ path: "/auth/refresh" }),
+    );
 
     // 3. Logout with the new token (raw-token-2) → revokes session
     const logoutRes = mockRes();
@@ -269,9 +277,15 @@ describe("Auth lifecycle (AR-02, AR-03, AR-04)", () => {
       logoutRes as unknown as import("express").Response,
     );
 
-    expect(logoutRes.clearCookie).toHaveBeenCalledTimes(2);
+    expect(logoutRes.clearCookie).toHaveBeenCalledTimes(3);
+    expect(logoutRes.clearCookie).toHaveBeenCalledWith(
+      REFRESH_TOKEN,
+      expect.objectContaining({ path: "/auth/refresh" }),
+    );
 
     // 4. Refresh with raw-token-2 (now revoked) → should fail with 401
+    // without clearing cookies, because another refresh response may already
+    // have installed a newer token in the browser.
     const badRefreshRes = mockRes();
     const badRefreshReq = mockReq({ [REFRESH_TOKEN]: "raw-token-2" });
 
@@ -282,7 +296,7 @@ describe("Auth lifecycle (AR-02, AR-03, AR-04)", () => {
       ),
     ).rejects.toThrow(UnauthorizedException);
 
-    expect(badRefreshRes.clearCookie).toHaveBeenCalled();
+    expect(badRefreshRes.clearCookie).not.toHaveBeenCalled();
   });
 
   // ---- Multiple independent sessions (AR-04) ------------------------------

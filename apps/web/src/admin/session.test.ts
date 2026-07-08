@@ -4,8 +4,9 @@
 // Tests login, refreshSession, logout, and adminFetch behavior per design:
 // - credentials: "include" on every auth call
 // - adminFetch forces credentials even when caller provides an override
+// - refreshSession shares one in-flight refresh across direct/concurrent calls
 // - adminFetch retries one refresh on 401, sharing the refresh across
-//   concurrent 401 calls
+//   concurrent 401 calls through refreshSession
 // - adminFetch clears session and redirects to login on 403
 // - logout() throws on non-OK responses
 // ---------------------------------------------------------------------------
@@ -111,6 +112,32 @@ describe("refreshSession", () => {
     });
 
     await expect(refreshSession()).rejects.toThrow("Session refresh failed");
+  });
+
+  it("shares a single in-flight refresh across concurrent direct calls", async () => {
+    let resolveRefresh!: () => void;
+    const refreshDeferred = new Promise<void>((resolve) => {
+      resolveRefresh = resolve;
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      refreshDeferred.then(() => ({
+        ok: true,
+        json: () => Promise.resolve(MOCK_USER),
+      })),
+    );
+
+    const refreshA = refreshSession();
+    const refreshB = refreshSession();
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    resolveRefresh();
+
+    await expect(Promise.all([refreshA, refreshB])).resolves.toEqual([
+      MOCK_USER,
+      MOCK_USER,
+    ]);
   });
 });
 

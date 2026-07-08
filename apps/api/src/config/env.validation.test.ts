@@ -22,6 +22,7 @@ describe("config validation", () => {
 
     expect(result.NODE_ENV).toBe("development");
     expect(result.PORT).toBe(3000);
+    expect(result.API_ORIGIN).toBe("http://localhost:3000");
     expect(result.DATABASE_URL).toBe("postgresql://localhost/m199");
     expect(result.JWT_SECRET).toBe("test-jwt-secret");
     expect(result.VISITOR_HASH_SECRET).toBe("test-visitor-hash-secret");
@@ -106,6 +107,56 @@ describe("config validation", () => {
         VISITOR_HASH_SECRET: "",
       }),
     ).toThrow("Missing required env var: VISITOR_HASH_SECRET");
+  });
+
+  describe("API_ORIGIN", () => {
+    it("defaults to http://localhost:{PORT} when not provided", () => {
+      const result = validate({
+        ...MINIMAL_VALID_CONFIG,
+        PORT: "5173",
+      });
+
+      expect(result.API_ORIGIN).toBe("http://localhost:5173");
+    });
+
+    it("accepts explicit HTTP(S) API_ORIGIN values", () => {
+      const result = validate({
+        ...MINIMAL_VALID_CONFIG,
+        API_ORIGIN: "http://localhost:5173",
+      });
+      const httpsResult = validate({
+        ...MINIMAL_VALID_CONFIG,
+        API_ORIGIN: "https://admin.example.com",
+      });
+
+      expect(result.API_ORIGIN).toBe("http://localhost:5173");
+      expect(httpsResult.API_ORIGIN).toBe("https://admin.example.com");
+    });
+
+    it("throws when API_ORIGIN is not a valid URL origin", () => {
+      expect(() =>
+        validate({
+          ...MINIMAL_VALID_CONFIG,
+          API_ORIGIN: "not-a-url",
+        }),
+      ).toThrow("API_ORIGIN must be a valid URL origin");
+    });
+
+    it.each([
+      "ftp://admin.example.com",
+      "http://localhost:5173/admin",
+      "http://localhost:5173?next=/admin",
+      "http://localhost:5173#admin",
+      "https://user:pass@admin.example.com",
+      "https://admin.example.com/",
+    ])("rejects non-origin API_ORIGIN value %s", (apiOrigin) => {
+      expect(() =>
+        validate({
+          ...MINIMAL_VALID_CONFIG,
+          API_ORIGIN: apiOrigin,
+        }),
+      ).toThrow("API_ORIGIN must be a valid URL origin");
+    });
   });
 
   describe("UPLOAD_DIR", () => {

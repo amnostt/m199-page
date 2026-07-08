@@ -5,8 +5,8 @@
  * (POST, PUT, PATCH, DELETE). GET, HEAD, and OPTIONS requests are
  * exempt — they cannot trigger state changes.
  *
- * The expected origin is read from the `API_ORIGIN` env var, defaulting
- * to `http://localhost:{PORT}`. Combined with `SameSite=Lax` on auth
+ * The expected origin is read from validated ConfigService `API_ORIGIN`,
+ * defaulting to `http://localhost:{PORT}`. Combined with `SameSite=Lax` on auth
  * cookies, this provides defence-in-depth against CSRF attacks without
  * requiring a separate CSRF token.
  *
@@ -40,10 +40,11 @@ export class AuthInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    // Resolve the allowed origin.
+    // Resolve the allowed origin from validated configuration.
     const port = this.config.get<number>("PORT", 3000);
     const allowed =
-      process.env["API_ORIGIN"] ?? `http://localhost:${String(port)}`;
+      this.config.get<string>("API_ORIGIN") ??
+      `http://localhost:${String(port)}`;
 
     const origin = req.headers.origin;
 

@@ -33,6 +33,8 @@ import {
 } from "./auth.constants.js";
 import type { LoginDto } from "./dto/login.dto.js";
 
+const LEGACY_REFRESH_TOKEN_PATH = "/auth/refresh";
+
 // ---------------------------------------------------------------------------
 // Minimal Prisma-model interfaces used by the auth service.
 // The runtime DbService.client is a full PrismaClient, but apps/api/
@@ -153,6 +155,10 @@ export class AuthService {
     const secure = process.env["NODE_ENV"] === "production";
     const baseOptions = { httpOnly: true, sameSite: "lax" as const, secure };
 
+    res.clearCookie(REFRESH_TOKEN, {
+      ...baseOptions,
+      path: LEGACY_REFRESH_TOKEN_PATH,
+    });
     res.cookie(ACCESS_TOKEN, accessToken, { ...baseOptions, path: "/" });
     res.cookie(REFRESH_TOKEN, refreshToken, {
       ...baseOptions,
@@ -160,13 +166,17 @@ export class AuthService {
     });
   }
 
-  /** Clears both auth cookies from the client. */
+  /** Clears root auth cookies plus the legacy refresh path cookie. */
   private clearAuthCookies(res: Response): void {
     const secure = process.env["NODE_ENV"] === "production";
     const baseOptions = { httpOnly: true, sameSite: "lax" as const, secure };
 
     res.clearCookie(ACCESS_TOKEN, { ...baseOptions, path: "/" });
     res.clearCookie(REFRESH_TOKEN, { ...baseOptions, path: "/" });
+    res.clearCookie(REFRESH_TOKEN, {
+      ...baseOptions,
+      path: LEGACY_REFRESH_TOKEN_PATH,
+    });
   }
 
   /** Looks up a user by email and enforces ACTIVE status. */
@@ -241,8 +251,9 @@ export class AuthService {
    * cookies are set.
    *
    * Throws 401 for revoked/expired/missing tokens; 403 for inactive users.
-   * Clears cookies on any failure so the client does not retry with a
-   * dead token.
+   * Missing-token and inactive-user failures clear cookies. Revoked or expired
+   * tokens do not clear cookies because they can be stale losers from a
+   * concurrent refresh race after newer valid cookies were already issued.
    */
   async refresh(req: Request, res: Response): Promise<AuthUser> {
     const rawToken: string | undefined = req.cookies?.[REFRESH_TOKEN];
@@ -259,13 +270,11 @@ export class AuthService {
     });
 
     if (!session || session.status !== "ACTIVE") {
-      this.clearAuthCookies(res);
       throw new UnauthorizedException("Invalid or revoked token");
     }
 
     // Check if the session is expired (DB-level guard).
     if (session.expiresAt < new Date()) {
-      this.clearAuthCookies(res);
       throw new UnauthorizedException("Refresh token expired");
     }
 
