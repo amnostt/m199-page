@@ -363,8 +363,8 @@ describe("deletePost", () => {
       json: () => Promise.resolve({}),
     });
 
-    await expect(deletePost("p1")).rejects.toThrow(
-      "Admin request failed",
-    );
+    // adminFetch now throws AdminRequestError with the parsed response
+    // statusText as the message when no JSON/text body is present.
+    await expect(deletePost("p1")).rejects.toThrow("Not Found");
   });
 });

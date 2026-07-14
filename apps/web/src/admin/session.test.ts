@@ -12,7 +12,13 @@
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { login, refreshSession, logout, adminFetch } from "./session.js";
+import {
+  login,
+  refreshSession,
+  logout,
+  adminFetch,
+  AdminRequestError,
+} from "./session.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -479,5 +485,164 @@ describe("adminFetch", () => {
     expect(b).toEqual({ data: "b" });
     // Only ONE refresh should have been initiated
     expect(refreshCallCount).toBe(1);
+  });
+});
+
+// ===========================================================================
+// AdminRequestError — non-OK responses throw a parsed error (Task 1.4 RED)
+// ===========================================================================
+
+describe("AdminRequestError", () => {
+  it("is exposed as a class extending Error with status, statusText, body", () => {
+    const err = new AdminRequestError(400, "Bad Request", "title is required");
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(AdminRequestError);
+    expect(err.name).toBe("AdminRequestError");
+    expect(err.status).toBe(400);
+    expect(err.statusText).toBe("Bad Request");
+    expect(err.body).toBe("title is required");
+    expect(err.message).toBe("title is required");
+  });
+});
+
+describe("adminFetch — AdminRequestError on non-OK responses", () => {
+  it("throws AdminRequestError with JSON message field when body is JSON", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      headers: { get: (key: string) => (key === "content-type" ? "application/json" : null) },
+      json: () =>
+        Promise.resolve({
+          message: "title is required",
+          error: "Bad Request",
+          statusCode: 400,
+        }),
+    });
+
+    const promise = adminFetch("/admin/some-endpoint");
+    await expect(promise).rejects.toBeInstanceOf(AdminRequestError);
+    await expect(promise).rejects.toMatchObject({
+      status: 400,
+      statusText: "Bad Request",
+      message: "title is required",
+    });
+  });
+
+  it("joins array-shaped validation messages into a single message", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      headers: { get: (key: string) => (key === "content-type" ? "application/json" : null) },
+      json: () =>
+        Promise.resolve({
+          message: ["title is required", "slug must be a string"],
+          error: "Bad Request",
+          statusCode: 400,
+        }),
+    });
+
+    await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
+      "title is required; slug must be a string",
+    );
+  });
+
+  it("falls back to JSON `error` field when `message` is missing", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      headers: { get: (key: string) => (key === "content-type" ? "application/json" : null) },
+      json: () =>
+        Promise.resolve({ error: "Database unavailable", statusCode: 500 }),
+    });
+
+    await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
+      "Database unavailable",
+    );
+  });
+
+  it("uses plain-text body as message when content-type is text/plain", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      statusText: "Bad Gateway",
+      headers: { get: (key: string) => (key === "content-type" ? "text/plain" : null) },
+      text: () => Promise.resolve("Upstream service is unreachable"),
+    });
+
+    await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
+      "Upstream service is unreachable",
+    );
+  });
+
+  it("uses statusText fallback when body is empty and content-type is JSON", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      headers: { get: (key: string) => (key === "content-type" ? "application/json" : null) },
+      json: () => Promise.reject(new SyntaxError("Unexpected end of JSON input")),
+    });
+
+    await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
+      "Internal Server Error",
+    );
+  });
+
+  it("uses statusText fallback when body is empty and content-type is text", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      headers: { get: (key: string) => (key === "content-type" ? "text/plain" : null) },
+      text: () => Promise.resolve(""),
+    });
+
+    await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
+      "Internal Server Error",
+    );
+  });
+
+  it("does not affect the auth-retry 401 path — still throws Session expired", async () => {
+    const hrefSetter = mockLocationHref();
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/admin/some-endpoint") {
+        return Promise.resolve({ ok: false, status: 401 });
+      }
+      if (url === "/auth/refresh") {
+        return Promise.resolve({ ok: false, status: 401 });
+      }
+      if (url === "/auth/logout") {
+        return Promise.resolve({ ok: true });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
+      "Session expired",
+    );
+    expect(hrefSetter).toHaveBeenCalledWith("/admin");
+  });
+
+  it("does not affect the 403 redirect path — still throws Session expired", async () => {
+    const hrefSetter = mockLocationHref();
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/admin/some-endpoint") {
+        return Promise.resolve({ ok: false, status: 403 });
+      }
+      if (url === "/auth/logout") {
+        return Promise.resolve({ ok: true });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
+      "Session expired",
+    );
+    expect(hrefSetter).toHaveBeenCalledWith("/admin");
   });
 });
