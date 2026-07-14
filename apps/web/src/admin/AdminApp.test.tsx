@@ -431,11 +431,190 @@ describe("AdminApp shell navigation", () => {
     expect(screen.getByRole("button", { name: /logout/i })).toBeTruthy();
   });
 
+  it("clicking Outings nav shows OutingsPage (list) and hides LandingSettings", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(AUTH_USER),
+        });
+      }
+      if (url === "/outings/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: "o1",
+                slug: "camp-day",
+                title: "Camp Day",
+                dateTime: "2026-07-15T10:00:00.000Z",
+                location: "Barrio Norte",
+                description: "A great day",
+                status: "DRAFT",
+                mainImageId: null,
+                croquisId: null,
+                planId: null,
+              },
+            ]),
+        });
+      }
+      // Landing settings GET
+      if (url === "/landing/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              mission: "m",
+              vision: "v",
+              description: "d",
+              featuredVideoUrl: null,
+              contactEmail: null,
+              contactPhone: null,
+            }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    render(<AdminApp />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-shell")).toBeTruthy();
+    });
+
+    // Landing Settings should be visible by default
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
+    // Click Outings nav
+    const outingsNav = screen.getByTestId("nav-outings");
+    fireEvent.click(outingsNav);
+
+    // Outings list should now be visible
+    await waitFor(() => {
+      expect(screen.getByTestId("outings-list-table")).toBeTruthy();
+    });
+
+    // Landing Settings should be hidden
+    expect(screen.queryByTestId("landing-settings-form")).toBeNull();
+
+    // Posts list (the other active section) should also be hidden
+    expect(screen.queryByTestId("posts-list-table")).toBeNull();
+
+    // The Outings nav button should now be disabled (active section is
+    // Outings — the disabled flag prevents re-navigation).
+    expect((outingsNav as HTMLButtonElement).disabled).toBe(true);
+
+    // Shell should still be intact
+    expect(screen.getByTestId("admin-shell")).toBeTruthy();
+    expect(screen.getByTestId("admin-user-name")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /logout/i })).toBeTruthy();
+  });
+
+  it("switching between Outings and Posts preserves the shell", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(AUTH_USER),
+        });
+      }
+      if (url === "/outings/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: "o1",
+                slug: "camp-day",
+                title: "Camp Day",
+                dateTime: "2026-07-15T10:00:00.000Z",
+                location: "Barrio Norte",
+                description: "A great day",
+                status: "DRAFT",
+                mainImageId: null,
+                croquisId: null,
+                planId: null,
+              },
+            ]),
+        });
+      }
+      if (url === "/posts/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: "p1",
+                slug: "hello",
+                title: "Hello",
+                status: "DRAFT",
+                coverImageId: null,
+                publishedAt: null,
+              },
+            ]),
+        });
+      }
+      if (url === "/landing/admin") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              mission: "m",
+              vision: "v",
+              description: "d",
+              featuredVideoUrl: null,
+              contactEmail: null,
+              contactPhone: null,
+            }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    render(<AdminApp />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("admin-shell")).toBeTruthy();
+    });
+
+    // Navigate to Outings
+    fireEvent.click(screen.getByTestId("nav-outings"));
+    await waitFor(() => {
+      expect(screen.getByTestId("outings-list-table")).toBeTruthy();
+    });
+
+    // Switch to Posts
+    fireEvent.click(screen.getByTestId("nav-posts"));
+    await waitFor(() => {
+      expect(screen.getByTestId("posts-list-table")).toBeTruthy();
+    });
+
+    // Outings list is gone
+    expect(screen.queryByTestId("outings-list-table")).toBeNull();
+
+    // Switch back to Outings
+    fireEvent.click(screen.getByTestId("nav-outings"));
+    await waitFor(() => {
+      expect(screen.getByTestId("outings-list-table")).toBeTruthy();
+    });
+
+    // Posts list is gone
+    expect(screen.queryByTestId("posts-list-table")).toBeNull();
+
+    // Shell and session still intact
+    expect(screen.getByTestId("admin-shell")).toBeTruthy();
+    expect(screen.getByTestId("admin-user-name")).toBeTruthy();
+  });
+
   it("renders placeholder nav items for out-of-scope sections as disabled", async () => {
     await renderShell();
 
-    // Posts is now an active nav section (not a placeholder)
-    const placeholders = ["Outings", "Verses", "Responsibles", "Files"];
+    // Outings is now an active nav section (not a placeholder); only
+    // Verses, Responsibles, and Files remain as placeholders.
+    const placeholders = ["Verses", "Responsibles", "Files"];
 
     for (const label of placeholders) {
       const testId = `nav-placeholder-${label.toLowerCase()}`;
@@ -450,6 +629,26 @@ describe("AdminApp shell navigation", () => {
       // Assert it is disabled (unavailable, not just unselected)
       expect((el as HTMLButtonElement).disabled).toBe(true);
     }
+  });
+
+  it("renders Outings nav item as an active (navigable) button, not a placeholder", async () => {
+    await renderShell();
+
+    const outingsNav = screen.getByTestId("nav-outings");
+    expect(outingsNav).toBeTruthy();
+    expect(outingsNav.tagName).toBe("BUTTON");
+    // Outings is now an active section — not disabled, not a placeholder
+    expect((outingsNav as HTMLButtonElement).disabled).toBe(false);
+    // Should NOT carry the "(coming soon)" placeholder suffix
+    expect(outingsNav.textContent).not.toMatch(/coming soon/i);
+  });
+
+  it("does NOT render an Outings placeholder", async () => {
+    await renderShell();
+
+    // The old "Outings (coming soon)" placeholder must be gone now that
+    // Outings is an active section.
+    expect(screen.queryByTestId("nav-placeholder-outings")).toBeNull();
   });
 
   it("renders logout button", async () => {

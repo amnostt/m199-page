@@ -15,6 +15,7 @@ import type { AuthUser } from "./adminTypes.js";
 import { login, logout, refreshSession } from "./session.js";
 import { LandingSettingsPage } from "./LandingSettingsPage.js";
 import { PostsPage } from "./PostsPage.js";
+import { OutingsPage } from "./OutingsPage.js";
 
 // ---------------------------------------------------------------------------
 // Timeout constants — prevent permanent loading/submitting when auth
@@ -108,10 +109,9 @@ function AdminLogin({
 // AdminShell — sidebar navigation with active section switching.
 // ---------------------------------------------------------------------------
 
-export type AdminSection = "landing" | "posts";
+export type AdminSection = "landing" | "posts" | "outings";
 
 const PLACEHOLDER_SECTIONS = [
-  "Outings",
   "Verses",
   "Responsibles",
   "Files",
@@ -157,6 +157,16 @@ function AdminShell({
               Posts
             </button>
           </li>
+          <li>
+            <button
+              type="button"
+              data-testid="nav-outings"
+              onClick={() => onNavigate("outings")}
+              disabled={activeSection === "outings"}
+            >
+              Outings
+            </button>
+          </li>
           {PLACEHOLDER_SECTIONS.map((label) => (
             <li key={label}>
               <button
@@ -173,8 +183,10 @@ function AdminShell({
       <main data-testid="admin-content">
         {activeSection === "landing" ? (
           <LandingSettingsPage />
-        ) : (
+        ) : activeSection === "posts" ? (
           <PostsPage />
+        ) : (
+          <OutingsPage />
         )}
       </main>
       <footer>

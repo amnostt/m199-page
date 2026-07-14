@@ -8,6 +8,10 @@
 // - parseOutingDateTime: datetime-local HTML input format → ISO (UTC)
 // - buildOutingPayload: form → API body, including ISO dateTime conversion
 //   and optional asset IDs (null values omitted from body)
+// - updateOuting: PATCH payload OMITS null asset IDs so the server preserves
+//   existing asset references (WU1 review follow-up — "Existing assets are
+//   retained" scenario). createOuting POST payload keeps the default
+//   behavior of including null asset IDs (create semantics preserved).
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -16,6 +20,8 @@ import {
   formatOutingDateTime,
   parseOutingDateTime,
   buildOutingPayload,
+  createOuting,
+  updateOuting,
 } from "./outingsApi.js";
 
 // ---------------------------------------------------------------------------
@@ -250,5 +256,275 @@ describe("buildOutingPayload", () => {
     });
 
     expect(payload.status).toBe("PUBLISHED");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildOutingPayload — PATCH (update) omit-null-assets option
+//
+// WU1 review follow-up: on PATCH, the API's OutingsService.update() uses
+// `if (dto.mainImageId !== undefined) data.mainImageId = dto.mainImageId`,
+// which means a body that includes `mainImageId: null` CLEARS the asset
+// on the server. To satisfy the "Existing assets are retained" spec
+// scenario, the PATCH payload must OMIT null asset IDs so the server keeps
+// the existing values. The create payload keeps the documented default
+// (null is the explicit unset value on create).
+// ---------------------------------------------------------------------------
+
+describe("buildOutingPayload (omitNullAssets — PATCH preserve-assets)", () => {
+  it("omits all three null asset keys when omitNullAssets is true", () => {
+    const payload = buildOutingPayload(
+      {
+        title: "Camp Day",
+        slug: "camp-day",
+        dateTime: "2026-07-15T10:00",
+        location: "Barrio Norte",
+        description: "A great day",
+        mainImageId: null,
+        croquisId: null,
+        planId: null,
+        status: "DRAFT",
+      },
+      { omitNullAssets: true },
+    );
+
+    expect("mainImageId" in payload).toBe(false);
+    expect("croquisId" in payload).toBe(false);
+    expect("planId" in payload).toBe(false);
+  });
+
+  it("keeps non-null asset keys when omitNullAssets is true", () => {
+    const payload = buildOutingPayload(
+      {
+        title: "Camp Day",
+        slug: "camp-day",
+        dateTime: "2026-07-15T10:00",
+        location: "Barrio Norte",
+        description: "A great day",
+        mainImageId: "img-1",
+        croquisId: "croq-1",
+        planId: "plan-1",
+        status: "PUBLISHED",
+      },
+      { omitNullAssets: true },
+    );
+
+    expect(payload.mainImageId).toBe("img-1");
+    expect(payload.croquisId).toBe("croq-1");
+    expect(payload.planId).toBe("plan-1");
+  });
+
+  it("omits only the null asset keys when some are set (mixed)", () => {
+    const payload = buildOutingPayload(
+      {
+        title: "Camp Day",
+        slug: "camp-day",
+        dateTime: "2026-07-15T10:00",
+        location: "Barrio Norte",
+        description: "A great day",
+        mainImageId: "img-1",
+        croquisId: null,
+        planId: "plan-1",
+        status: "DRAFT",
+      },
+      { omitNullAssets: true },
+    );
+
+    expect(payload.mainImageId).toBe("img-1");
+    expect("croquisId" in payload).toBe(false);
+    expect(payload.planId).toBe("plan-1");
+  });
+
+  it("still includes parsed ISO dateTime, status, and required fields when omitNullAssets is true", () => {
+    const payload = buildOutingPayload(
+      {
+        title: "Camp Day",
+        slug: "camp-day",
+        dateTime: "2026-07-15T10:00",
+        location: "Barrio Norte",
+        description: "A great day",
+        mainImageId: null,
+        croquisId: null,
+        planId: null,
+        status: "DRAFT",
+      },
+      { omitNullAssets: true },
+    );
+
+    expect(payload.title).toBe("Camp Day");
+    expect(payload.slug).toBe("camp-day");
+    expect(payload.dateTime).toBe("2026-07-15T10:00:00.000Z");
+    expect(payload.location).toBe("Barrio Norte");
+    expect(payload.description).toBe("A great day");
+    expect(payload.status).toBe("DRAFT");
+  });
+
+  it("defaults to including null asset keys (create semantics preserved)", () => {
+    const payload = buildOutingPayload({
+      title: "Camp Day",
+      slug: "camp-day",
+      dateTime: "2026-07-15T10:00",
+      location: "Barrio Norte",
+      description: "A great day",
+      mainImageId: null,
+      croquisId: null,
+      planId: null,
+      status: "DRAFT",
+    });
+
+    expect(payload).toEqual({
+      title: "Camp Day",
+      slug: "camp-day",
+      dateTime: "2026-07-15T10:00:00.000Z",
+      location: "Barrio Norte",
+      description: "A great day",
+      mainImageId: null,
+      croquisId: null,
+      planId: null,
+      status: "DRAFT",
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateOuting — PATCH body omits null asset IDs
+// ---------------------------------------------------------------------------
+
+describe("updateOuting (PATCH — preserve-assets)", () => {
+  it("PATCH body OMITS null asset IDs so the server preserves existing assets", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          id: "out-1",
+          slug: "camp-day",
+          title: "Camp Day",
+          dateTime: "2026-07-15T10:00:00.000Z",
+          location: "Barrio Norte",
+          description: "A great day",
+          status: "DRAFT",
+          mainImageId: null,
+          croquisId: null,
+          planId: null,
+        }),
+    });
+
+    await updateOuting("out-1", {
+      title: "Camp Day — Updated Title",
+      slug: "camp-day",
+      dateTime: "2026-07-15T10:00",
+      location: "Barrio Norte",
+      description: "A great day",
+      mainImageId: null,
+      croquisId: null,
+      planId: null,
+      status: "DRAFT",
+    });
+
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0];
+    const body = JSON.parse(fetchCall![1].body as string) as Record<
+      string,
+      unknown
+    >;
+
+    expect("mainImageId" in body).toBe(false);
+    expect("croquisId" in body).toBe(false);
+    expect("planId" in body).toBe(false);
+    expect(body.title).toBe("Camp Day — Updated Title");
+    expect(body.slug).toBe("camp-day");
+    expect(body.status).toBe("DRAFT");
+  });
+
+  it("PATCH body INCLUDES non-null asset IDs so the server updates them", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          id: "out-1",
+          slug: "camp-day",
+          title: "Camp Day",
+          dateTime: "2026-07-15T10:00:00.000Z",
+          location: "Barrio Norte",
+          description: "A great day",
+          status: "DRAFT",
+          mainImageId: "img-2",
+          croquisId: "croq-1",
+          planId: null,
+        }),
+    });
+
+    await updateOuting("out-1", {
+      title: "Camp Day",
+      slug: "camp-day",
+      dateTime: "2026-07-15T10:00",
+      location: "Barrio Norte",
+      description: "A great day",
+      mainImageId: "img-2",
+      croquisId: "croq-1",
+      planId: null,
+      status: "DRAFT",
+    });
+
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0];
+    const body = JSON.parse(fetchCall![1].body as string) as Record<
+      string,
+      unknown
+    >;
+
+    expect(body.mainImageId).toBe("img-2");
+    expect(body.croquisId).toBe("croq-1");
+    expect("planId" in body).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createOuting — POST body keeps null asset IDs (create semantics preserved)
+// ---------------------------------------------------------------------------
+
+describe("createOuting (POST — create semantics preserved)", () => {
+  it("POST body STILL INCLUDES null asset IDs so create behavior is unchanged", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          id: "out-new",
+          slug: "camp-day",
+          title: "Camp Day",
+          dateTime: "2026-07-15T10:00:00.000Z",
+          location: "Barrio Norte",
+          description: "A great day",
+          status: "DRAFT",
+          mainImageId: null,
+          croquisId: null,
+          planId: null,
+        }),
+    });
+
+    await createOuting({
+      title: "Camp Day",
+      slug: "camp-day",
+      dateTime: "2026-07-15T10:00",
+      location: "Barrio Norte",
+      description: "A great day",
+      mainImageId: null,
+      croquisId: null,
+      planId: null,
+      status: "DRAFT",
+    });
+
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0];
+    const body = JSON.parse(fetchCall![1].body as string) as Record<
+      string,
+      unknown
+    >;
+
+    expect(body.mainImageId).toBeNull();
+    expect(body.croquisId).toBeNull();
+    expect(body.planId).toBeNull();
+    expect(body.title).toBe("Camp Day");
+    expect(body.status).toBe("DRAFT");
   });
 });

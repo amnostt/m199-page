@@ -89,26 +89,56 @@ export function parseOutingDateTime(
 // ---------------------------------------------------------------------------
 
 /**
+ * Options for {@link buildOutingPayload}.
+ *
+ * - `omitNullAssets`: when true, null optional asset IDs (mainImageId,
+ *   croquisId, planId) are OMITTED from the body. The Outings API's
+ *   PATCH handler treats an absent field as "preserve existing value"
+ *   and a present `null` as "clear the asset" (see
+ *   `apps/api/src/outings/outings.service.ts` update()). To honor the
+ *   "Existing assets are retained" spec scenario, PATCH payloads must
+ *   omit null asset IDs so an edit that changes unrelated fields does
+ *   not clobber existing asset references. Create payloads keep the
+ *   documented default of including null (null is the explicit unset
+ *   value on create).
+ */
+export interface BuildOutingPayloadOptions {
+  omitNullAssets?: boolean;
+}
+
+/**
  * Build the request body for create/update. dateTime is converted to ISO
  * (parseOutingDateTime returns null for empty input — that case yields an
- * invalid payload and the form guards against it). Asset IDs are always
- * sent; the backend distinguishes null from omitted on update, and on
- * create null is the documented default.
+ * invalid payload and the form guards against it). When the
+ * `omitNullAssets` option is true, null optional asset IDs are omitted
+ * from the body so the server preserves the existing values (PATCH
+ * behavior). The default behavior includes null asset IDs so create
+ * payloads remain explicit about the unset state.
  */
 export function buildOutingPayload(
   form: OutingForm,
+  options: BuildOutingPayloadOptions = {},
 ): Record<string, unknown> {
-  return {
+  const payload: Record<string, unknown> = {
     title: form.title,
     slug: form.slug,
     dateTime: parseOutingDateTime(form.dateTime),
     location: form.location,
     description: form.description,
-    mainImageId: form.mainImageId,
-    croquisId: form.croquisId,
-    planId: form.planId,
     status: form.status,
   };
+
+  if (options.omitNullAssets) {
+    if (form.mainImageId !== null) payload.mainImageId = form.mainImageId;
+    if (form.croquisId !== null) payload.croquisId = form.croquisId;
+    if (form.planId !== null) payload.planId = form.planId;
+  } else {
+    payload.mainImageId = form.mainImageId;
+    payload.croquisId = form.croquisId;
+    payload.planId = form.planId;
+  }
+
+  return payload;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,8 +179,14 @@ export function createOuting(form: OutingForm): Promise<OutingAdmin> {
 }
 
 /**
- * Update an existing outing. Sends the same payload shape as create; the
- * backend treats every field as optional on PATCH.
+ * Update an existing outing. The PATCH payload OMITS null optional asset
+ * IDs (mainImageId, croquisId, planId) so the server preserves the
+ * existing asset references when the operator edits unrelated fields.
+ * The backend's update() handler treats an absent field as "preserve
+ * existing" and a present `null` as "clear the asset" — omitting null
+ * assets is required to honor the "Existing assets are retained" spec
+ * scenario. Required fields (title, slug, dateTime, location,
+ * description) and the current status are always sent.
  */
 export function updateOuting(
   id: string,
@@ -159,7 +195,7 @@ export function updateOuting(
   return adminFetch<OutingAdmin>(buildOutingResourceUrl(id), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(buildOutingPayload(form)),
+    body: JSON.stringify(buildOutingPayload(form, { omitNullAssets: true })),
   });
 }
 
