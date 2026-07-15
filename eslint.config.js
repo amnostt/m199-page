@@ -17,7 +17,6 @@ export default tseslint.config(
       "**/.output/**",
       "**/coverage/**",
       "packages/db/prisma/**",
-      "openspec/**",
       "docs/**",
       ".atl/**",
       "pnpm-lock.yaml",
