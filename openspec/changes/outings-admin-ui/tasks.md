@@ -92,13 +92,13 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Form Page (Create / Edit)
 
-- [ ] 3.1 RED: `apps/web/src/admin/OutingFormPage.test.tsx` — create, edit, 3 upload slots, Draft/Publish, validation error, preserve assets
-- [ ] 3.2 GREEN: `apps/web/src/admin/OutingFormPage.tsx` — required fields, ISO dateTime, three FileUploadWidget slots (no removal), confirmed Draft/Publish
-- [ ] 3.3 REFACTOR: extract `useOutingForm` hook to slim component
+- [x] 3.1 RED: `apps/web/src/admin/OutingFormPage.test.tsx` — create, edit, 3 upload slots, Draft/Publish, validation error, preserve assets
+- [x] 3.2 GREEN: `apps/web/src/admin/OutingFormPage.tsx` — required fields, ISO dateTime, three FileUploadWidget slots (no removal), confirmed Draft/Publish
+- [x] 3.3 REFACTOR: extract `useOutingForm` hook to slim component
 
 ## Phase 4: Verification
 
-- [ ] 4.1 `pnpm --filter @m199/web test:run` — all green
-- [ ] 4.2 `pnpm typecheck` — clean
-- [ ] 4.3 `pnpm lint` — clean
-- [ ] 4.4 Manual smoke: list, filter, create, edit (assets preserved), archive, API errors surface
+- [x] 4.1 `pnpm --filter @m199/web test:run` — all green
+- [x] 4.2 `pnpm typecheck` — clean
+- [x] 4.3 `pnpm lint` — clean
+- [x] 4.4 Manual smoke: list, filter, create, edit (assets preserved), archive, API errors surface

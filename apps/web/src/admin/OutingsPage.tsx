@@ -2,18 +2,23 @@
 // OutingsPage — admin section owner for Outings
 //
 // Owns view state: list | create | edit(slug).
-// Delegates to OutingsListPage for read-only list and (in a later work unit)
-// OutingFormPage for create/edit forms.
+// Delegates to OutingsListPage for the read-only list and to
+// OutingFormPage for create/edit forms. Mirrors the existing
+// PostsPage composition pattern.
 //
-// Mirrors the existing PostsPage composition pattern. The form page is not
-// part of WU2 — the edit/create callbacks land on WU3 — but the owner is
-// declared now so the navigation wiring (Task 2.5) can compile and render
-// without depending on the not-yet-built form component. The form slot is
-// handled by a temporary "coming soon" placeholder that disappears in WU3.
+// History:
+// - WU2 declared the owner with a temporary placeholder for the
+//   create/edit surfaces so the navigation wiring could compile and
+//   render without depending on the not-yet-built form component.
+// - WU3 (this revision) replaces the placeholder with the real
+//   OutingFormPage. The owner still owns the slug-based view state
+//   and the list↔form transition; the form is responsible for
+//   loading, validation, save, and error display.
 // ---------------------------------------------------------------------------
 
 import { useState } from "react";
 import { OutingsListPage } from "./OutingsListPage.js";
+import { OutingFormPage } from "./OutingFormPage.js";
 
 // ---------------------------------------------------------------------------
 // View state
@@ -31,16 +36,24 @@ type OutingsView =
 export function OutingsPage() {
   const [view, setView] = useState<OutingsView>({ mode: "list" });
 
-  // Create / Edit forms land in WU3. Until then, surface a recoverable
-  // placeholder that does not claim the form is built.
-  if (view.mode === "create" || view.mode === "edit") {
+  if (view.mode === "create") {
     return (
-      <div data-testid="outings-form-placeholder">
-        <p>Outing form coming in the next release.</p>
-        <button type="button" onClick={() => setView({ mode: "list" })}>
-          Back to Outings
-        </button>
-      </div>
+      <OutingFormPage
+        mode="create"
+        onSaved={() => setView({ mode: "list" })}
+        onCancel={() => setView({ mode: "list" })}
+      />
+    );
+  }
+
+  if (view.mode === "edit") {
+    return (
+      <OutingFormPage
+        mode="edit"
+        slug={view.slug}
+        onSaved={() => setView({ mode: "list" })}
+        onCancel={() => setView({ mode: "list" })}
+      />
     );
   }
 
