@@ -49,6 +49,10 @@ export default defineConfig({
           }
         },
       },
+      "/responsibles": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
       "/landing": {
         target: API_TARGET,
         changeOrigin: true,

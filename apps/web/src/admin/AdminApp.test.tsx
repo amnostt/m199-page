@@ -612,9 +612,9 @@ describe("AdminApp shell navigation", () => {
   it("renders placeholder nav items for out-of-scope sections as disabled", async () => {
     await renderShell();
 
-    // Outings is now an active nav section (not a placeholder); only
-    // Verses, Responsibles, and Files remain as placeholders.
-    const placeholders = ["Verses", "Responsibles", "Files"];
+    // Outings and Responsibles are active nav sections; only Verses and Files
+    // remain as placeholders.
+    const placeholders = ["Verses", "Files"];
 
     for (const label of placeholders) {
       const testId = `nav-placeholder-${label.toLowerCase()}`;
@@ -641,6 +641,18 @@ describe("AdminApp shell navigation", () => {
     expect((outingsNav as HTMLButtonElement).disabled).toBe(false);
     // Should NOT carry the "(coming soon)" placeholder suffix
     expect(outingsNav.textContent).not.toMatch(/coming soon/i);
+  });
+
+  it("renders Responsibles as an enabled section and passes the current user", async () => {
+    await renderShell();
+    fireEvent.click(screen.getByTestId("nav-responsibles"));
+    await waitFor(() => {
+      expect(screen.getByTestId("responsibles-page")).toBeTruthy();
+    });
+    expect(screen.getByText(/manage the responsible users/i)).toBeTruthy();
+    expect((screen.getByTestId("nav-responsibles") as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 
   it("does NOT render an Outings placeholder", async () => {

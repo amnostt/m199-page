@@ -8,6 +8,21 @@ export interface AuthUser {
   displayName: string;
 }
 
+export type ResponsibleStatus = "ACTIVE" | "INACTIVE";
+
+export interface Responsible {
+  id: string;
+  email: string;
+  displayName: string;
+  status: ResponsibleStatus;
+}
+
+export interface CreateResponsibleInput {
+  email: string;
+  displayName: string;
+  password: string;
+}
+
 /** LP-01 base landing settings fields used by the admin editor. */
 export interface LandingSettings {
   mission: string | null;
