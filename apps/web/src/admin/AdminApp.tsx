@@ -17,6 +17,7 @@ import { LandingSettingsPage } from "./LandingSettingsPage.js";
 import { PostsPage } from "./PostsPage.js";
 import { OutingsPage } from "./OutingsPage.js";
 import { ResponsiblesPage } from "./ResponsiblesPage.js";
+import { VersesPage } from "./VersesPage.js";
 
 // ---------------------------------------------------------------------------
 // Timeout constants — prevent permanent loading/submitting when auth
@@ -110,9 +111,14 @@ function AdminLogin({
 // AdminShell — sidebar navigation with active section switching.
 // ---------------------------------------------------------------------------
 
-export type AdminSection = "landing" | "posts" | "outings" | "responsibles";
+export type AdminSection =
+  | "landing"
+  | "posts"
+  | "outings"
+  | "responsibles"
+  | "verses";
 
-const PLACEHOLDER_SECTIONS = ["Verses", "Files"];
+const PLACEHOLDER_SECTIONS = ["Files"];
 
 function AdminShell({
   user,
@@ -142,6 +148,16 @@ function AdminShell({
               disabled={activeSection === "landing"}
             >
               Landing Settings
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              data-testid="nav-verses"
+              onClick={() => onNavigate("verses")}
+              disabled={activeSection === "verses"}
+            >
+              Verses
             </button>
           </li>
           <li>
@@ -194,6 +210,8 @@ function AdminShell({
           <PostsPage />
         ) : activeSection === "outings" ? (
           <OutingsPage />
+        ) : activeSection === "verses" ? (
+          <VersesPage />
         ) : (
           <ResponsiblesPage currentUserId={user.id} />
         )}

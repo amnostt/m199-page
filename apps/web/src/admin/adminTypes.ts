@@ -23,6 +23,25 @@ export interface CreateResponsibleInput {
   password: string;
 }
 
+export type VerseStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
+export interface VerseAdmin {
+  id: string;
+  text: string;
+  reference: string;
+  date: string;
+  publishedAt: string | null;
+  status: VerseStatus;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateVerseInput {
+  text: string;
+  reference: string;
+}
+
 /** LP-01 base landing settings fields used by the admin editor. */
 export interface LandingSettings {
   mission: string | null;
