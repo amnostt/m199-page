@@ -289,9 +289,9 @@ sustituye su verificación ni despliega el producto.
 
 ## Contraste: el proxy `/verses`
 
-La UI ya solicita `/verses/admin`, la API expone esa ruta y Vite no la incluye
-entre sus proxies. Si se confirma que esa es toda la causa, añadir la entrada
-equivalente es un arreglo directo pequeño.
+La UI ya solicitaba `/verses/admin`, la API exponía esa ruta y Vite no la incluía
+entre sus proxies. Como esa era toda la causa, añadir la entrada equivalente fue
+un arreglo directo pequeño.
 
 | Gestión del héroe                          | Proxy `/verses`                                  |
 | ------------------------------------------ | ------------------------------------------------ |
@@ -300,9 +300,9 @@ equivalente es un arreglo directo pequeño.
 | Tiene varios escenarios e invariantes.     | Su criterio es que la solicitud llegue a la API. |
 | Justifica un SDD change.                   | No justifica el ciclo completo.                  |
 
-El proxy aún requiere una solicitud real a `/verses/admin` mediante Vite,
-control de formato y revisión del diff. Su rollback boundary es la entrada
-añadida.
+El arreglo se verificó con una solicitud real a `/verses/admin` mediante Vite,
+además del control de formato y la revisión del diff. Su rollback boundary es la
+entrada añadida.
 
 ## Errores comunes
 

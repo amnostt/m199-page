@@ -8,8 +8,7 @@ import react from "@vitejs/plugin-react";
 // This proxy only applies to the dev server — production builds serve the
 // static bundle and expect a reverse proxy (nginx, etc.) to handle routing.
 // ---------------------------------------------------------------------------
-const API_TARGET =
-  process.env.API_TARGET ?? "http://localhost:3000";
+const API_TARGET = process.env.API_TARGET ?? "http://localhost:3000";
 
 export default defineConfig({
   plugins: [react()],
@@ -50,6 +49,10 @@ export default defineConfig({
         },
       },
       "/responsibles": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
+      "/verses": {
         target: API_TARGET,
         changeOrigin: true,
       },
