@@ -1,203 +1,125 @@
-# Misión 1-99 MVP Technical Foundation
+# Fundamento técnico de Misión 1-99
 
-This document defines the first technical baseline for the Misión 1-99 MVP. It is intentionally documentation-first: it explains the future architecture and provides an initial Prisma model draft, but it does not implement runtime application behavior.
+Este documento describe la arquitectura que existe hoy, sus límites obligatorios y las brechas técnicas conocidas. No representa una arquitectura futura ni implica que una capacidad esté completa solo porque exista en la API.
 
-## Current State
+| Mantenimiento       | Valor                                                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Estado              | Vigente; contiene estado actual volátil.                                                                              |
+| Responsable         | Equipo de desarrollo.                                                                                                 |
+| Última verificación | 2026-07-19                                                                                                            |
+| Actualizar cuando   | Cambien arquitectura, configuración efectiva, esquema, migraciones, contratos, invariantes o capacidades verificadas. |
 
-The repository now contains an installable monorepo baseline with `apps/web`, `apps/api`, and `packages/db`; root quality scripts; Vitest smoke tests; a hardened Prisma schema; local/dev PostgreSQL documentation; an initial migration; Prisma Client generation; and an `@m199/db` package boundary consumed by the API shell. Runtime product behavior is still intentionally absent.
+## Fuentes de verdad
 
-## Architecture Baseline
+| Necesidad                                     | Fuente                                            |
+| --------------------------------------------- | ------------------------------------------------- |
+| Propósito y alcance del producto              | [Resumen ejecutivo](./executive-summary.md)       |
+| Arquitectura, decisiones e invariantes        | Este documento                                    |
+| Prioridad y estado de entrega                 | [Hoja de ruta](./development-roadmap.md)          |
+| Flujo de trabajo y criterios de entrega       | [Proceso de desarrollo](./development-process.md) |
+| Terminología compartida                       | [Glosario](./glossary.md)                         |
+| Comandos, estructura y reglas para contribuir | [`AGENTS.md`](../AGENTS.md)                       |
 
-| Area | Planned Path | Responsibility |
-|---|---|---|
-| Web app | `apps/web` | Public mobile-first site and admin UI. Public labels may use Spanish domain terms such as “Salidas”. |
-| API app | `apps/api` | NestJS modules, authentication, content workflows, file upload handling, and business-rule enforcement. |
-| Database package | `packages/db` | Prisma schema, future Prisma config, migrations, generated client, and database-specific persistence concerns. |
-| Shared package | `packages/shared` *(optional)* | Shared validation/types only when duplication appears across apps. |
+Para afirmar el estado actual prevalecen la fuente ejecutable, la configuración efectiva, las declaraciones del esquema, las migraciones y las pruebas. Los comentarios y las descripciones de paquetes orientan, pero pueden conservar contexto histórico y no demuestran por sí solos el comportamiento vigente. Si esas fuentes ejecutables se contradicen, se debe verificar el recorrido real y corregir la inconsistencia en lugar de elegir la afirmación más conveniente. Las decisiones de producto pendientes deben resolverse en un SDD change antes de modificar comportamiento.
 
-### Dependency Direction
+## Estado actual: arquitectura
 
 ```text
-apps/web ──HTTP──> apps/api ──Prisma──> packages/db ──> PostgreSQL
+apps/web ──HTTP──> apps/api ──DbService──> packages/db ──Prisma──> PostgreSQL
 ```
 
-The web app must not import Prisma directly. Business rules belong in API modules; database constraints should protect durable invariants where possible.
+| Área          | Tecnología              | Responsabilidad actual                                                                      |
+| ------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
+| `apps/web`    | React 19 y Vite         | Sitio público, routing del cliente, sesión administrativa y panel de gestión.               |
+| `apps/api`    | NestJS                  | Contratos HTTP, autenticación, validación, reglas de aplicación, archivos y acceso a datos. |
+| `packages/db` | Prisma                  | Esquema, configuración, migraciones, seed y creación compartida del cliente.                |
+| PostgreSQL 16 | Docker Compose en local | Persistencia relacional y restricciones durables.                                           |
 
-## Domain Modules
+### Invariantes de arquitectura
 
-| Module | Core Models | Notes |
-|---|---|---|
-| Auth | `ResponsibleUser`, `RefreshSession` | JWT access tokens remain stateless; refresh tokens are stored hashed and revocable. |
-| Outings | `Outing`, `OutingLike` | Public “Salidas” content with images/documents, featured support, and anonymous likes. |
-| Posts | `Post`, `FeaturedPost`, `PostDownload` | Published content with cover image, rich body, tags, downloads, and featured slots. |
-| Verses | `Verse`, `VerseRevision` | Daily verse content with history/audit support. |
-| Files | `FileAsset` | Local upload metadata for images, croquis, plans, covers, and downloadable documents. |
-| Landing | `LandingSettings`, `FeaturedPost` | Hero/landing settings, one featured outing, and up to three featured posts. |
+- Mantener la dirección `web -> HTTP -> API -> database`; `apps/web` no importa Prisma ni accede a PostgreSQL.
+- Acceder a Prisma desde la API mediante `DbService`; `packages/db` conserva la propiedad del cliente y del ciclo de migraciones.
+- Validar entradas HTTP en DTOs y aplicar reglas de dominio en servicios de la API.
+- Usar restricciones de base de datos para invariantes durables y transacciones de servicio para reglas entre registros o ciclos de vida.
+- Mantener separados los controladores públicos y administrativos cuando el módulo ya usa esa frontera.
+- Preservar los sufijos `.js` en imports relativos de TypeScript ESM.
+- No introducir un paquete compartido hasta que exista duplicación real entre paquetes.
 
-## Data Model Decisions
+## Estado actual: capacidades
 
-| Topic | Decision |
-|---|---|
-| Responsible users | Use `ResponsibleUser` with `ACTIVE`/`INACTIVE` status and `passwordHash`; deactivate instead of deleting. |
-| Sessions | Store only hashed refresh tokens in `RefreshSession`; track status, expiration, revocation, and rotation metadata. |
-| Outings | Use slugs, date/time, location, description, status, image/file relations, and `likesCount` for efficient reads. |
-| Likes | Use anonymous `visitorHash` plus `outingId` unique constraint for dedupe. Do not store public identity. |
-| Posts | Use slug, description, cover image, rich content, status, simple `String[]` tags, and downloadable file join rows. |
-| Featured posts | Use three fixed `FeaturedPostSlot` enum values. A row in a slot means that slot is active, so the model cannot exceed three. |
-| Featured outing | Use `LandingSettings.featuredOutingId` as the singleton landing selection instead of scattered boolean flags. |
-| Files | Centralize uploads in `FileAsset` with category, path/URL, size, MIME, and JSON metadata. |
+| Módulo       | Estado actual comprobado                                                                                                                                                                      | Evidencia principal                                                                                                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth         | Login, access token y refresh token en cookies `httpOnly`, rotación, logout, revocación y control de responsable `ACTIVE`.                                                                    | [`apps/api/src/auth`](../apps/api/src/auth)                                                                                                                                                  |
+| Landing      | Lectura pública y edición administrativa de campos base. La API y el modelo soportan héroe y salida destacada, pero la interfaz no los administra.                                            | [`landing.service.ts`](../apps/api/src/landing/landing.service.ts), [`LandingSettingsPage.tsx`](../apps/web/src/admin/LandingSettingsPage.tsx)                                               |
+| Posts        | CRUD administrativo, publicación, archivo, sanitización, descargas, destacados y lectura pública. El formulario permite cargar, reemplazar y desasociar portada y descargas.                  | [`posts.service.ts`](../apps/api/src/posts/posts.service.ts), [`PostFormPage.tsx`](../apps/web/src/admin/PostFormPage.tsx)                                                                   |
+| Outings      | Gestión administrativa, publicación, archivo, lectura pública, likes anónimos y carga o reemplazo de imagen principal, croquis y plan. La interfaz no permite quitar asociaciones existentes. | [`outings.service.ts`](../apps/api/src/outings/outings.service.ts), [`OutingFormPage.tsx`](../apps/web/src/admin/OutingFormPage.tsx), [`outingsApi.ts`](../apps/web/src/admin/outingsApi.ts) |
+| Responsibles | API para crear, listar, editar `displayName`, cambiar estado y restablecer contraseña. La interfaz solo crea, lista y cambia estado.                                                          | [`apps/api/src/responsibles`](../apps/api/src/responsibles), [`ResponsiblesPage.tsx`](../apps/web/src/admin/ResponsiblesPage.tsx)                                                            |
+| Verses       | API pública y administrativa, historial y panel para crear, listar y eliminar. En desarrollo local falta el proxy Vite de `/verses`.                                                          | [`apps/api/src/verses`](../apps/api/src/verses), [`vite.config.ts`](../apps/web/vite.config.ts)                                                                                              |
+| Files        | Carga autenticada, validación, miniaturas, entrega pública y eliminación. No existe endpoint para listar archivos ni pantalla independiente.                                                  | [`apps/api/src/file-module`](../apps/api/src/file-module), [`FileUploadWidget.tsx`](../apps/web/src/admin/FileUploadWidget.tsx)                                                              |
 
-## Constraint Strategy
+## Decisiones e invariantes
 
-Every business invariant is classified into one of two enforcement tiers, matching the
-`// DB:` and `// APP:` labels in `packages/db/prisma/schema.prisma`.
+| Tema                  | Invariante o regla vigente                                                                                            | Mecanismo                                                            |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Landing singleton     | Existe una única configuración con `id = 1`.                                                                          | Upsert en `LandingService`.                                          |
+| Salida destacada      | `LandingSettings.featuredOutingId` admite una selección; la respuesta pública solo la incluye si está `PUBLISHED`.    | Restricción `@unique` y filtro de servicio.                          |
+| Posts destacados      | Hay tres slots fijos y un post no puede ocupar más de uno. El cuarto intento se rechaza; no hay reemplazo automático. | `FeaturedPostSlot`, índices únicos y validación de servicio.         |
+| Contenido público     | Posts, salidas y versículos públicos deben estar `PUBLISHED`.                                                         | Consultas y proyecciones públicas.                                   |
+| Likes de salidas      | Cada combinación `outingId` + `visitorHash` es única; no se persiste identidad pública ni IP sin procesar.            | Restricción compuesta y actualización transaccional de `likesCount`. |
+| Versículo vigente     | Es el último `PUBLISHED` por `publishedAt`; la fecha de negocio se deriva con zona `America/Lima`.                    | Servicio de versículos e índice por estado y fecha.                  |
+| Archivos              | El binario vive en almacenamiento local y `FileAsset` conserva metadatos, categoría, ruta y URL.                      | `FileService`, validación por categoría y contención de rutas.       |
+| Contenido enriquecido | El HTML de posts se sanitiza en servidor y en cliente.                                                                | `sanitize-html` y DOMPurify.                                         |
+| Responsable inactivo  | No puede iniciar sesión, refrescar sesión ni atravesar rutas protegidas; al desactivarlo se revocan sus sesiones.     | Guards, auth service y servicio de responsables.                     |
 
-### Tier Definitions
+## Seguridad y contratos HTTP
 
-| Tier | Label | Enforcement | Notes |
-|------|-------|-------------|-------|
-| **Database** | `DB` | Prisma-native: `@unique`, `@@unique`, `@@index`, `@default`, enum, required field, relation | Source of truth lives in the schema. |
-| **Application** | `APP` | API/service logic, transactional writes, future SQL migrations | Prisma cannot enforce these directly at the DB level. |
+- La configuración se valida antes de inicializar la base de datos. Son obligatorias `NODE_ENV`, `PORT`, `DATABASE_URL`, `JWT_SECRET` y `VISITOR_HASH_SECRET`.
+- Las cookies de autenticación son `httpOnly`, usan `SameSite=Lax` y activan `secure` en producción.
+- Las mutaciones requieren que `Origin` coincida con `API_ORIGIN`; la configuración actual admite un solo origen.
+- El `ValidationPipe` global aplica `whitelist` y `transform`.
+- El filtro global normaliza errores como `{ statusCode, message, timestamp, path }` y oculta stacks no controlados.
+- Los archivos aceptan JPEG, PNG, WebP, GIF y, según la categoría, PDF. `MAX_FILE_SIZE` tiene un valor predeterminado de 10 MiB.
+- Los archivos entregados por `GET /files/:id` son públicos. No deben usarse para información privada.
 
-### Invariant Classification
+### Scaffold temporal de validación
 
-| Invariant | Tier | Mechanism |
-|---|---|---|
-| Unique email, slug, token hash | DB | `@unique` constraints |
-| FeaturedPost max 3 slots | DB | `FeaturedPostSlot` enum (3 values) + `slot @unique` + `postId @unique` |
-| One featured outing | DB | `LandingSettings.featuredOutingId @unique` |
-| One like per visitor per outing | DB | `@@unique([outingId, visitorHash])` |
-| Anonymous likes (no PII) | DB | `visitorHash` column; no identity columns |
-| One verse per date | DB | `@@unique([date])` |
-| One post per download file | DB | `@@unique([postId, fileId])` |
-| Inactive responsible users | DB | `ResponsibleUserStatus` enum + `status` field + `@@index([status])` |
-| File size/type metadata | DB | `sizeBytes`, `mimeType`, `extension` columns in `FileAsset` |
-| Post tags | DB | `tags String[] @default([])` + `@@index([tags], type: Gin)` |
-| Verse history / revisions | DB | `VerseRevision` model + `@@index([verseId, changedAt])` |
-| Refresh-session fields | DB | `tokenHash @unique`, status/expiresAt columns, indexes |
-| LandingSettings singleton | APP | Service enforces `WHERE id = 1` on upsert |
-| Inactive user enforcement | APP | Login/content-creation guards check `status != INACTIVE` |
-| Outing.likesCount sync | APP | Transactional writes on like/unlike |
-| Upload MIME/size limits | APP | Per-category validation before `FileAsset` insert |
-| Publish-readiness | APP | Status transition guard requires complete public fields |
-| Refresh token lifecycle | APP | Hash-only storage; app layer handles revoke/rotate/expiry |
+- **Estado actual:** `ValidationProofModule` está registrado en `AppModule` y expone `POST /echo` sin `AuthGuard` para demostrar el `ValidationPipe` global ([módulo](../apps/api/src/common/validation-proof/validation-proof.module.ts), [controlador](../apps/api/src/common/validation-proof/echo.controller.ts), [registro](../apps/api/src/app.module.ts)). Es scaffolding técnico, no un contrato de producto.
+- **Invariante:** una release desplegable no debe exponer este endpoint de prueba en producción.
+- **Brecha objetivo:** antes de la primera release se debe retirar `ValidationProofModule` de `AppModule` o condicionar su registro para que `NODE_ENV=production` no cree la ruta. La evidencia de release debe comprobar que `POST /echo` responde `404` en la configuración de producción.
 
-## Auth and Session Model
+## Almacenamiento de archivos
 
-### Authentication Flow
+**Estado actual:** el almacenamiento local es una decisión válida para desarrollo, no una garantía de durabilidad en producción.
 
-1. **Login** (`POST /auth/login`): validates a `ResponsibleUser` with `ACTIVE` status and a bcrypt password hash. On success, issues a short-lived JWT access token (15m) and an opaque refresh token (7d). Both travel as `httpOnly` cookies.
-2. **Refresh** (`POST /auth/refresh`): reads the `refresh_token` cookie, hashes it (SHA-256), locates the matching ACTIVE `RefreshSession`, and performs token rotation — the old session is revoked, a new session is created, and fresh cookies are set. Inactive users are rejected with 403.
-3. **Logout** (`POST /auth/logout`): revokes the current refresh session and clears both auth cookies. Idempotent — missing or already-revoked tokens still result in cleared cookies.
-4. **Multiple sessions**: concurrent refresh sessions per user are supported (AR-04). Logging out from one device revokes only that session.
+- Los controles de carga están integrados en posts y salidas; gestionar el héroe deberá reutilizar la misma frontera de `FileService` y validar la categoría `LANDING_HERO`.
+- No hay API de listado general, por lo que todavía no existe una fuente completa para una biblioteca de archivos.
+- `DELETE /files/:id` elimina metadatos y binarios, pero una interfaz global de borrado requiere antes políticas de archivos en uso, huérfanos, retención y recuperación.
+- **Brecha objetivo:** la topología de producción debe montar almacenamiento persistente o adoptar otro proveedor sin romper las referencias de `FileAsset`.
 
-### Token Details
+## Estado actual y brecha objetivo: operación
 
-| Token | Type | Storage | TTL | Transport |
-|-------|------|---------|-----|-----------|
-| Access token | JWT (stateless) | Not stored server-side | 15 minutes | `access_token` httpOnly cookie |
-| Refresh token | Opaque (`crypto.randomBytes(48)`) | SHA-256 hash in `RefreshSession.tokenHash` | 7 days | `refresh_token` httpOnly cookie |
+| Área                   | Estado actual                                                        | Brecha para producción                                                                        |
+| ---------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Desarrollo local       | PostgreSQL 16 mediante Compose, migraciones Prisma y seed repetible. | No aplica como topología de producción.                                                       |
+| Calidad                | Scripts raíz para Prettier, ESLint, typecheck, Vitest y build web.   | Falta CI/CD que los ejecute y conserve evidencia.                                             |
+| API                    | `start:dev`, typecheck y pruebas unitarias.                          | Faltan scripts de build e inicio de producción.                                               |
+| Salud                  | `GET /health` informa proceso, uptime y entorno.                     | No comprueba conectividad con PostgreSQL ni almacenamiento.                                   |
+| Persistencia           | PostgreSQL y `UPLOAD_DIR` local.                                     | Faltan almacenamiento persistente, copias de seguridad, restauración y política de retención. |
+| Verificación integrada | Pruebas por paquete.                                                 | Falta un E2E ejecutable sobre web, API, base de datos y archivos.                             |
 
-### CSRF Protection
+Los comandos y prerrequisitos detallados se mantienen en [`AGENTS.md`](../AGENTS.md), no se duplican aquí.
 
-Defence-in-depth CSRF protection combines two layers:
+## Brechas objetivo conocidas
 
-1. **SameSite=Lax cookies**: both auth cookies use `sameSite: 'lax'`, which blocks cross-site requests for mutation methods. `secure` is enabled in production (`NODE_ENV === 'production'`).
-2. **Origin header validation**: a global `AuthInterceptor` validates the `Origin` header on every POST, PUT, PATCH, and DELETE request. GET, HEAD, and OPTIONS are exempt. The expected origin is configurable via the `API_ORIGIN` environment variable (defaults to `http://localhost:{PORT}`). Mismatched or missing origins on mutation endpoints return 403.
+| Prioridad         | Brecha                                                                                                                                       | Riesgo                                                                               |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Alta              | `CreatePostDto` y `UpdatePostDto` aceptan `status: PUBLISHED`, pero esa ruta no establece `publishedAt`; puede eludir `publish()`.           | Contenido publicado con fecha nula y transición inconsistente.                       |
+| Alta              | La interfaz maneja etiquetas de descargas, pero la API solo persiste `downloadIds`.                                                          | El contrato `downloadLabels` se pierde al guardar.                                   |
+| Alta              | La prevención de auto-desactivación existe en la interfaz, no como invariante de API; tampoco se protege al último responsable activo.       | Bloqueo administrativo o bypass mediante HTTP directo.                               |
+| Media             | `skip` y `take` carecen de validación numérica y límites explícitos; las consultas públicas no tienen una estrategia uniforme de paginación. | Consultas costosas o contratos ambiguos.                                             |
+| Media             | Fechas de salidas, categorías de archivos y detalles de errores requieren validación y contratos más estrictos.                              | Inconsistencias de datos y diagnósticos insuficientes.                               |
+| Media             | No se configura CORS ni `trust proxy`; `API_ORIGIN` admite un solo origen.                                                                   | Fallos o supuestos incorrectos detrás de proxy y despliegues con orígenes separados. |
+| Alta para release | `POST /echo` sigue registrado como scaffold público de validación.                                                                           | Exposición de una ruta sin contrato de producto en producción.                       |
+| Alta para release | Faltan build/start de API, topología, almacenamiento persistente, copias de seguridad, health dependiente de DB, CI/CD y E2E.                | No existe una ruta de despliegue recuperable y verificable.                          |
 
-### Guard and Active-Status Enforcement
-
-- **`AuthGuard`**: a NestJS `CanActivate` guard that extracts the `access_token` cookie, verifies the JWT, looks up the user, enforces ACTIVE status, and attaches `{ id, email, displayName }` to the request. Exported from `AuthModule` so downstream modules (e.g., `ResponsiblesModule`) can protect routes.
-- **Inactive enforcement**: inactive users are rejected at login (403), refresh (403, cookies cleared), and every guard-protected endpoint (403).
-
-### Session Revocation
-
-| Trigger | Scope | Mechanism |
-|---------|-------|-----------|
-| Logout | Current session | `AuthService.logout` → revoke single `RefreshSession` |
-| Refresh rotation | Previous session (in same transaction) | `AuthService.refresh` → `$transaction` revokes old + creates new |
-| User deactivation | All sessions for that user | `ResponsiblesService.update(status=INACTIVE)` → `AuthService.revokeAllUserSessions` |
-| Password reset | All sessions for that user | `ResponsiblesService.resetPassword` → `AuthService.revokeAllUserSessions` |
-
-### Module Structure
-
-- **`AuthModule`** (`apps/api/src/auth/`): provides `AuthService`, `AuthGuard`, `AuthInterceptor` (global `APP_INTERCEPTOR`), and `AuthController`. Exports `AuthGuard` and `AuthService` for consumption by other modules.
-- **`ResponsiblesModule`** (`apps/api/src/responsibles/`): imports `AuthModule`, provides `ResponsiblesService` and `ResponsiblesController`. All routes are behind `@UseGuards(AuthGuard)`.
-- **First user**: created via seed or manual database setup only — no public registration endpoint (AR-09). All authenticated active users have equal access (AR-10).
-
-Password recovery, social login, and differentiated roles are explicitly deferred.
-
-## File Storage Model
-
-MVP storage is local filesystem storage with metadata in `FileAsset`.
-
-| Category | Examples | Notes |
-|---|---|---|
-| `OUTING_MAIN_IMAGE` | Outing card/detail image | Image MIME types only. |
-| `OUTING_CROQUIS` | Map/croquis image or PDF | Validate per final upload policy. |
-| `OUTING_PLAN` | Plan document | Document or image depending on product decision. |
-| `POST_COVER_IMAGE` | Post cover | Image MIME types only. |
-| `POST_DOWNLOAD` | Downloadable attachments | Public download files. |
-| `LANDING_HERO` | Landing hero image | Optional landing customization. |
-
-Final size and MIME values remain an open product/technical decision.
-
-## Database Operational Foundation
-
-### Prerequisites
-
-- Docker with Compose support.
-- Copy `.env.example` to `.env` at the repository root. The included `DATABASE_URL` matches the Compose service defaults and works out of the box — no manual credential editing required.
-
-### Database Lifecycle (root `pnpm db:*`)
-
-The official local/dev database workflow uses root scripts that wrap Docker Compose:
-
-```sh
-pnpm db:up      # Start PostgreSQL in the background
-pnpm db:status  # Check whether the container is running
-pnpm db:down    # Stop the container (preserves data in the named volume)
-pnpm db:reset   # Destroy the volume and recreate the service — all local data is lost
-```
-
-`pnpm db:up` and `pnpm db:reset` return after the container starts. PostgreSQL can still need a short readiness wait before immediate Prisma or `psql` commands.
-
-Data persists in the `m199_postgres_data` named volume across `db:down` / `db:up` cycles. Docker may display the actual Compose volume with a project prefix, such as `m199-page_m199_postgres_data`. Only `pnpm db:reset` destroys local data.
-
-### Package Boundary
-
-`@m199/db` owns the Prisma schema, config, migration history, and Prisma Client singleton. `apps/api` consumes the client exclusively through `@m199/db`'s public exports — never importing `@prisma/client` directly. All Prisma commands remain host-run under `packages/db`.
-
-### Prisma Commands
-
-Run from the repository root (requires a ready database via `pnpm db:up`):
-
-```sh
-pnpm --filter @m199/db db:validate      # Validate schema syntax
-pnpm --filter @m199/db db:migrate:dev    # Create and apply a new migration
-pnpm --filter @m199/db db:migrate:deploy # Apply pending migrations (production-safe)
-pnpm --filter @m199/db db:generate       # Regenerate Prisma Client types
-pnpm --filter @m199/api typecheck        # Verify @m199/db boundary compiles
-```
-
-## MVP Exclusions
-
-This foundation does not design or implement advanced roles, social login, email password recovery, public search, dark mode, presenter mode, embedded post images, UI screens, auth flows, upload handling, API endpoints, production deployment, or real product seed data. Database migrations, Prisma config, generated Prisma Client, and local/dev database tooling are operational scaffolding and ARE included.
-
-## Acceptance Checklist
-
-- [x] Module boundaries are documented.
-- [x] MVP entities and relationships are represented in the Prisma schema.
-- [x] Featured outing and featured post rules are visible beyond UI behavior.
-- [x] Anonymous likes avoid public identity storage.
-- [x] File metadata and local-storage assumptions are documented.
-- [x] Deferred features and unresolved assumptions are explicit.
-- [x] `@m199/db` owns Prisma schema, migration history, config, and client generation.
-- [x] Migration workflow creates and applies migrations from the hardened schema.
-- [x] `apps/api` consumes the database package through the `@m199/db` boundary.
-- [x] Workspace installs, validates, typechecks, and tests pass from a clean checkout.
-
-## Open Questions
-
-- What are the final upload size limits and allowed MIME types by file category?
-- Should verse history be publicly visible or only available for admin audit?
+Estas brechas se priorizan como slices en la [hoja de ruta](./development-roadmap.md).

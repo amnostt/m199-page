@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Mision 1-99 MVP monorepo workspace root. App and package shells ship in later changes; this package only provides workspace orchestration and shared tooling.",
+  "description": "Mision 1-99 monorepo for the React web app, NestJS API, and Prisma database package.",
   "engines": {
     "node": "^20.19.0 || >=22.12.0",
     "pnpm": ">=9.0.0"

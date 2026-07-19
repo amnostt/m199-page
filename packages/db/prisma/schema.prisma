@@ -2,8 +2,8 @@
 // DB:  → Prisma constructs: @unique, @@unique, @@index, @default, enum, required field, relation
 // APP: → API/service logic, transactional writes, future SQL migrations
 //
-// Initial Prisma model draft for the Misión 1-99 MVP.
-// This file is documentation/design for now: no migrations or generated client setup yet.
+// Current Prisma schema for the Misión 1-99 application.
+// packages/db owns its migration history and generated Prisma Client workflow.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,8 +11,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Prisma 7 keeps connection URLs in prisma.config.ts, not in schema.prisma.
-  // Add packages/db/prisma.config.ts with datasource.url during implementation setup.
+  // Prisma 7 keeps the connection URL in packages/db/prisma.config.ts.
 }
 
 enum ResponsibleUserStatus {

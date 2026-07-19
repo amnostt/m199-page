@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Mision 1-99 API — NestJS foundation with config validation, error conventions, and health endpoint. Product endpoints ship in later changes.",
+  "description": "NestJS API for Mision 1-99 authentication, content management, files, and public endpoints.",
   "scripts": {
     "start:dev": "tsx watch src/main.ts",
     "typecheck": "tsc --noEmit",

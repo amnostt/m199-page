@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Mision 1-99 web frontend shell (Vite React). Non-product baseline; product UI ships in later changes.",
+  "description": "React and Vite application for the Mision 1-99 public site and admin UI.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
