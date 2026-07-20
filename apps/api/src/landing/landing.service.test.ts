@@ -553,6 +553,41 @@ describe("LandingService", () => {
       expect(callArgs.create).toHaveProperty("id", 1);
       expect(callArgs.create).toHaveProperty("mission", "Primera misión");
     });
+
+    it("ignores an attempted featured pointer while preserving hero settings", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+      });
+
+      const result = await service.updateSettings({
+        heroTitle: "Updated hero",
+        featuredOutingId: "out-002",
+      } as never);
+
+      const call = mocks.upsert.mock.calls[0]![0];
+      expect(call.update).toEqual({ heroTitle: "Updated hero" });
+      expect(result.featuredOutingId).toBe("out-001");
+    });
+
+    it("persists a focused featured pointer including null", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+      });
+
+      await service.persistFeaturedOutingId("out-002");
+      await service.persistFeaturedOutingId(null);
+
+      expect(mocks.upsert).toHaveBeenNthCalledWith(1, {
+        where: { id: 1 },
+        create: { id: 1, featuredOutingId: "out-002" },
+        update: { featuredOutingId: "out-002" },
+      });
+      expect(mocks.upsert).toHaveBeenNthCalledWith(2, {
+        where: { id: 1 },
+        create: { id: 1, featuredOutingId: null },
+        update: { featuredOutingId: null },
+      });
+    });
   });
 
   // ---- getPublicPayload (LP-02) -------------------------------------------

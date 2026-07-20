@@ -89,14 +89,8 @@ function HeroSection({ data }: { data: LandingPublicPayload }) {
   if (!data.heroImageUrl) return null;
   return (
     <section data-testid="hero-section">
-      <img
-        src={data.heroImageUrl}
-        alt="Hero"
-        data-testid="hero-image"
-      />
-      {data.heroTitle && (
-        <h1 data-testid="hero-title">{data.heroTitle}</h1>
-      )}
+      <img src={data.heroImageUrl} alt="Hero" data-testid="hero-image" />
+      {data.heroTitle && <h1 data-testid="hero-title">{data.heroTitle}</h1>}
       {data.heroSubtitle && (
         <p data-testid="hero-subtitle">{data.heroSubtitle}</p>
       )}
@@ -163,12 +157,9 @@ function FeaturedOutingSection({ data }: { data: LandingPublicPayload }) {
   const outing = data.featuredOuting;
   return (
     <section data-testid="featured-outing-section">
-      <h2>{outing.title}</h2>
+      <p data-testid="featured-outing-title">{outing.title}</p>
       <p data-testid="outing-location">{outing.location}</p>
-      <a
-        data-testid="featured-outing-link"
-        href={`/outings/${outing.slug}`}
-      >
+      <a data-testid="featured-outing-link" href={`/outings/${outing.slug}`}>
         Ver salida
       </a>
     </section>
@@ -290,16 +281,10 @@ function LikeButton({
 
   return (
     <div>
-      <button
-        data-testid="like-button"
-        onClick={handleLike}
-        disabled={liked}
-      >
+      <button data-testid="like-button" onClick={handleLike} disabled={liked}>
         ❤️ <span data-testid="like-count">{count}</span>
       </button>
-      {error && (
-        <span data-testid="like-error">Error al registrar like.</span>
-      )}
+      {error && <span data-testid="like-error">Error al registrar like.</span>}
     </div>
   );
 }
@@ -376,11 +361,7 @@ function OutingDetail({ slug }: { slug: string }) {
         />
       )}
       {outing.planUrl && (
-        <img
-          data-testid="outing-plan"
-          src={outing.planUrl}
-          alt="Plan"
-        />
+        <img data-testid="outing-plan" src={outing.planUrl} alt="Plan" />
       )}
       <LikeButton initialCount={outing.likesCount} slug={slug} />
     </section>
@@ -451,12 +432,12 @@ function LandingPage() {
   return (
     <main>
       <HeroSection data={data} />
+      <FeaturedOutingSection data={data} />
       <MissionSection data={data} />
       <VisionSection data={data} />
       <DescriptionSection data={data} />
       <VideoSection data={data} />
       <ContactSection data={data} />
-      <FeaturedOutingSection data={data} />
       <FeaturedPostsSection data={data} />
       <VerseSection data={data} />
     </main>

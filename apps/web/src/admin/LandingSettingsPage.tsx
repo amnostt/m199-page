@@ -13,6 +13,12 @@ import { useEffect, useState } from "react";
 import { FileUploadWidget } from "./FileUploadWidget.js";
 import type { LandingSettings, LandingSettingsForm } from "./adminTypes.js";
 import { adminFetch } from "./session.js";
+import {
+  clearFeaturedOuting,
+  featureOuting,
+  listOutings,
+} from "./outingsApi.js";
+import type { OutingAdmin } from "./adminTypes.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -65,13 +71,25 @@ export function LandingSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [featuredOutingId, setFeaturedOutingId] = useState<string | null>(null);
+  const [publishedOutings, setPublishedOutings] = useState<OutingAdmin[]>([]);
+  const [selectedOutingId, setSelectedOutingId] = useState("");
+  const [featuredError, setFeaturedError] = useState(false);
 
   // Load on mount
   useEffect(() => {
     let cancelled = false;
-    adminFetch<LandingSettings | null>("/landing/admin")
-      .then((data) => {
+    Promise.all([
+      adminFetch<LandingSettings | null>("/landing/admin"),
+      listOutings("PUBLISHED"),
+    ])
+      .then(([data, outings]) => {
         if (!cancelled) setSettings(normalizeLandingSettings(data));
+        if (!cancelled) {
+          setFeaturedOutingId(data?.featuredOutingId ?? null);
+          setSelectedOutingId(data?.featuredOutingId ?? "");
+          setPublishedOutings(Array.isArray(outings) ? outings : []);
+        }
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -80,6 +98,43 @@ export function LandingSettingsPage() {
       cancelled = true;
     };
   }, []);
+
+  const refreshFeaturedState = async () => {
+    const [data, outings] = await Promise.all([
+      adminFetch<LandingSettings | null>("/landing/admin"),
+      listOutings("PUBLISHED"),
+    ]);
+    setFeaturedOutingId(data?.featuredOutingId ?? null);
+    setSelectedOutingId(data?.featuredOutingId ?? "");
+    setPublishedOutings(outings);
+  };
+
+  const handleFeatureOuting = async () => {
+    if (!selectedOutingId) return;
+    if (
+      featuredOutingId &&
+      featuredOutingId !== selectedOutingId &&
+      !window.confirm("Replace the featured outing?")
+    )
+      return;
+    setFeaturedError(false);
+    try {
+      await featureOuting(selectedOutingId);
+      await refreshFeaturedState();
+    } catch {
+      setFeaturedError(true);
+    }
+  };
+
+  const handleClearFeatured = async () => {
+    setFeaturedError(false);
+    try {
+      await clearFeaturedOuting();
+      await refreshFeaturedState();
+    } catch {
+      setFeaturedError(true);
+    }
+  };
 
   // ------------------------------------------------------------------
   // Handlers
@@ -152,6 +207,39 @@ export function LandingSettingsPage() {
   return (
     <div data-testid="landing-settings-form">
       <h2>Landing Settings</h2>
+
+      <fieldset>
+        <legend>Featured outing</legend>
+        <select
+          data-testid="featured-outing-select"
+          value={selectedOutingId}
+          onChange={(event) => setSelectedOutingId(event.target.value)}
+        >
+          <option value="">No featured outing</option>
+          {publishedOutings.map((outing) => (
+            <option key={outing.id} value={outing.id}>
+              {outing.title}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => void handleFeatureOuting()}
+          disabled={!selectedOutingId}
+        >
+          Feature outing
+        </button>
+        {featuredOutingId && (
+          <button type="button" onClick={() => void handleClearFeatured()}>
+            Clear featured outing
+          </button>
+        )}
+        {featuredError && (
+          <p data-testid="featured-outing-error">
+            Failed to update featured outing.
+          </p>
+        )}
+      </fieldset>
 
       <fieldset>
         <legend>Hero</legend>

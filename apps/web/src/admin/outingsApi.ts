@@ -212,3 +212,22 @@ export function archiveOuting(id: string): Promise<OutingAdmin> {
     method: "POST",
   });
 }
+
+export interface FeaturedOutingState {
+  featuredOutingId: string | null;
+}
+
+export function featureOuting(id: string): Promise<FeaturedOutingState> {
+  return adminFetch<FeaturedOutingState>(
+    `${buildOutingResourceUrl(id)}/feature`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function clearFeaturedOuting(): Promise<FeaturedOutingState> {
+  return adminFetch<FeaturedOutingState>(`${OUTINGS_ADMIN_BASE}/feature`, {
+    method: "DELETE",
+  });
+}

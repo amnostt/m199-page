@@ -25,7 +25,6 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-  Optional,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { DbService } from "../db/db.service.js";
@@ -71,7 +70,9 @@ interface OutingLikeRow {
 interface OutingPrismaClient {
   outing: {
     create(args: { data: Record<string, unknown> }): Promise<OutingRow>;
-    findUnique(args: { where: Record<string, unknown> }): Promise<OutingRow | null>;
+    findUnique(args: {
+      where: Record<string, unknown>;
+    }): Promise<OutingRow | null>;
     findMany(args?: {
       where?: Record<string, unknown>;
       skip?: number;
@@ -84,16 +85,32 @@ interface OutingPrismaClient {
     }): Promise<OutingRow>;
   };
   fileAsset: {
-    findUnique(args: { where: Record<string, unknown> }): Promise<FileAssetRow | null>;
+    findUnique(args: {
+      where: Record<string, unknown>;
+    }): Promise<FileAssetRow | null>;
   };
   outingLike: {
     findUnique(args: {
-      where: { outingId_visitorHash: { outingId: string; visitorHash: string } };
+      where: {
+        outingId_visitorHash: { outingId: string; visitorHash: string };
+      };
     }): Promise<OutingLikeRow | null>;
-    create(args: { data: { outingId: string; visitorHash: string; fingerprintVersion: number } }): Promise<OutingLikeRow>;
+    create(args: {
+      data: {
+        outingId: string;
+        visitorHash: string;
+        fingerprintVersion: number;
+      };
+    }): Promise<OutingLikeRow>;
     upsert(args: {
-      where: { outingId_visitorHash: { outingId: string; visitorHash: string } };
-      create: { outingId: string; visitorHash: string; fingerprintVersion: number };
+      where: {
+        outingId_visitorHash: { outingId: string; visitorHash: string };
+      };
+      create: {
+        outingId: string;
+        visitorHash: string;
+        fingerprintVersion: number;
+      };
       update: Record<string, unknown>;
     }): Promise<OutingLikeRow>;
   };
@@ -167,9 +184,8 @@ export class OutingsService {
   constructor(
     @Inject(DbService) private readonly dbService: DbService,
     @Inject(ConfigService) private readonly configService: ConfigService,
-    @Optional()
     @Inject(LandingService)
-    private readonly landingService?: LandingService,
+    private readonly landingService: LandingService,
   ) {}
 
   // -----------------------------------------------------------------------
@@ -278,11 +294,7 @@ export class OutingsService {
       );
     }
 
-    await this.validateAssetIds(
-      dto.mainImageId,
-      dto.croquisId,
-      dto.planId,
-    );
+    await this.validateAssetIds(dto.mainImageId, dto.croquisId, dto.planId);
 
     try {
       return await this.client.outing.create({
@@ -340,10 +352,11 @@ export class OutingsService {
     if (effectiveStatus === "PUBLISHED") {
       const effectiveTitle =
         dto.title !== undefined ? dto.title : existing.title;
-      const effectiveSlug =
-        dto.slug !== undefined ? dto.slug : existing.slug;
+      const effectiveSlug = dto.slug !== undefined ? dto.slug : existing.slug;
       const effectiveDateTime =
-        dto.dateTime !== undefined ? dto.dateTime : existing.dateTime.toISOString();
+        dto.dateTime !== undefined
+          ? dto.dateTime
+          : existing.dateTime.toISOString();
       const effectiveLocation =
         dto.location !== undefined ? dto.location : existing.location;
       const effectiveDescription =
@@ -359,11 +372,7 @@ export class OutingsService {
     }
 
     // Validate asset IDs (only the ones being updated)
-    await this.validateAssetIds(
-      dto.mainImageId,
-      dto.croquisId,
-      dto.planId,
-    );
+    await this.validateAssetIds(dto.mainImageId, dto.croquisId, dto.planId);
 
     try {
       return await this.client.outing.update({
@@ -533,7 +542,7 @@ export class OutingsService {
    * Rejects DRAFT, ARCHIVED, and non-existent outings.
    * Requires LandingService to be available in the DI container.
    */
-  async featureOuting(id: string): Promise<void> {
+  async featureOuting(id: string): Promise<{ featuredOutingId: string }> {
     const outing = await this.client.outing.findUnique({ where: { id } });
     if (!outing) {
       throw new NotFoundException(`Outing "${id}" not found`);
@@ -544,12 +553,13 @@ export class OutingsService {
       );
     }
 
-    if (!this.landingService) {
-      throw new Error(
-        "LandingService is not available — ensure LandingModule is imported in OutingsModule",
-      );
-    }
+    await this.landingService.persistFeaturedOutingId(id);
+    return { featuredOutingId: id };
+  }
 
-    await this.landingService.updateSettings({ featuredOutingId: id });
+  /** Clears the landing pointer; repeated clears are intentionally idempotent. */
+  async clearFeaturedOuting(): Promise<{ featuredOutingId: null }> {
+    await this.landingService.persistFeaturedOutingId(null);
+    return { featuredOutingId: null };
   }
 }

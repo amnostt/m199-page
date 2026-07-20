@@ -21,10 +21,6 @@ export class UpdateLandingSettingsDto {
 
   @IsOptional()
   @IsString()
-  featuredOutingId?: string;
-
-  @IsOptional()
-  @IsString()
   mission?: string;
 
   @IsOptional()

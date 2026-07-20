@@ -142,7 +142,9 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
       // Check for duplicate slug
       const dup = existingOutings.find((o) => o.slug === slug);
       if (dup) {
-        const err = new Error("Unique constraint failed on the fields: (slug)") as Error & { code?: string };
+        const err = new Error(
+          "Unique constraint failed on the fields: (slug)",
+        ) as Error & { code?: string };
         err.code = "P2002";
         throw err;
       }
@@ -167,14 +169,24 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const findUnique = vi
-    .fn<(args: { where: Record<string, unknown> }) => Promise<OutingRow | null>>()
+    .fn<
+      (args: { where: Record<string, unknown> }) => Promise<OutingRow | null>
+    >()
     .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       const id = args.where?.id as string | undefined;
       const slugCond = args.where?.slug as string | undefined;
-      if (id && overrides.findUniqueReturn && overrides.findUniqueReturn.id === id) {
+      if (
+        id &&
+        overrides.findUniqueReturn &&
+        overrides.findUniqueReturn.id === id
+      ) {
         return overrides.findUniqueReturn;
       }
-      if (slugCond && overrides.findUniqueReturn && overrides.findUniqueReturn.slug === slugCond) {
+      if (
+        slugCond &&
+        overrides.findUniqueReturn &&
+        overrides.findUniqueReturn.slug === slugCond
+      ) {
         return overrides.findUniqueReturn;
       }
       // Check against existing outings
@@ -186,7 +198,9 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const findFirst = vi
-    .fn<(_args?: { where?: Record<string, unknown> }) => Promise<OutingRow | null>>()
+    .fn<
+      (_args?: { where?: Record<string, unknown> }) => Promise<OutingRow | null>
+    >()
     .mockImplementation(async (_args?: { where?: Record<string, unknown> }) => {
       if (overrides.findFirstReturn) return overrides.findFirstReturn;
       return null;
@@ -205,48 +219,66 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const update = vi
-    .fn<(args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<OutingRow>>()
-    .mockImplementation(async (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
-      const id = args.where.id as string;
-      const existing = existingOutings.find((o) => o.id === id);
-      if (!existing) {
-        const err = new Error("Record not found") as Error & { code?: string };
-        err.code = "P2025";
-        throw err;
-      }
-      // Handle Prisma atomic update operators (increment)
-      const resolved: Partial<OutingRow> = {};
-      for (const [key, value] of Object.entries(args.data)) {
-        if (value && typeof value === "object" && "increment" in value) {
-          const current = (existing as unknown as Record<string, unknown>)[key];
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (resolved as any)[key] = Number(current) + Number((value as { increment: number }).increment);
-        } else {
-          (resolved as Record<string, unknown>)[key] = value;
+    .fn<
+      (args: {
+        where: Record<string, unknown>;
+        data: Record<string, unknown>;
+      }) => Promise<OutingRow>
+    >()
+    .mockImplementation(
+      async (args: {
+        where: Record<string, unknown>;
+        data: Record<string, unknown>;
+      }) => {
+        const id = args.where.id as string;
+        const existing = existingOutings.find((o) => o.id === id);
+        if (!existing) {
+          const err = new Error("Record not found") as Error & {
+            code?: string;
+          };
+          err.code = "P2025";
+          throw err;
         }
-      }
-      const merged: OutingRow = {
-        ...existing,
-        ...resolved,
-        updatedAt: new Date(),
-      };
-      // Update the in-memory array so subsequent reads see the changes
-      const idx = existingOutings.indexOf(existing);
-      if (idx !== -1) {
-        existingOutings[idx] = merged;
-      }
-      // Also update findUniqueReturn if it matches (prevents stale overrides)
-      if (
-        overrides.findUniqueReturn &&
-        overrides.findUniqueReturn.id === id
-      ) {
-        overrides.findUniqueReturn = merged;
-      }
-      return merged;
-    });
+        // Handle Prisma atomic update operators (increment)
+        const resolved: Partial<OutingRow> = {};
+        for (const [key, value] of Object.entries(args.data)) {
+          if (value && typeof value === "object" && "increment" in value) {
+            const current = (existing as unknown as Record<string, unknown>)[
+              key
+            ];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (resolved as any)[key] =
+              Number(current) +
+              Number((value as { increment: number }).increment);
+          } else {
+            (resolved as Record<string, unknown>)[key] = value;
+          }
+        }
+        const merged: OutingRow = {
+          ...existing,
+          ...resolved,
+          updatedAt: new Date(),
+        };
+        // Update the in-memory array so subsequent reads see the changes
+        const idx = existingOutings.indexOf(existing);
+        if (idx !== -1) {
+          existingOutings[idx] = merged;
+        }
+        // Also update findUniqueReturn if it matches (prevents stale overrides)
+        if (
+          overrides.findUniqueReturn &&
+          overrides.findUniqueReturn.id === id
+        ) {
+          overrides.findUniqueReturn = merged;
+        }
+        return merged;
+      },
+    );
 
   const findUniqueFile = vi
-    .fn<(args: { where: Record<string, unknown> }) => Promise<FileAssetRow | null>>()
+    .fn<
+      (args: { where: Record<string, unknown> }) => Promise<FileAssetRow | null>
+    >()
     .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       const id = args.where?.id as string | undefined;
       const files = overrides.existingFiles ?? [];
@@ -259,11 +291,19 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
   const existingLikes: OutingLikeRow[] = [...(overrides.existingLikes ?? [])];
 
   const outingLikeUpsert = vi
-    .fn<(args: {
-      where: { outingId_visitorHash: { outingId: string; visitorHash: string } };
-      create: { outingId: string; visitorHash: string; fingerprintVersion: number };
-      update: Record<string, unknown>;
-    }) => Promise<OutingLikeRow>>()
+    .fn<
+      (args: {
+        where: {
+          outingId_visitorHash: { outingId: string; visitorHash: string };
+        };
+        create: {
+          outingId: string;
+          visitorHash: string;
+          fingerprintVersion: number;
+        };
+        update: Record<string, unknown>;
+      }) => Promise<OutingLikeRow>
+    >()
     .mockImplementation(async (args) => {
       const { outingId, visitorHash } = args.where.outingId_visitorHash;
       const existing = existingLikes.find(
@@ -285,7 +325,13 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const outingLikeFindUnique = vi
-    .fn<(args: { where: { outingId_visitorHash: { outingId: string; visitorHash: string } } }) => Promise<OutingLikeRow | null>>()
+    .fn<
+      (args: {
+        where: {
+          outingId_visitorHash: { outingId: string; visitorHash: string };
+        };
+      }) => Promise<OutingLikeRow | null>
+    >()
     .mockImplementation(async (args) => {
       const { outingId, visitorHash } = args.where.outingId_visitorHash;
       const found = existingLikes.find(
@@ -295,7 +341,15 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const outingLikeCreate = vi
-    .fn<(args: { data: { outingId: string; visitorHash: string; fingerprintVersion: number } }) => Promise<OutingLikeRow>>()
+    .fn<
+      (args: {
+        data: {
+          outingId: string;
+          visitorHash: string;
+          fingerprintVersion: number;
+        };
+      }) => Promise<OutingLikeRow>
+    >()
     .mockImplementation(async (args) => {
       const { outingId: oid, visitorHash: vh } = args.data;
 
@@ -332,14 +386,18 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const outingLikeFindFirst = vi
-    .fn<(args?: { where?: Record<string, unknown> }) => Promise<OutingLikeRow | null>>()
+    .fn<
+      (args?: {
+        where?: Record<string, unknown>;
+      }) => Promise<OutingLikeRow | null>
+    >()
     .mockImplementation(async (_args) => null);
 
   // $transaction — passes the mock client as the tx callback argument
   const $transaction = vi
     .fn()
-    .mockImplementation(
-      async <T>(cb: (tx: unknown) => Promise<T>) => cb(client),
+    .mockImplementation(async <T>(cb: (tx: unknown) => Promise<T>) =>
+      cb(client),
     );
 
   const client = {
@@ -381,7 +439,7 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
 interface ServiceFixture {
   service: OutingsService;
   mocks: ReturnType<typeof makeDbValue>;
-  landingServiceMock: { updateSettings: ReturnType<typeof vi.fn> };
+  landingServiceMock: { persistFeaturedOutingId: ReturnType<typeof vi.fn> };
 }
 
 async function buildService(
@@ -390,7 +448,7 @@ async function buildService(
   const dbValue = makeDbValue(dbOverrides);
 
   const landingServiceMock = {
-    updateSettings: vi.fn().mockResolvedValue({}),
+    persistFeaturedOutingId: vi.fn().mockResolvedValue(undefined),
   };
 
   const module = await Test.createTestingModule({
@@ -401,7 +459,9 @@ async function buildService(
         provide: ConfigService,
         useValue: {
           get: vi.fn((key: string) =>
-            key === "VISITOR_HASH_SECRET" ? "test-visitor-hash-secret" : undefined,
+            key === "VISITOR_HASH_SECRET"
+              ? "test-visitor-hash-secret"
+              : undefined,
           ),
         },
       },
@@ -438,7 +498,9 @@ describe("OutingsService", () => {
       });
 
       expect(mocks.create).toHaveBeenCalledTimes(1);
-      const createArgs = mocks.create.mock.calls[0]![0] as { data: Record<string, unknown> };
+      const createArgs = mocks.create.mock.calls[0]![0] as {
+        data: Record<string, unknown>;
+      };
       expect(createArgs.data.title).toBe("Nueva Salida");
       expect(createArgs.data.slug).toBe("nueva-salida");
       expect(createArgs.data.status).toBe("DRAFT"); // default
@@ -524,7 +586,9 @@ describe("OutingsService", () => {
     it("throws on non-existent outing", async () => {
       const { service } = await buildService({ existingOutings: [] });
 
-      await expect(service.update("nonexistent", { title: "X" })).rejects.toThrow();
+      await expect(
+        service.update("nonexistent", { title: "X" }),
+      ).rejects.toThrow();
     });
   });
 
@@ -934,9 +998,9 @@ describe("OutingsService", () => {
         findUniqueReturn: DRAFT_OUTING,
       });
 
-      await expect(
-        service.addLike("out-002", IP, UA),
-      ).rejects.toThrow(/PUBLISHED/);
+      await expect(service.addLike("out-002", IP, UA)).rejects.toThrow(
+        /PUBLISHED/,
+      );
     });
 
     it("rejects non-existent outing", async () => {
@@ -944,9 +1008,7 @@ describe("OutingsService", () => {
         existingOutings: [],
       });
 
-      await expect(
-        service.addLike("nonexistent", IP, UA),
-      ).rejects.toThrow();
+      await expect(service.addLike("nonexistent", IP, UA)).rejects.toThrow();
     });
   });
 
@@ -1018,9 +1080,12 @@ describe("OutingsService", () => {
 
       await service.featureOuting("out-001");
 
-      expect(landingServiceMock.updateSettings).toHaveBeenCalledWith({
+      expect(await service.featureOuting("out-001")).toEqual({
         featuredOutingId: "out-001",
       });
+      expect(landingServiceMock.persistFeaturedOutingId).toHaveBeenCalledWith(
+        "out-001",
+      );
     });
 
     it("rejects DRAFT outing", async () => {
@@ -1029,11 +1094,11 @@ describe("OutingsService", () => {
         findUniqueReturn: DRAFT_OUTING,
       });
 
-      await expect(
-        service.featureOuting("out-002"),
-      ).rejects.toThrow(/PUBLISHED/);
+      await expect(service.featureOuting("out-002")).rejects.toThrow(
+        /PUBLISHED/,
+      );
 
-      expect(landingServiceMock.updateSettings).not.toHaveBeenCalled();
+      expect(landingServiceMock.persistFeaturedOutingId).not.toHaveBeenCalled();
     });
 
     it("rejects ARCHIVED outing", async () => {
@@ -1042,11 +1107,11 @@ describe("OutingsService", () => {
         findUniqueReturn: ARCHIVED_OUTING,
       });
 
-      await expect(
-        service.featureOuting("out-003"),
-      ).rejects.toThrow(/PUBLISHED/);
+      await expect(service.featureOuting("out-003")).rejects.toThrow(
+        /PUBLISHED/,
+      );
 
-      expect(landingServiceMock.updateSettings).not.toHaveBeenCalled();
+      expect(landingServiceMock.persistFeaturedOutingId).not.toHaveBeenCalled();
     });
 
     it("rejects non-existent outing", async () => {
@@ -1054,11 +1119,27 @@ describe("OutingsService", () => {
         existingOutings: [],
       });
 
-      await expect(
-        service.featureOuting("nonexistent"),
-      ).rejects.toThrow();
+      await expect(service.featureOuting("nonexistent")).rejects.toThrow();
 
-      expect(landingServiceMock.updateSettings).not.toHaveBeenCalled();
+      expect(landingServiceMock.persistFeaturedOutingId).not.toHaveBeenCalled();
+    });
+
+    it("clears the featured pointer idempotently", async () => {
+      const { service, landingServiceMock } = await buildService();
+
+      await expect(service.clearFeaturedOuting()).resolves.toEqual({
+        featuredOutingId: null,
+      });
+      await expect(service.clearFeaturedOuting()).resolves.toEqual({
+        featuredOutingId: null,
+      });
+
+      expect(landingServiceMock.persistFeaturedOutingId).toHaveBeenCalledTimes(
+        2,
+      );
+      expect(
+        landingServiceMock.persistFeaturedOutingId,
+      ).toHaveBeenLastCalledWith(null);
     });
   });
 });

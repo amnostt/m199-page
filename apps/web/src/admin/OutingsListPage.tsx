@@ -21,7 +21,10 @@ import type { OutingAdmin, OutingStatus } from "./adminTypes.js";
 import {
   listOutings,
   archiveOuting,
+  clearFeaturedOuting,
+  featureOuting,
 } from "./outingsApi.js";
+import { adminFetch } from "./session.js";
 import { AdminRequestError } from "./session.js";
 
 // ---------------------------------------------------------------------------
@@ -54,6 +57,18 @@ export function OutingsListPage({
   // Per-row error message captured from the server's parsed response so the
   // UI can show the actual validation reason rather than a generic failure.
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
+  const [featuredOutingId, setFeaturedOutingId] = useState<string | null>(null);
+
+  const refreshFeaturedState = useCallback(async () => {
+    const rows = await listOutings(statusFilter || undefined);
+    setOutings(rows);
+    const settings = await adminFetch<{
+      featuredOutingId?: string | null;
+    } | null>("/landing/admin");
+    if (settings && !Array.isArray(settings)) {
+      setFeaturedOutingId(settings.featuredOutingId ?? null);
+    }
+  }, [statusFilter]);
 
   // Load (or re-load) on mount and on filter change.
   // Server-side filtering — the API returns the matching subset.
@@ -63,10 +78,9 @@ export function OutingsListPage({
     setLoadError(false);
     setOutings(null);
 
-    listOutings(statusFilter || undefined)
-      .then((rows) => {
+    refreshFeaturedState()
+      .then(() => {
         if (cancelled) return;
-        setOutings(rows);
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -75,55 +89,89 @@ export function OutingsListPage({
     return () => {
       cancelled = true;
     };
-  }, [statusFilter]);
+  }, [refreshFeaturedState]);
+
+  const handleFeature = useCallback(
+    async (outing: OutingAdmin) => {
+      if (
+        featuredOutingId &&
+        featuredOutingId !== outing.id &&
+        !window.confirm(`Replace the featured outing with "${outing.title}"?`)
+      )
+        return;
+      try {
+        await featureOuting(outing.id);
+        await refreshFeaturedState();
+      } catch {
+        setActionErrors((prev) => ({
+          ...prev,
+          [outing.id]: "Failed to update featured outing.",
+        }));
+      }
+    },
+    [featuredOutingId, refreshFeaturedState],
+  );
+
+  const handleClearFeatured = useCallback(async () => {
+    try {
+      await clearFeaturedOuting();
+      await refreshFeaturedState();
+    } catch {
+      setActionErrors((prev) => ({
+        ...prev,
+        featured: "Failed to update featured outing.",
+      }));
+    }
+  }, [refreshFeaturedState]);
 
   // ------------------------------------------------------------------
   // Archive handler
   // ------------------------------------------------------------------
 
-  const handleArchive = useCallback(async (outing: OutingAdmin) => {
-    if (!window.confirm(`Archive "${outing.title}"?`)) return;
+  const handleArchive = useCallback(
+    async (outing: OutingAdmin) => {
+      if (!window.confirm(`Archive "${outing.title}"?`)) return;
 
-    setActionStates((prev) => ({ ...prev, [outing.id]: "pending" }));
-    setActionErrors((prev) => {
-      const next = { ...prev };
-      delete next[outing.id];
-      return next;
-    });
+      setActionStates((prev) => ({ ...prev, [outing.id]: "pending" }));
+      setActionErrors((prev) => {
+        const next = { ...prev };
+        delete next[outing.id];
+        return next;
+      });
 
-    try {
-      const updated = await archiveOuting(outing.id);
-      // Reconcile list state from the server's response — never assume
-      // success locally.
-      //
-      // WU2-WARN-1: when the active status filter is DRAFT or PUBLISHED,
-      // the newly-archived row no longer matches the filter and must be
-      // removed from the visible list (showing an ARCHIVED row under a
-      // DRAFT/PUBLISHED filter would contradict the active filter). The
-      // All and ARCHIVED filters keep the row with its updated status.
-      const filterExcludesArchived =
-        statusFilter === "DRAFT" || statusFilter === "PUBLISHED";
-      if (filterExcludesArchived) {
-        setOutings((prev) =>
-          prev === null
-            ? prev
-            : prev.filter((o) => o.id !== updated.id),
-        );
-      } else {
-        setOutings((prev) =>
-          prev === null
-            ? prev
-            : prev.map((o) => (o.id === updated.id ? updated : o)),
-        );
+      try {
+        const updated = await archiveOuting(outing.id);
+        // Reconcile list state from the server's response — never assume
+        // success locally.
+        //
+        // WU2-WARN-1: when the active status filter is DRAFT or PUBLISHED,
+        // the newly-archived row no longer matches the filter and must be
+        // removed from the visible list (showing an ARCHIVED row under a
+        // DRAFT/PUBLISHED filter would contradict the active filter). The
+        // All and ARCHIVED filters keep the row with its updated status.
+        const filterExcludesArchived =
+          statusFilter === "DRAFT" || statusFilter === "PUBLISHED";
+        if (filterExcludesArchived) {
+          setOutings((prev) =>
+            prev === null ? prev : prev.filter((o) => o.id !== updated.id),
+          );
+        } else {
+          setOutings((prev) =>
+            prev === null
+              ? prev
+              : prev.map((o) => (o.id === updated.id ? updated : o)),
+          );
+        }
+        setActionStates((prev) => ({ ...prev, [outing.id]: "idle" }));
+      } catch (err) {
+        setActionStates((prev) => ({ ...prev, [outing.id]: "error" }));
+        if (err instanceof AdminRequestError) {
+          setActionErrors((prev) => ({ ...prev, [outing.id]: err.message }));
+        }
       }
-      setActionStates((prev) => ({ ...prev, [outing.id]: "idle" }));
-    } catch (err) {
-      setActionStates((prev) => ({ ...prev, [outing.id]: "error" }));
-      if (err instanceof AdminRequestError) {
-        setActionErrors((prev) => ({ ...prev, [outing.id]: err.message }));
-      }
-    }
-  }, [statusFilter]);
+    },
+    [statusFilter],
+  );
 
   // ------------------------------------------------------------------
   // States
@@ -161,9 +209,7 @@ export function OutingsListPage({
         <select
           id="outings-filter-status"
           value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value as OutingsFilter)
-          }
+          onChange={(e) => setStatusFilter(e.target.value as OutingsFilter)}
         >
           <option value="">All</option>
           <option value="DRAFT">DRAFT</option>
@@ -179,6 +225,13 @@ export function OutingsListPage({
     <div data-testid="outings-list-table">
       <h2>Outings</h2>
 
+      {featuredOutingId && (
+        <button type="button" onClick={handleClearFeatured}>
+          Clear featured outing
+        </button>
+      )}
+      {actionErrors.featured && <p>{actionErrors.featured}</p>}
+
       {onCreateOuting && (
         <button type="button" onClick={onCreateOuting}>
           New Outing
@@ -189,9 +242,7 @@ export function OutingsListPage({
       <select
         id="outings-filter-status"
         value={statusFilter}
-        onChange={(e) =>
-          setStatusFilter(e.target.value as OutingsFilter)
-        }
+        onChange={(e) => setStatusFilter(e.target.value as OutingsFilter)}
       >
         <option value="">All</option>
         <option value="DRAFT">DRAFT</option>
@@ -228,6 +279,22 @@ export function OutingsListPage({
                 </td>
               )}
               <td>
+                {outing.status === "PUBLISHED" && (
+                  <>
+                    {featuredOutingId === outing.id && (
+                      <span data-testid={`featured-outing-${outing.id}`}>
+                        Featured
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      data-testid={`feature-outing-${outing.id}`}
+                      onClick={() => handleFeature(outing)}
+                    >
+                      Feature outing
+                    </button>
+                  </>
+                )}
                 {outing.status !== "ARCHIVED" && (
                   <button
                     type="button"

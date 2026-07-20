@@ -26,6 +26,7 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import { OutingsListPage } from "./OutingsListPage.js";
+import type { OutingAdmin } from "./adminTypes.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -69,6 +70,32 @@ const MOCK_OUTINGS = [
     planId: null,
   },
 ];
+
+function mockOutingsRequests(
+  getOutings: (url: string) => OutingAdmin[],
+  archiveResponse?: OutingAdmin | Error,
+) {
+  return vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+    if (url === "/landing/admin") {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ featuredOutingId: null }),
+      });
+    }
+    if (init?.method === "POST" && url.includes("/archive")) {
+      if (archiveResponse instanceof Error)
+        return Promise.reject(archiveResponse);
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(archiveResponse),
+      });
+    }
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(getOutings(url)),
+    });
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -187,16 +214,9 @@ describe("OutingsListPage status filter", () => {
     // First call (initial) returns all; second call (filter) returns DRAFT only
     const draftOnly = [MOCK_OUTINGS[0]!];
 
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(draftOnly),
-      });
+    globalThis.fetch = mockOutingsRequests((url) =>
+      url === "/outings/admin?status=DRAFT" ? draftOnly : MOCK_OUTINGS,
+    );
 
     render(<OutingsListPage />);
 
@@ -227,16 +247,9 @@ describe("OutingsListPage status filter", () => {
   it("server-side filter: selecting PUBLISHED re-fetches with status=PUBLISHED", async () => {
     const publishedOnly = [MOCK_OUTINGS[1]!];
 
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(publishedOnly),
-      });
+    globalThis.fetch = mockOutingsRequests((url) =>
+      url === "/outings/admin?status=PUBLISHED" ? publishedOnly : MOCK_OUTINGS,
+    );
 
     render(<OutingsListPage />);
 
@@ -263,20 +276,9 @@ describe("OutingsListPage status filter", () => {
   });
 
   it("server-side filter: switching back to All re-fetches /outings/admin (no status)", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([MOCK_OUTINGS[0]!]),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      });
+    globalThis.fetch = mockOutingsRequests((url) =>
+      url === "/outings/admin?status=DRAFT" ? [MOCK_OUTINGS[0]!] : MOCK_OUTINGS,
+    );
 
     render(<OutingsListPage />);
 
@@ -406,9 +408,7 @@ describe("OutingsListPage archive action", () => {
   });
 
   it("archives a DRAFT outing: confirm accepted → POST /:id/archive request sent", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     globalThis.fetch = vi
       .fn()
@@ -420,7 +420,8 @@ describe("OutingsListPage archive action", () => {
       // Archive POST response — server returns the archived row
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ ...MOCK_OUTINGS[0]!, status: "ARCHIVED" }),
+        json: () =>
+          Promise.resolve({ ...MOCK_OUTINGS[0]!, status: "ARCHIVED" }),
       });
 
     render(<OutingsListPage />);
@@ -432,9 +433,7 @@ describe("OutingsListPage archive action", () => {
     fireEvent.click(screen.getByTestId("lifecycle-archive-o1"));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/archive/i),
-    );
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/archive/i));
 
     await waitFor(() => {
       const postCall = (
@@ -454,9 +453,7 @@ describe("OutingsListPage archive action", () => {
   });
 
   it("declining confirm does NOT send an archive request", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(false);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -490,18 +487,7 @@ describe("OutingsListPage archive action", () => {
       status: "ARCHIVED" as const,
     };
 
-    globalThis.fetch = vi
-      .fn()
-      // Initial list load
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      })
-      // Archive POST response
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(archivedRow),
-      });
+    globalThis.fetch = mockOutingsRequests(() => MOCK_OUTINGS, archivedRow);
 
     render(<OutingsListPage />);
 
@@ -536,23 +522,11 @@ describe("OutingsListPage archive action", () => {
     const draftRow = MOCK_OUTINGS[0]!;
     const archivedRow = { ...draftRow, status: "ARCHIVED" as const };
 
-    globalThis.fetch = vi
-      .fn()
-      // Initial list load (default All)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      })
-      // Refetch when filter is switched to DRAFT
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([draftRow]),
-      })
-      // Archive POST response — server returns the archived row
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(archivedRow),
-      });
+    globalThis.fetch = mockOutingsRequests(
+      (url) =>
+        url === "/outings/admin?status=DRAFT" ? [draftRow] : MOCK_OUTINGS,
+      archivedRow,
+    );
 
     render(<OutingsListPage />);
 
@@ -589,10 +563,11 @@ describe("OutingsListPage archive action", () => {
     });
     // The archive button for the row is gone with the row.
     expect(screen.queryByTestId("lifecycle-archive-o1")).toBeNull();
-    // No refetch was triggered (local-state reconciliation, not a server
-    // round-trip). The fetch mock only saw 3 calls: initial + DRAFT
-    // refetch + archive POST.
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(3);
+    // Archive reconciliation remains local. The two authoritative reads occur
+    // for each list load: initial + DRAFT refetch + archive POST.
+    expect(
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length,
+    ).toBe(5);
   });
 
   it("WU2-WARN-1: archives a PUBLISHED row while the PUBLISHED filter is active — the row is REMOVED from the visible list", async () => {
@@ -601,23 +576,13 @@ describe("OutingsListPage archive action", () => {
     const publishedRow = MOCK_OUTINGS[1]!;
     const archivedRow = { ...publishedRow, status: "ARCHIVED" as const };
 
-    globalThis.fetch = vi
-      .fn()
-      // Initial list load (default All)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      })
-      // Refetch when filter is switched to PUBLISHED
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([publishedRow]),
-      })
-      // Archive POST response
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(archivedRow),
-      });
+    globalThis.fetch = mockOutingsRequests(
+      (url) =>
+        url === "/outings/admin?status=PUBLISHED"
+          ? [publishedRow]
+          : MOCK_OUTINGS,
+      archivedRow,
+    );
 
     render(<OutingsListPage />);
 
@@ -651,8 +616,11 @@ describe("OutingsListPage archive action", () => {
       expect(screen.queryByText("Published Outing")).toBeNull();
     });
     expect(screen.queryByTestId("lifecycle-archive-o2")).toBeNull();
-    // No refetch was triggered.
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(3);
+    // Archive reconciliation remains local after the initial and filtered
+    // authoritative reads.
+    expect(
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length,
+    ).toBe(5);
   });
 
   it("WU2-WARN-1: archives a DRAFT row while the All filter is active — the row REMAINS in the table with status ARCHIVED (regression: All-filter behavior preserved)", async () => {
@@ -661,18 +629,7 @@ describe("OutingsListPage archive action", () => {
     const draftRow = MOCK_OUTINGS[0]!;
     const archivedRow = { ...draftRow, status: "ARCHIVED" as const };
 
-    globalThis.fetch = vi
-      .fn()
-      // Initial list load (default All)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      })
-      // Archive POST response
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(archivedRow),
-      });
+    globalThis.fetch = mockOutingsRequests(() => MOCK_OUTINGS, archivedRow);
 
     render(<OutingsListPage />);
 
@@ -704,8 +661,11 @@ describe("OutingsListPage archive action", () => {
       // dropdown option + o3's status cell + o1's status cell (now ARCHIVED)
       expect(archivedCells.length).toBe(3);
     });
-    // No refetch was triggered.
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(2);
+    // No post-archive refetch was triggered; the initial authoritative load
+    // consists of the list and landing reads plus the archive POST.
+    expect(
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length,
+    ).toBe(3);
   });
 
   it("keeps per-row state isolated — clicking one row leaves other rows unchanged", async () => {
@@ -744,13 +704,10 @@ describe("OutingsListPage archive action", () => {
   });
 
   it("shows an error indicator on a row whose archive failed", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      })
-      .mockRejectedValueOnce(new Error("Network error"));
+    globalThis.fetch = mockOutingsRequests(
+      () => MOCK_OUTINGS,
+      new Error("Network error"),
+    );
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
@@ -777,22 +734,32 @@ describe("OutingsListPage archive action", () => {
     // Server returns 400 with JSON validation message
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(MOCK_OUTINGS),
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        statusText: "Bad Request",
-        headers: {
-          get: (key: string) =>
-            key === "content-type" ? "application/json" : null,
-        },
-        json: () =>
-          Promise.resolve({
-            message: "Cannot archive an outing that has dependent content",
-          }),
+      .mockImplementation((url: string, init?: RequestInit) => {
+        if (url === "/landing/admin") {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ featuredOutingId: null }),
+          });
+        }
+        if (init?.method === "POST" && url.includes("/archive")) {
+          return Promise.resolve({
+            ok: false,
+            status: 400,
+            statusText: "Bad Request",
+            headers: {
+              get: (key: string) =>
+                key === "content-type" ? "application/json" : null,
+            },
+            json: () =>
+              Promise.resolve({
+                message: "Cannot archive an outing that has dependent content",
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(MOCK_OUTINGS),
+        });
       });
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -807,7 +774,9 @@ describe("OutingsListPage archive action", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/cannot archive an outing that has dependent content/i),
+        screen.getByText(
+          /cannot archive an outing that has dependent content/i,
+        ),
       ).toBeTruthy();
     });
   });
@@ -856,5 +825,76 @@ describe("OutingsListPage entry points", () => {
 
     expect(onEdit).toHaveBeenCalledTimes(1);
     expect(onEdit).toHaveBeenCalledWith("camp-day");
+  });
+});
+
+describe("OutingsListPage featured selection", () => {
+  it("marks the authoritative selection, confirms replacement, and refreshes both reads", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    let featuredOutingId = "o1";
+    const publishedOutings = [
+      { ...MOCK_OUTINGS[0]!, status: "PUBLISHED" as const },
+      MOCK_OUTINGS[1]!,
+      MOCK_OUTINGS[2]!,
+    ];
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
+        if (url === "/landing/admin") {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ featuredOutingId }),
+          });
+        }
+        if (init?.method === "POST" && url === "/outings/admin/o2/feature") {
+          featuredOutingId = "o2";
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ featuredOutingId }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(publishedOutings),
+        });
+      });
+    render(<OutingsListPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId("outings-list-table")).toBeTruthy(),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("featured-outing-o1")).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByTestId("feature-outing-o2"));
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/outings/admin/o2/feature",
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
+    expect(window.confirm).toHaveBeenCalledWith(
+      expect.stringMatching(/replace/i),
+    );
+  });
+
+  it("does not mutate when replacement confirmation is cancelled", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(MOCK_OUTINGS),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ featuredOutingId: "o1" }),
+      });
+    render(<OutingsListPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId("feature-outing-o2")).toBeTruthy(),
+    );
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockClear();
+    fireEvent.click(screen.getByTestId("feature-outing-o2"));
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

@@ -8,7 +8,15 @@
  * Test.createTestingModule with mocked OutingsService and overridden AuthGuard.
  */
 import { Test } from "@nestjs/testing";
-import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  beforeAll,
+  afterAll,
+} from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { UnauthorizedException } from "@nestjs/common";
 import request from "supertest";
@@ -51,7 +59,8 @@ function mockOutingsService(): OutingsService {
       ...SAMPLE_OUTING,
       status: "ARCHIVED" as const,
     }),
-    featureOuting: vi.fn().mockResolvedValue(undefined),
+    featureOuting: vi.fn().mockResolvedValue({ featuredOutingId: "out-002" }),
+    clearFeaturedOuting: vi.fn().mockResolvedValue({ featuredOutingId: null }),
     findAllPublic: vi.fn(),
     addLike: vi.fn(),
   } as unknown as OutingsService;
@@ -207,6 +216,19 @@ describe("OutingsAdminController", () => {
 
       expect(service.featureOuting).toHaveBeenCalledWith("out-001");
     });
+
+    it("returns the authoritative featured pointer from selection", async () => {
+      await expect(controller.feature("out-002")).resolves.toEqual({
+        featuredOutingId: "out-002",
+      });
+    });
+
+    it("delegates clear and returns a null pointer", async () => {
+      await expect(controller.clearFeature()).resolves.toEqual({
+        featuredOutingId: null,
+      });
+      expect(service.clearFeaturedOuting).toHaveBeenCalledOnce();
+    });
   });
 
   // ---- AuthGuard protection (OUT-01) ---------------------------------------
@@ -230,7 +252,9 @@ describe("OutingsAdminController", () => {
     beforeAll(async () => {
       const module = await Test.createTestingModule({
         controllers: [OutingsAdminController],
-        providers: [{ provide: OutingsService, useValue: mockOutingsService() }],
+        providers: [
+          { provide: OutingsService, useValue: mockOutingsService() },
+        ],
       })
         .overrideGuard(AuthGuard)
         .useValue({
@@ -254,13 +278,15 @@ describe("OutingsAdminController", () => {
     });
 
     it("returns 401 for POST /outings/admin without valid auth", async () => {
-      const res = await request(app.getHttpServer()).post("/outings/admin").send({
-        title: "Test",
-        slug: "test",
-        dateTime: "2026-07-15T10:00:00Z",
-        location: "Test",
-        description: "Test",
-      });
+      const res = await request(app.getHttpServer())
+        .post("/outings/admin")
+        .send({
+          title: "Test",
+          slug: "test",
+          dateTime: "2026-07-15T10:00:00Z",
+          location: "Test",
+          description: "Test",
+        });
       expect(res.status).toBe(401);
     });
   });

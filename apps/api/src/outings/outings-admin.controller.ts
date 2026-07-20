@@ -14,6 +14,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
@@ -96,7 +97,12 @@ export class OutingsAdminController {
    */
   @Post(":id/feature")
   async feature(@Param("id") id: string) {
-    await this.outingsService.featureOuting(id);
-    return { featuredOutingId: id };
+    return this.outingsService.featureOuting(id);
+  }
+
+  /** Clears the featured outing pointer through the outings domain boundary. */
+  @Delete("feature")
+  async clearFeature() {
+    return this.outingsService.clearFeaturedOuting();
   }
 }

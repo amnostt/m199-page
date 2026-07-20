@@ -194,6 +194,35 @@ describe("LandingAdminController", () => {
         await app.close();
       }
     });
+
+    it("whitelists featuredOutingId from generic settings requests", async () => {
+      const landingService = mockLandingService();
+      const module = await Test.createTestingModule({
+        controllers: [LandingAdminController],
+        providers: [{ provide: LandingService, useValue: landingService }],
+      })
+        .overrideGuard(AuthGuard)
+        .useValue({ canActivate: vi.fn().mockResolvedValue(true) })
+        .compile();
+      const app = module.createNestApplication();
+      app.useGlobalPipes(
+        new ValidationPipe({ whitelist: true, transform: true }),
+      );
+      await app.init();
+
+      try {
+        const res = await request(app.getHttpServer())
+          .put("/landing/admin")
+          .send({ heroTitle: "Updated", featuredOutingId: "out-002" });
+
+        expect(res.status).toBe(200);
+        expect(landingService.updateSettings).toHaveBeenCalledWith({
+          heroTitle: "Updated",
+        });
+      } finally {
+        await app.close();
+      }
+    });
   });
 
   // ---- AuthGuard protection (LP-01) ---------------------------------------

@@ -214,8 +214,6 @@ export class LandingService {
     if (dto.heroTitle !== undefined) data.heroTitle = dto.heroTitle;
     if (dto.heroSubtitle !== undefined) data.heroSubtitle = dto.heroSubtitle;
     if (dto.heroImageId !== undefined) data.heroImageId = dto.heroImageId;
-    if (dto.featuredOutingId !== undefined)
-      data.featuredOutingId = dto.featuredOutingId;
     if (dto.mission !== undefined) data.mission = dto.mission;
     if (dto.vision !== undefined) data.vision = dto.vision;
     if (dto.description !== undefined) data.description = dto.description;
@@ -228,6 +226,17 @@ export class LandingService {
       where: { id: 1 },
       create: { id: 1, ...data },
       update: data,
+    });
+  }
+
+  /** Persists only the featured outing pointer for the outings domain. */
+  async persistFeaturedOutingId(
+    featuredOutingId: string | null,
+  ): Promise<LandingSettingsRow> {
+    return this.client.landingSettings.upsert({
+      where: { id: 1 },
+      create: { id: 1, featuredOutingId },
+      update: { featuredOutingId },
     });
   }
 

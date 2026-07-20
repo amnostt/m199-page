@@ -38,9 +38,7 @@ const FULL_PAYLOAD = {
   },
 };
 
-function mockFetchOk(
-  payload: unknown,
-): ReturnType<typeof vi.fn> {
+function mockFetchOk(payload: unknown): ReturnType<typeof vi.fn> {
   return vi.fn().mockResolvedValue({
     ok: true,
     json: () => Promise.resolve(payload),
@@ -199,6 +197,17 @@ describe("App (landing rendering)", () => {
     expectSection("mission-section");
   });
 
+  it("places the heading-free featured outing immediately after the hero", async () => {
+    globalThis.fetch = mockFetchOk(FULL_PAYLOAD) as unknown as typeof fetch;
+    render(<App />);
+    await waitFor(() => expectSection("featured-outing-section"));
+    const hero = getOne("hero-section");
+    const featured = getOne("featured-outing-section");
+    expect(hero.nextElementSibling).toBe(featured);
+    expect(featured.querySelector("h2")).toBeNull();
+    expect(featured.textContent).toContain("Salida Misionera 2025");
+  });
+
   // -----------------------------------------------------------------------
   // TRIANGULATE — empty featuredPosts hides section
   // -----------------------------------------------------------------------
@@ -354,14 +363,14 @@ describe("Outings list (4.2)", () => {
     // Never-resolving fetch keeps the component in loading state
     globalThis.fetch = vi
       .fn()
-      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
 
     render(<App pathname="/outings" />);
 
     expect(screen.getByTestId("outings-loading")).toBeTruthy();
-    expect(
-      screen.getByText(/cargando salidas/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/cargando salidas/i)).toBeTruthy();
   });
 
   it("shows error state when outings fetch fails", async () => {
@@ -375,9 +384,7 @@ describe("Outings list (4.2)", () => {
       expectSection("outings-error");
     });
 
-    expect(
-      screen.getByText(/no se pudo cargar la lista/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/no se pudo cargar la lista/i)).toBeTruthy();
   });
 });
 
@@ -403,14 +410,14 @@ describe("Outing detail (4.3)", () => {
   it("shows loading state while outing detail fetch is in-flight", () => {
     globalThis.fetch = vi
       .fn()
-      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
 
     render(<App pathname="/outings/camp-day" />);
 
     expect(screen.getByTestId("outing-detail-loading")).toBeTruthy();
-    expect(
-      screen.getByText(/cargando salida/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/cargando salida/i)).toBeTruthy();
   });
 
   it("shows not found when API returns 404", async () => {
@@ -426,9 +433,7 @@ describe("Outing detail (4.3)", () => {
       expectSection("outing-not-found");
     });
 
-    expect(
-      screen.getByText(/salida no encontrada/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/salida no encontrada/i)).toBeTruthy();
   });
 
   it("renders like button with initial count from detail response", async () => {
@@ -671,7 +676,9 @@ describe("Posts list route (3.3)", () => {
   it("shows loading state on /posts while fetch is in-flight", () => {
     globalThis.fetch = vi
       .fn()
-      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
 
     render(<App pathname="/posts" />);
 
@@ -689,9 +696,7 @@ describe("Posts list route (3.3)", () => {
       expectSection("posts-error");
     });
 
-    expect(
-      screen.getByText(/no se pudo cargar la lista/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/no se pudo cargar la lista/i)).toBeTruthy();
   });
 });
 
@@ -726,15 +731,15 @@ describe("Post detail route (3.3)", () => {
       expectSection("post-detail-not-found");
     });
 
-    expect(
-      screen.getByText(/post no encontrado/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/post no encontrado/i)).toBeTruthy();
   });
 
   it("shows loading state on /posts/:slug while fetch is in-flight", () => {
     globalThis.fetch = vi
       .fn()
-      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
 
     render(<App pathname="/posts/primer-post" />);
 
@@ -752,9 +757,7 @@ describe("Post detail route (3.3)", () => {
       expectSection("post-detail-error");
     });
 
-    expect(
-      screen.getByText(/no se pudo cargar el post/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/no se pudo cargar el post/i)).toBeTruthy();
   });
 });
 

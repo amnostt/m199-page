@@ -22,6 +22,8 @@ import {
   buildOutingPayload,
   createOuting,
   updateOuting,
+  featureOuting,
+  clearFeaturedOuting,
 } from "./outingsApi.js";
 
 // ---------------------------------------------------------------------------
@@ -526,5 +528,38 @@ describe("createOuting (POST — create semantics preserved)", () => {
     expect(body.planId).toBeNull();
     expect(body.title).toBe("Camp Day");
     expect(body.status).toBe("DRAFT");
+  });
+});
+
+describe("featured outing mutations", () => {
+  it("POSTs selection and DELETEs clear through the outings endpoints", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ featuredOutingId: "out-1" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ featuredOutingId: null }),
+      });
+
+    await expect(featureOuting("out-1")).resolves.toEqual({
+      featuredOutingId: "out-1",
+    });
+    await expect(clearFeaturedOuting()).resolves.toEqual({
+      featuredOutingId: null,
+    });
+
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(
+      1,
+      "/outings/admin/out-1/feature",
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(
+      2,
+      "/outings/admin/feature",
+      expect.objectContaining({ method: "DELETE", credentials: "include" }),
+    );
   });
 });

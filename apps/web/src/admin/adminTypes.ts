@@ -53,6 +53,7 @@ export interface LandingSettings {
   featuredVideoUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  featuredOutingId?: string | null;
 }
 
 /** Normalized form values — every field is a non-null string. */

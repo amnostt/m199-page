@@ -390,6 +390,10 @@ describe("LandingSettingsPage edit and save", () => {
         ok: true,
         json: () => Promise.resolve(settingsWithoutHeroImage),
       })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]),
+      })
       .mockRejectedValueOnce(new Error("Network error"));
 
     render(<LandingSettingsPage />);
@@ -532,6 +536,149 @@ describe("LandingSettingsPage triangulation", () => {
     ).toBe(false);
     expect((screen.getByLabelText(/email/i) as HTMLInputElement).disabled).toBe(
       false,
+    );
+  });
+});
+
+describe("LandingSettingsPage featured selection", () => {
+  it("selects a published candidate through outings endpoints and clears it", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ ...SAMPLE_SETTINGS, featuredOutingId: "o1" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            { id: "o2", title: "Published Outing", status: "PUBLISHED" },
+          ]),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ featuredOutingId: "o2" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ ...SAMPLE_SETTINGS, featuredOutingId: "o2" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            { id: "o2", title: "Published Outing", status: "PUBLISHED" },
+          ]),
+      });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<LandingSettingsPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId("featured-outing-select")).toBeTruthy(),
+    );
+    fireEvent.change(screen.getByTestId("featured-outing-select"), {
+      target: { value: "o2" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /feature outing/i }));
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/outings/admin/o2/feature",
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
+  });
+
+  it("shows a featured-outing error when mutation or authoritative refresh fails", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
+        if (url === "/landing/admin") {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({ ...SAMPLE_SETTINGS, featuredOutingId: null }),
+          });
+        }
+        if (url === "/outings/admin?status=PUBLISHED") {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve([
+                { id: "o2", title: "Published Outing", status: "PUBLISHED" },
+              ]),
+          });
+        }
+        if (url === "/outings/admin/o2/feature" && init?.method === "POST") {
+          return Promise.reject(new Error("Network error"));
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      });
+
+    render(<LandingSettingsPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId("featured-outing-select")).toBeTruthy(),
+    );
+    fireEvent.change(screen.getByTestId("featured-outing-select"), {
+      target: { value: "o2" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /feature outing/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("featured-outing-error").textContent).toMatch(
+        /failed to update/i,
+      );
+    });
+  });
+
+  it("clears through the outings endpoint and refreshes authoritative state", async () => {
+    let featuredOutingId: string | null = "o2";
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
+        if (url === "/landing/admin")
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({ ...SAMPLE_SETTINGS, featuredOutingId }),
+          });
+        if (url === "/outings/admin?status=PUBLISHED")
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve([
+                { id: "o2", title: "Published Outing", status: "PUBLISHED" },
+              ]),
+          });
+        if (url === "/outings/admin/feature" && init?.method === "DELETE") {
+          featuredOutingId = null;
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ featuredOutingId }),
+          });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      });
+
+    render(<LandingSettingsPage />);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /clear featured outing/i }),
+      ).toBeTruthy(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /clear featured outing/i }),
+    );
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/outings/admin/feature",
+        expect.objectContaining({ method: "DELETE" }),
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /clear featured outing/i }),
+      ).toBeNull(),
     );
   });
 });
