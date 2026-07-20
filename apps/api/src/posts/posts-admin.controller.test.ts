@@ -6,7 +6,15 @@
  * Test.createTestingModule with mocked PostsService and overridden AuthGuard.
  */
 import { Test } from "@nestjs/testing";
-import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  beforeAll,
+  afterAll,
+} from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { UnauthorizedException } from "@nestjs/common";
 import request from "supertest";
@@ -150,7 +158,6 @@ describe("PostsAdminController", () => {
         coverImageId: "img-001",
         tags: ["ministry", "news"],
         downloadIds: ["dl-001"],
-        status: "DRAFT",
       };
 
       await controller.create(dto);
@@ -273,9 +280,7 @@ describe("PostsAdminController", () => {
     beforeAll(async () => {
       const module = await Test.createTestingModule({
         controllers: [PostsAdminController],
-        providers: [
-          { provide: PostsService, useValue: mockPostsService() },
-        ],
+        providers: [{ provide: PostsService, useValue: mockPostsService() }],
       })
         .overrideGuard(AuthGuard)
         .useValue({

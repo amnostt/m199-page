@@ -7,9 +7,7 @@ import type { PostPublicDownload } from "./PostsList.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockFetchOk(
-  payload: unknown,
-): ReturnType<typeof vi.fn> {
+function mockFetchOk(payload: unknown): ReturnType<typeof vi.fn> {
   return vi.fn().mockResolvedValue({
     ok: true,
     json: () => Promise.resolve(payload),
@@ -79,7 +77,9 @@ describe("PostDetail", () => {
   it("shows loading state while fetch is in-flight", () => {
     globalThis.fetch = vi
       .fn()
-      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
 
     render(<PostDetail slug="primer-post" />);
 
@@ -103,9 +103,7 @@ describe("PostDetail", () => {
       expectSection("post-detail-not-found");
     });
 
-    expect(
-      screen.getByText(/post no encontrado/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/post no encontrado/i)).toBeTruthy();
   });
 
   // -----------------------------------------------------------------------
@@ -123,9 +121,7 @@ describe("PostDetail", () => {
       expectSection("post-detail-error");
     });
 
-    expect(
-      screen.getByText(/no se pudo cargar/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/no se pudo cargar/i)).toBeTruthy();
   });
 
   // -----------------------------------------------------------------------
@@ -166,9 +162,7 @@ describe("PostDetail", () => {
       expectSection("post-detail-section");
     });
 
-    const img = screen.getByTestId(
-      "post-detail-cover",
-    ) as HTMLImageElement;
+    const img = screen.getByTestId("post-detail-cover") as HTMLImageElement;
     expect(img.getAttribute("src")).toBe("/files/img-post-1");
   });
 
@@ -225,7 +219,7 @@ describe("PostDetail", () => {
     const postAllowed = {
       ...POST_DETAIL,
       content:
-        '<h2>Título</h2><h3>Subtítulo</h3><p>Párrafo con <strong>negrita</strong> y <em>cursiva</em>.</p><ul><li>Item 1</li><li>Item 2</li></ul><ol><li>Paso 1</li></ol><blockquote>Cita</blockquote><br>',
+        "<h2>Título</h2><h3>Subtítulo</h3><p>Párrafo con <strong>negrita</strong> y <em>cursiva</em>.</p><ul><li>Item 1</li><li>Item 2</li></ul><ol><li>Paso 1</li></ol><blockquote>Cita</blockquote><br>",
     };
     globalThis.fetch = mockFetchOk(postAllowed) as unknown as typeof fetch;
 
@@ -320,6 +314,21 @@ describe("PostDetail", () => {
     expect(dateEl.textContent).toBeTruthy();
   });
 
+  it("does not render a date when a transitional API response has null publishedAt", async () => {
+    const postWithoutPublicationDate = { ...POST_DETAIL, publishedAt: null };
+    globalThis.fetch = mockFetchOk(
+      postWithoutPublicationDate,
+    ) as unknown as typeof fetch;
+
+    render(<PostDetail slug="primer-post" />);
+
+    await waitFor(() => {
+      expectSection("post-detail-section");
+    });
+
+    expectNoSection("post-detail-date");
+  });
+
   // -----------------------------------------------------------------------
   // RED 10 — renders download links (Blocker 3 fix)
   // -----------------------------------------------------------------------
@@ -329,7 +338,9 @@ describe("PostDetail", () => {
       ...POST_DETAIL,
       downloads: [DOWNLOAD_1, DOWNLOAD_2],
     };
-    globalThis.fetch = mockFetchOk(postWithDownloads) as unknown as typeof fetch;
+    globalThis.fetch = mockFetchOk(
+      postWithDownloads,
+    ) as unknown as typeof fetch;
 
     render(<PostDetail slug="primer-post" />);
 

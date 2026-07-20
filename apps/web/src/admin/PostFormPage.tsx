@@ -15,7 +15,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Post, PostDownload, PostForm, PostStatus } from "./adminTypes.js";
-import { createPost, getPost, updatePost, fileUrl, thumbUrl } from "./postsApi.js";
+import {
+  createPost,
+  getPost,
+  updatePost,
+  fileUrl,
+  thumbUrl,
+} from "./postsApi.js";
 import { FileUploadWidget } from "./FileUploadWidget.js";
 
 // ---------------------------------------------------------------------------
@@ -28,7 +34,6 @@ const EMPTY_FORM: PostForm = {
   content: "",
   description: "",
   tagsInput: "",
-  status: "DRAFT",
   coverImageId: null,
   downloadIds: [],
 };
@@ -59,6 +64,7 @@ export function PostFormPage({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [validationError, setValidationError] = useState(false);
   const [postId, setPostId] = useState<string | null>(null);
+  const [loadedStatus, setLoadedStatus] = useState<PostStatus>("DRAFT");
 
   // Download list with labels (managed separately from form.downloadIds)
   const [downloadEntries, setDownloadEntries] = useState<PostDownload[]>([]);
@@ -79,6 +85,7 @@ export function PostFormPage({
       .then((post: Post) => {
         if (cancelled) return;
         setPostId(post.id);
+        setLoadedStatus(post.status);
         setForm(normalizePostToForm(post));
         setDownloadEntries(post.downloads);
         originalSlugRef.current = post.slug;
@@ -168,7 +175,7 @@ export function PostFormPage({
       originalSlugRef.current !== null &&
       form.slug !== originalSlugRef.current;
 
-    if (slugChanged && form.status === "PUBLISHED") {
+    if (slugChanged && loadedStatus === "PUBLISHED") {
       // URL-breakage warning
       if (
         !window.confirm(
@@ -286,19 +293,7 @@ export function PostFormPage({
         placeholder="e.g. react, typescript"
       />
 
-      <label htmlFor="pf-status">Status</label>
-      <select
-        id="pf-status"
-        value={form.status}
-        onChange={(e) =>
-          handleChange("status", e.target.value as PostStatus)
-        }
-        disabled={saving}
-      >
-        <option value="DRAFT">DRAFT</option>
-        <option value="PUBLISHED">PUBLISHED</option>
-        <option value="ARCHIVED">ARCHIVED</option>
-      </select>
+      {mode === "edit" && <p>Status: {loadedStatus}</p>}
 
       {/* Cover image section */}
       <fieldset>
@@ -335,9 +330,7 @@ export function PostFormPage({
             <input
               type="text"
               value={d.label ?? ""}
-              onChange={(e) =>
-                handleDownloadLabel(d.fileId, e.target.value)
-              }
+              onChange={(e) => handleDownloadLabel(d.fileId, e.target.value)}
               placeholder="File label"
               data-testid={`post-form-download-label-${d.fileId}`}
             />
@@ -369,15 +362,11 @@ export function PostFormPage({
       </div>
 
       {validationError && (
-        <div data-testid="post-form-validation-error">
-          Title is required.
-        </div>
+        <div data-testid="post-form-validation-error">Title is required.</div>
       )}
 
       {saveSuccess && (
-        <div data-testid="post-form-save-success">
-          Post saved successfully.
-        </div>
+        <div data-testid="post-form-save-success">Post saved successfully.</div>
       )}
 
       {saveError && (
@@ -404,7 +393,6 @@ export function normalizePostToForm(post: Post): PostForm {
     content: post.content,
     description: post.description,
     tagsInput: post.tags.join(", "),
-    status: post.status,
     coverImageId: post.coverImageId,
     downloadIds: post.downloads.map((d) => d.fileId),
   };

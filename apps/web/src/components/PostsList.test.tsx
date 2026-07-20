@@ -6,9 +6,7 @@ import { PostsList } from "./PostsList.js";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockFetchOk(
-  payload: unknown,
-): ReturnType<typeof vi.fn> {
+function mockFetchOk(payload: unknown): ReturnType<typeof vi.fn> {
   return vi.fn().mockResolvedValue({
     ok: true,
     json: () => Promise.resolve(payload),
@@ -56,7 +54,7 @@ const PUBLISHED_POSTS = [
     title: "Reflexión semanal",
     description: "Otra reflexión",
     coverImageUrl: null,
-    content: '<h2>Título</h2><p>Texto con <strong>énfasis</strong></p>',
+    content: "<h2>Título</h2><p>Texto con <strong>énfasis</strong></p>",
     status: "PUBLISHED" as const,
     tags: ["reflexion", "semanal"],
     publishedAt: "2025-06-10T10:00:00.000Z",
@@ -81,7 +79,9 @@ describe("PostsList", () => {
   it("shows loading state while fetch is in-flight", () => {
     globalThis.fetch = vi
       .fn()
-      .mockImplementation(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
 
     render(<PostsList />);
 
@@ -101,9 +101,7 @@ describe("PostsList", () => {
       expectSection("posts-list-section");
     });
 
-    expect(screen.getByTestId("posts-empty").textContent).toContain(
-      "No hay",
-    );
+    expect(screen.getByTestId("posts-empty").textContent).toContain("No hay");
   });
 
   // -----------------------------------------------------------------------
@@ -121,9 +119,7 @@ describe("PostsList", () => {
       expectSection("posts-error");
     });
 
-    expect(
-      screen.getByText(/no se pudo cargar/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/no se pudo cargar/i)).toBeTruthy();
   });
 
   // -----------------------------------------------------------------------
@@ -150,8 +146,8 @@ describe("PostsList", () => {
     // Each post links to its detail page
     const links = screen.getAllByRole("link");
     // Each post card has at least a title link; first post has a cover link too
-    const detailLinks = links.filter(
-      (l) => l.getAttribute("href")?.startsWith("/posts/"),
+    const detailLinks = links.filter((l) =>
+      l.getAttribute("href")?.startsWith("/posts/"),
     );
     expect(detailLinks.length).toBeGreaterThanOrEqual(2);
   });
@@ -161,7 +157,9 @@ describe("PostsList", () => {
   // -----------------------------------------------------------------------
 
   it("renders cover image when coverImageUrl is present", async () => {
-    globalThis.fetch = mockFetchOk([PUBLISHED_POSTS[0]!]) as unknown as typeof fetch;
+    globalThis.fetch = mockFetchOk([
+      PUBLISHED_POSTS[0]!,
+    ]) as unknown as typeof fetch;
 
     render(<PostsList />);
 
@@ -178,7 +176,9 @@ describe("PostsList", () => {
   // -----------------------------------------------------------------------
 
   it("does not render cover image when coverImageUrl is null", async () => {
-    globalThis.fetch = mockFetchOk([PUBLISHED_POSTS[1]!]) as unknown as typeof fetch;
+    globalThis.fetch = mockFetchOk([
+      PUBLISHED_POSTS[1]!,
+    ]) as unknown as typeof fetch;
 
     render(<PostsList />);
 
@@ -194,7 +194,9 @@ describe("PostsList", () => {
   // -----------------------------------------------------------------------
 
   it("renders post tags", async () => {
-    globalThis.fetch = mockFetchOk([PUBLISHED_POSTS[0]!]) as unknown as typeof fetch;
+    globalThis.fetch = mockFetchOk([
+      PUBLISHED_POSTS[0]!,
+    ]) as unknown as typeof fetch;
 
     render(<PostsList />);
 
@@ -218,7 +220,9 @@ describe("PostsList", () => {
           '<p>Safe text</p><script>alert("xss")</script><img src="evil.png" onerror="alert(1)">',
       },
     ];
-    globalThis.fetch = mockFetchOk(postsWithDangerous) as unknown as typeof fetch;
+    globalThis.fetch = mockFetchOk(
+      postsWithDangerous,
+    ) as unknown as typeof fetch;
 
     render(<PostsList />);
 
@@ -245,7 +249,7 @@ describe("PostsList", () => {
       {
         ...PUBLISHED_POSTS[0]!,
         content:
-          '<h2>Título</h2><p>Un párrafo con <strong>negrita</strong> y <em>cursiva</em>.</p><ul><li>Item 1</li></ul><blockquote>Cita</blockquote>',
+          "<h2>Título</h2><p>Un párrafo con <strong>negrita</strong> y <em>cursiva</em>.</p><ul><li>Item 1</li></ul><blockquote>Cita</blockquote>",
       },
     ];
     globalThis.fetch = mockFetchOk(postsWithAllowed) as unknown as typeof fetch;
@@ -271,7 +275,9 @@ describe("PostsList", () => {
   // -----------------------------------------------------------------------
 
   it("renders published date", async () => {
-    globalThis.fetch = mockFetchOk([PUBLISHED_POSTS[0]!]) as unknown as typeof fetch;
+    globalThis.fetch = mockFetchOk([
+      PUBLISHED_POSTS[0]!,
+    ]) as unknown as typeof fetch;
 
     render(<PostsList />);
 
@@ -282,6 +288,24 @@ describe("PostsList", () => {
     // publishedAt is displayed (we use a testid)
     const dateEl = screen.getByTestId("post-date-post-1");
     expect(dateEl.textContent).toBeTruthy();
+  });
+
+  it("does not render a date when a transitional API response has null publishedAt", async () => {
+    const postWithoutPublicationDate = {
+      ...PUBLISHED_POSTS[0]!,
+      publishedAt: null,
+    };
+    globalThis.fetch = mockFetchOk([
+      postWithoutPublicationDate,
+    ]) as unknown as typeof fetch;
+
+    render(<PostsList />);
+
+    await waitFor(() => {
+      expectSection("posts-list-section");
+    });
+
+    expectNoSection("post-date-post-1");
   });
 
   // -----------------------------------------------------------------------
@@ -325,7 +349,9 @@ describe("PostsList", () => {
           '<p><a href="https://a.com">A</a> y <a href="https://b.com">B</a></p>',
       },
     ];
-    globalThis.fetch = mockFetchOk(postsWithMultiLinks) as unknown as typeof fetch;
+    globalThis.fetch = mockFetchOk(
+      postsWithMultiLinks,
+    ) as unknown as typeof fetch;
 
     render(<PostsList />);
 

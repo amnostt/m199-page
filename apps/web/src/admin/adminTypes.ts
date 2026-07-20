@@ -104,7 +104,6 @@ export interface PostForm {
   content: string;
   description: string;
   tagsInput: string;
-  status: PostStatus;
   coverImageId: string | null;
   downloadIds: string[];
 }

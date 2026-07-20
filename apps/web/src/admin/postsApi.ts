@@ -75,7 +75,6 @@ export function createPost(
     content: form.content,
     description: form.description,
     tags: parseTags(form.tagsInput),
-    status: form.status,
     coverImageId: form.coverImageId,
     downloadIds: form.downloadIds,
   };
@@ -103,7 +102,6 @@ export function updatePost(
     content: form.content,
     description: form.description,
     tags: parseTags(form.tagsInput),
-    status: form.status,
     coverImageId: form.coverImageId,
     downloadIds: form.downloadIds,
   };
@@ -148,18 +146,17 @@ export function deletePost(id: string): Promise<void> {
 
 /** Feature a PUBLISHED post (adheres to the configured feature-slot cap, first-free slot). */
 export function featurePost(id: string): Promise<{ success: boolean }> {
-  return adminFetch<{ success: boolean }>(
-    `/posts/admin/${id}/feature`,
-    { method: "POST", headers: { "Content-Type": "application/json" } },
-  );
+  return adminFetch<{ success: boolean }>(`/posts/admin/${id}/feature`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 /** Unfeature a post (idempotent — does not error if not currently featured). */
 export function unfeaturePost(id: string): Promise<{ success: boolean }> {
-  return adminFetch<{ success: boolean }>(
-    `/posts/admin/${id}/feature`,
-    { method: "DELETE" },
-  );
+  return adminFetch<{ success: boolean }>(`/posts/admin/${id}/feature`, {
+    method: "DELETE",
+  });
 }
 
 /**

@@ -26,9 +26,30 @@ import { PostsListPage } from "./PostsListPage.js";
 // ---------------------------------------------------------------------------
 
 const MOCK_POSTS = [
-  { id: "p1", slug: "hello-world", title: "Hello World", status: "PUBLISHED" as const, coverImageId: null, publishedAt: "2026-01-01T00:00:00.000Z" },
-  { id: "p2", slug: "draft-post", title: "Draft Post", status: "DRAFT" as const, coverImageId: null, publishedAt: null },
-  { id: "p3", slug: "archived-post", title: "Archived Post", status: "ARCHIVED" as const, coverImageId: null, publishedAt: null },
+  {
+    id: "p1",
+    slug: "hello-world",
+    title: "Hello World",
+    status: "PUBLISHED" as const,
+    coverImageId: null,
+    publishedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "p2",
+    slug: "draft-post",
+    title: "Draft Post",
+    status: "DRAFT" as const,
+    coverImageId: null,
+    publishedAt: null,
+  },
+  {
+    id: "p3",
+    slug: "archived-post",
+    title: "Archived Post",
+    status: "ARCHIVED" as const,
+    coverImageId: null,
+    publishedAt: null,
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -212,7 +233,14 @@ describe("PostsListPage empty state", () => {
   it("shows empty message when filter matches nothing", async () => {
     // Mock returns only PUBLISHED posts; filtering to DRAFT produces empty.
     const publishedOnly = [
-      { id: "p1", slug: "post-a", title: "Post A", status: "PUBLISHED" as const, coverImageId: null, publishedAt: "2026-01-01T00:00:00.000Z" },
+      {
+        id: "p1",
+        slug: "post-a",
+        title: "Post A",
+        status: "PUBLISHED" as const,
+        coverImageId: null,
+        publishedAt: "2026-01-01T00:00:00.000Z",
+      },
     ];
     globalThis.fetch = vi
       .fn()
@@ -318,9 +346,7 @@ describe("PostsListPage lifecycle actions", () => {
   });
 
   it("publishes a DRAFT post: confirm accepted → POST /publish request sent", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     globalThis.fetch = vi
       .fn()
@@ -350,9 +376,7 @@ describe("PostsListPage lifecycle actions", () => {
 
     // Confirm was called
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/publish/i),
-    );
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/publish/i));
 
     // POST /posts/admin/p2/publish request was sent (no body — parameterless lifecycle endpoint)
     await waitFor(() => {
@@ -385,9 +409,7 @@ describe("PostsListPage lifecycle actions", () => {
   });
 
   it("archives a PUBLISHED post: confirm accepted → POST /archive request sent", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     globalThis.fetch = vi
       .fn()
@@ -413,9 +435,7 @@ describe("PostsListPage lifecycle actions", () => {
     fireEvent.click(screen.getByTestId("lifecycle-archive-p1"));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/archive/i),
-    );
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/archive/i));
 
     // POST /posts/admin/p1/archive request was sent (no body — parameterless lifecycle endpoint)
     await waitFor(() => {
@@ -434,7 +454,7 @@ describe("PostsListPage lifecycle actions", () => {
     confirmSpy.mockRestore();
   });
 
-  it("archiving a featured post removes it from local featured tracking", async () => {
+  it("archives a featured post without requiring a complete API response", async () => {
     // p1 is PUBLISHED and pre-featured from backend
     globalThis.fetch = vi
       .fn()
@@ -495,9 +515,7 @@ describe("PostsListPage lifecycle actions", () => {
   });
 
   it("deletes a post: confirm accepted → DELETE request sent, post removed, no error shown", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     globalThis.fetch = vi
       .fn()
@@ -524,16 +542,13 @@ describe("PostsListPage lifecycle actions", () => {
     fireEvent.click(screen.getByTestId("lifecycle-delete-p3"));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/delete/i),
-    );
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/delete/i));
 
     await waitFor(() => {
       const deleteCall = (
         globalThis.fetch as ReturnType<typeof vi.fn>
       ).mock.calls.find(
-        ([, init]) =>
-          (init as RequestInit | undefined)?.method === "DELETE",
+        ([, init]) => (init as RequestInit | undefined)?.method === "DELETE",
       );
       expect(deleteCall).toBeTruthy();
       expect(deleteCall![0]).toBe("/posts/admin/p3");
@@ -552,9 +567,7 @@ describe("PostsListPage lifecycle actions", () => {
   // ------------------------------------------------------------------
 
   it("declining confirm does NOT send a request", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(false);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     globalThis.fetch = vi
       .fn()
@@ -602,9 +615,7 @@ describe("PostsListPage lifecycle actions", () => {
         ok: true,
         json: () => Promise.resolve({ postIds: [] }),
       })
-      .mockImplementationOnce(
-        () => new Promise<Response>(() => {}),
-      );
+      .mockImplementationOnce(() => new Promise<Response>(() => {}));
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
@@ -881,12 +892,25 @@ describe("PostsListPage feature toggle", () => {
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([
-          MOCK_POSTS[0]!, // PUBLISHED p1
-          MOCK_POSTS[1]!, // DRAFT p2
-          { ...MOCK_POSTS[0]!, id: "p4", slug: "post-four", title: "Post Four", status: "PUBLISHED" as const },
-          { ...MOCK_POSTS[0]!, id: "p5", slug: "post-five", title: "Post Five", status: "PUBLISHED" as const },
-        ]),
+        json: () =>
+          Promise.resolve([
+            MOCK_POSTS[0]!, // PUBLISHED p1
+            MOCK_POSTS[1]!, // DRAFT p2
+            {
+              ...MOCK_POSTS[0]!,
+              id: "p4",
+              slug: "post-four",
+              title: "Post Four",
+              status: "PUBLISHED" as const,
+            },
+            {
+              ...MOCK_POSTS[0]!,
+              id: "p5",
+              slug: "post-five",
+              title: "Post Five",
+              status: "PUBLISHED" as const,
+            },
+          ]),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -943,11 +967,24 @@ describe("PostsListPage feature toggle", () => {
       // List with 3 PUBLISHED posts
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([
-          MOCK_POSTS[0]!, // p1 PUBLISHED
-          { ...MOCK_POSTS[0]!, id: "p4", slug: "post-four", title: "Post Four", status: "PUBLISHED" as const },
-          { ...MOCK_POSTS[0]!, id: "p5", slug: "post-five", title: "Post Five", status: "PUBLISHED" as const },
-        ]),
+        json: () =>
+          Promise.resolve([
+            MOCK_POSTS[0]!, // p1 PUBLISHED
+            {
+              ...MOCK_POSTS[0]!,
+              id: "p4",
+              slug: "post-four",
+              title: "Post Four",
+              status: "PUBLISHED" as const,
+            },
+            {
+              ...MOCK_POSTS[0]!,
+              id: "p5",
+              slug: "post-five",
+              title: "Post Five",
+              status: "PUBLISHED" as const,
+            },
+          ]),
       })
       // listFeaturedPostIds
       .mockResolvedValueOnce({
@@ -1035,9 +1072,7 @@ describe("PostsListPage feature toggle", () => {
 
     // p1 should show "Featured ★" (unfeature button) since it's pre-featured
     expect(screen.getByTestId("unfeature-p1")).toBeTruthy();
-    expect(screen.getByTestId("unfeature-p1").textContent).toMatch(
-      /featured/i,
-    );
+    expect(screen.getByTestId("unfeature-p1").textContent).toMatch(/featured/i);
 
     // Feature button should NOT appear for p1
     expect(screen.queryByTestId("feature-p1")).toBeNull();
@@ -1052,9 +1087,27 @@ describe("PostsListPage feature toggle", () => {
     // 4 PUBLISHED posts, but 3 are already featured from backend
     const fourPublishedPosts = [
       MOCK_POSTS[0]!, // p1 PUBLISHED
-      { ...MOCK_POSTS[0]!, id: "p4", slug: "post-four", title: "Post Four", status: "PUBLISHED" as const },
-      { ...MOCK_POSTS[0]!, id: "p5", slug: "post-five", title: "Post Five", status: "PUBLISHED" as const },
-      { ...MOCK_POSTS[0]!, id: "p6", slug: "post-six", title: "Post Six", status: "PUBLISHED" as const },
+      {
+        ...MOCK_POSTS[0]!,
+        id: "p4",
+        slug: "post-four",
+        title: "Post Four",
+        status: "PUBLISHED" as const,
+      },
+      {
+        ...MOCK_POSTS[0]!,
+        id: "p5",
+        slug: "post-five",
+        title: "Post Five",
+        status: "PUBLISHED" as const,
+      },
+      {
+        ...MOCK_POSTS[0]!,
+        id: "p6",
+        slug: "post-six",
+        title: "Post Six",
+        status: "PUBLISHED" as const,
+      },
     ];
 
     globalThis.fetch = vi
@@ -1094,7 +1147,8 @@ describe("PostsListPage feature toggle", () => {
 
     // Verify no extra fetch calls beyond the two initial ones
     // (disabled Feature button should not send a request)
-    const fetchCalls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+    const fetchCalls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls;
     expect(fetchCalls).toHaveLength(2); // only listPosts + listFeaturedPostIds
   });
 
@@ -1104,12 +1158,31 @@ describe("PostsListPage feature toggle", () => {
       // listPosts
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([
-          MOCK_POSTS[0]!, // p1 PUBLISHED
-          { ...MOCK_POSTS[0]!, id: "p4", slug: "post-four", title: "Post Four", status: "PUBLISHED" as const },
-          { ...MOCK_POSTS[0]!, id: "p5", slug: "post-five", title: "Post Five", status: "PUBLISHED" as const },
-          { ...MOCK_POSTS[0]!, id: "p6", slug: "post-six", title: "Post Six", status: "PUBLISHED" as const },
-        ]),
+        json: () =>
+          Promise.resolve([
+            MOCK_POSTS[0]!, // p1 PUBLISHED
+            {
+              ...MOCK_POSTS[0]!,
+              id: "p4",
+              slug: "post-four",
+              title: "Post Four",
+              status: "PUBLISHED" as const,
+            },
+            {
+              ...MOCK_POSTS[0]!,
+              id: "p5",
+              slug: "post-five",
+              title: "Post Five",
+              status: "PUBLISHED" as const,
+            },
+            {
+              ...MOCK_POSTS[0]!,
+              id: "p6",
+              slug: "post-six",
+              title: "Post Six",
+              status: "PUBLISHED" as const,
+            },
+          ]),
       })
       // listFeaturedPostIds → all 3 slots full
       .mockResolvedValueOnce({
@@ -1162,10 +1235,38 @@ describe("PostsListPage featured endpoint failure", () => {
   });
 
   const FOUR_PUBLISHED = [
-    { id: "p1", slug: "post-one", title: "Post One", status: "PUBLISHED" as const, coverImageId: null, publishedAt: "2026-01-01T00:00:00.000Z" },
-    { id: "p2", slug: "post-two", title: "Post Two", status: "PUBLISHED" as const, coverImageId: null, publishedAt: "2026-01-01T00:00:00.000Z" },
-    { id: "p3", slug: "post-three", title: "Post Three", status: "PUBLISHED" as const, coverImageId: null, publishedAt: "2026-01-01T00:00:00.000Z" },
-    { id: "p4", slug: "post-four", title: "Post Four", status: "PUBLISHED" as const, coverImageId: null, publishedAt: "2026-01-01T00:00:00.000Z" },
+    {
+      id: "p1",
+      slug: "post-one",
+      title: "Post One",
+      status: "PUBLISHED" as const,
+      coverImageId: null,
+      publishedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "p2",
+      slug: "post-two",
+      title: "Post Two",
+      status: "PUBLISHED" as const,
+      coverImageId: null,
+      publishedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "p3",
+      slug: "post-three",
+      title: "Post Three",
+      status: "PUBLISHED" as const,
+      coverImageId: null,
+      publishedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "p4",
+      slug: "post-four",
+      title: "Post Four",
+      status: "PUBLISHED" as const,
+      coverImageId: null,
+      publishedAt: "2026-01-01T00:00:00.000Z",
+    },
   ];
 
   it("shows 'unavailable' in featured cap display when featured endpoint fails", async () => {

@@ -29,8 +29,7 @@ export interface PostPublicResponse {
 // ---------------------------------------------------------------------------
 
 /** Format an ISO date string to a locale-friendly short date. */
-function formatDate(iso: string | null): string {
-  if (!iso) return "";
+function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString("es-AR", {
       year: "numeric",

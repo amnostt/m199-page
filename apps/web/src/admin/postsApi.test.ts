@@ -6,7 +6,20 @@
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { parseTags, fileUrl, thumbUrl, listPosts, getPost, listFeaturedPostIds, publishPost, archivePost, deletePost } from "./postsApi.js";
+import {
+  archivePost,
+  createPost,
+  deletePost,
+  fileUrl,
+  getPost,
+  listFeaturedPostIds,
+  listPosts,
+  parseTags,
+  publishPost,
+  thumbUrl,
+  updatePost,
+} from "./postsApi.js";
+import type { PostForm } from "./adminTypes.js";
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -42,8 +55,7 @@ describe("parseTags", () => {
   });
 
   it("caps at max 20 tags — excess tags are dropped", () => {
-    const twentyOne =
-      "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21";
+    const twentyOne = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21";
     const result = parseTags(twentyOne);
     expect(result).toHaveLength(20);
     expect(result[19]).toBe("20");
@@ -110,7 +122,14 @@ describe("thumbUrl", () => {
 describe("listPosts", () => {
   it("GETs /posts/admin with credentials and returns parsed JSON", async () => {
     const mockPosts = [
-      { id: "p1", slug: "hello", title: "Hello", status: "DRAFT", coverImageId: null, publishedAt: null },
+      {
+        id: "p1",
+        slug: "hello",
+        title: "Hello",
+        status: "DRAFT",
+        coverImageId: null,
+        publishedAt: null,
+      },
     ];
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -145,9 +164,16 @@ describe("listPosts", () => {
 describe("getPost", () => {
   it("GETs /posts/admin/slug/:slug with credentials and returns parsed JSON", async () => {
     const mockPost = {
-      id: "p1", slug: "hello", title: "Hello", status: "DRAFT",
-      coverImageId: null, publishedAt: null,
-      description: "desc", content: "body", tags: ["a"], downloads: [],
+      id: "p1",
+      slug: "hello",
+      title: "Hello",
+      status: "DRAFT",
+      coverImageId: null,
+      publishedAt: null,
+      description: "desc",
+      content: "body",
+      tags: ["a"],
+      downloads: [],
     };
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -172,6 +198,39 @@ describe("getPost", () => {
     });
 
     await expect(getPost("missing")).rejects.toThrow("Admin request failed");
+  });
+});
+
+describe("post mutation payloads", () => {
+  const form: PostForm = {
+    title: "Safe post",
+    slug: "safe-post",
+    content: "<p>content</p>",
+    description: "description",
+    tagsInput: "faith, news",
+    coverImageId: null,
+    downloadIds: [],
+  };
+
+  it("omits lifecycle fields from create and update payloads", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    await createPost(form);
+    await updatePost("post-1", form);
+
+    const bodies = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.map(([, init]) =>
+      JSON.parse((init as RequestInit).body as string),
+    ) as Record<string, unknown>[];
+    expect(bodies).toHaveLength(2);
+    expect(bodies[0]).not.toHaveProperty("status");
+    expect(bodies[0]).not.toHaveProperty("publishedAt");
+    expect(bodies[1]).not.toHaveProperty("status");
+    expect(bodies[1]).not.toHaveProperty("publishedAt");
   });
 });
 
@@ -215,9 +274,7 @@ describe("listFeaturedPostIds", () => {
       json: () => Promise.resolve({}),
     });
 
-    await expect(listFeaturedPostIds()).rejects.toThrow(
-      "Admin request failed",
-    );
+    await expect(listFeaturedPostIds()).rejects.toThrow("Admin request failed");
   });
 });
 
@@ -228,9 +285,16 @@ describe("listFeaturedPostIds", () => {
 describe("publishPost", () => {
   it("sends POST /posts/admin/:id/publish with credentials and no body", async () => {
     const mockPost = {
-      id: "p1", slug: "hello", title: "Hello", status: "PUBLISHED" as const,
-      coverImageId: null, publishedAt: "2026-01-01T00:00:00.000Z",
-      description: "desc", content: "body", tags: ["a"], downloads: [],
+      id: "p1",
+      slug: "hello",
+      title: "Hello",
+      status: "PUBLISHED" as const,
+      coverImageId: null,
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      description: "desc",
+      content: "body",
+      tags: ["a"],
+      downloads: [],
     };
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -263,9 +327,7 @@ describe("publishPost", () => {
       json: () => Promise.resolve({}),
     });
 
-    await expect(publishPost("p1")).rejects.toThrow(
-      "Admin request failed",
-    );
+    await expect(publishPost("p1")).rejects.toThrow("Admin request failed");
   });
 });
 
@@ -276,9 +338,16 @@ describe("publishPost", () => {
 describe("archivePost", () => {
   it("sends POST /posts/admin/:id/archive with credentials and no body", async () => {
     const mockPost = {
-      id: "p1", slug: "hello", title: "Hello", status: "ARCHIVED" as const,
-      coverImageId: null, publishedAt: null,
-      description: "desc", content: "body", tags: ["a"], downloads: [],
+      id: "p1",
+      slug: "hello",
+      title: "Hello",
+      status: "ARCHIVED" as const,
+      coverImageId: null,
+      publishedAt: null,
+      description: "desc",
+      content: "body",
+      tags: ["a"],
+      downloads: [],
     };
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -311,9 +380,7 @@ describe("archivePost", () => {
       json: () => Promise.resolve({}),
     });
 
-    await expect(archivePost("p1")).rejects.toThrow(
-      "Admin request failed",
-    );
+    await expect(archivePost("p1")).rejects.toThrow("Admin request failed");
   });
 });
 

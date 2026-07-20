@@ -2,17 +2,17 @@
  * CreatePostDto — validated input for post creation.
  *
  * Required: title, slug, content.
- * Optional: coverImageId, description, tags, downloadIds, status.
+ * Optional: coverImageId, description, tags, downloadIds.
  */
 import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsEnum,
   IsArray,
   ArrayMaxSize,
   Matches,
 } from "class-validator";
+import { IsAbsent } from "./is-absent.decorator.js";
 
 export class CreatePostDto {
   @IsString()
@@ -22,7 +22,8 @@ export class CreatePostDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-    message: "slug must be lowercase alphanumeric with optional hyphens (kebab-case)",
+    message:
+      "slug must be lowercase alphanumeric with optional hyphens (kebab-case)",
   })
   slug!: string;
 
@@ -49,7 +50,9 @@ export class CreatePostDto {
   @IsString({ each: true })
   downloadIds?: string[];
 
-  @IsOptional()
-  @IsEnum(["DRAFT", "PUBLISHED", "ARCHIVED"])
-  status?: string;
+  @IsAbsent()
+  declare status?: never;
+
+  @IsAbsent()
+  declare publishedAt?: never;
 }

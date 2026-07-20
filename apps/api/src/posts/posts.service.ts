@@ -133,7 +133,7 @@ export interface PostPublicResponse {
   content: string;
   status: "PUBLISHED";
   tags: string[];
-  publishedAt: string | null;
+  publishedAt: string;
   downloads: PostPublicDownload[];
 }
 
@@ -143,9 +143,7 @@ export interface PostPublicResponse {
 
 @Injectable()
 export class PostsService {
-  constructor(
-    @Inject(DbService) private readonly dbService: DbService,
-  ) {}
+  constructor(@Inject(DbService) private readonly dbService: DbService) {}
 
   // -----------------------------------------------------------------------
   // Internal helpers
@@ -172,7 +170,7 @@ export class PostsService {
       content: row.content,
       status: "PUBLISHED",
       tags: row.tags,
-      publishedAt: row.publishedAt?.toISOString() ?? null,
+      publishedAt: row.publishedAt!.toISOString(),
       downloads: (row.downloads ?? []).map((dl) => ({
         label: dl.label,
         fileUrl: `/files/${dl.fileId}`,
@@ -209,11 +207,9 @@ export class PostsService {
    * Creates a post with sanitized content.
    *
    * Validates coverImageId (POST_COVER_IMAGE) and downloadIds (POST_DOWNLOAD)
-   * FileAsset categories. Defaults status to DRAFT.
+   * FileAsset categories. Always creates status DRAFT.
    */
   async create(dto: CreatePostDto): Promise<PostRow> {
-    const status = dto.status ?? "DRAFT";
-
     // Validate cover image category
     if (dto.coverImageId) {
       await this.validateFileCategory(dto.coverImageId, "POST_COVER_IMAGE");
@@ -239,7 +235,7 @@ export class PostsService {
             description: dto.description ?? "",
             coverImageId: dto.coverImageId ?? null,
             tags: dto.tags ?? [],
-            status,
+            status: "DRAFT",
           },
         });
 
@@ -287,7 +283,6 @@ export class PostsService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.coverImageId !== undefined) data.coverImageId = dto.coverImageId;
     if (dto.tags !== undefined) data.tags = dto.tags;
-    if (dto.status !== undefined) data.status = dto.status;
 
     // Sanitize content if provided
     if (dto.content !== undefined) {
@@ -356,14 +351,15 @@ export class PostsService {
       throw new NotFoundException(`Post "${id}" not found`);
     }
 
-    // Only set publishedAt if not already published
-    const publishedAt = existing.publishedAt ?? new Date();
+    if (existing.status === "PUBLISHED") {
+      return existing;
+    }
 
     return this.client.post.update({
       where: { id },
       data: {
         status: "PUBLISHED",
-        publishedAt,
+        ...(existing.publishedAt ? {} : { publishedAt: new Date() }),
       },
     });
   }
@@ -378,6 +374,9 @@ export class PostsService {
     const existing = await this.client.post.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException(`Post "${id}" not found`);
+    }
+    if (existing.status !== "PUBLISHED") {
+      throw new ConflictException("Only PUBLISHED posts can be archived");
     }
 
     return this.client.$transaction(async (tx) => {
@@ -457,6 +456,15 @@ export class PostsService {
     });
   }
 
+  async findPublicBySlug(slug: string): Promise<PostPublicResponse | null> {
+    const [row] = await this.client.post.findMany({
+      where: { slug, status: "PUBLISHED", publishedAt: { not: null } },
+      include: { downloads: true },
+      take: 1,
+    });
+    return row ? this.toPublicResponse(row) : null;
+  }
+
   // -----------------------------------------------------------------------
   // Feature / Unfeature
   // -----------------------------------------------------------------------
@@ -471,17 +479,13 @@ export class PostsService {
    * - If already featured: delete old row and recreate with updated featuredAt.
    * - Otherwise: create new FeaturedPost row with first free slot.
    */
-  async feature(
-    postId: string,
-  ): Promise<{ success: true }> {
+  async feature(postId: string): Promise<{ success: true }> {
     const post = await this.client.post.findUnique({ where: { id: postId } });
     if (!post) {
       throw new NotFoundException(`Post "${postId}" not found`);
     }
     if (post.status !== "PUBLISHED") {
-      throw new BadRequestException(
-        "Only PUBLISHED posts can be featured",
-      );
+      throw new BadRequestException("Only PUBLISHED posts can be featured");
     }
 
     const existingFeatured = await this.client.featuredPost.findUnique({
@@ -536,9 +540,7 @@ export class PostsService {
    *
    * Idempotent: does not error if the post is not currently featured.
    */
-  async unfeature(
-    postId: string,
-  ): Promise<{ success: true }> {
+  async unfeature(postId: string): Promise<{ success: true }> {
     try {
       await this.client.featuredPost.delete({ where: { postId } });
     } catch (err: unknown) {
@@ -577,7 +579,7 @@ export class PostsService {
    */
   async findAllPublic(): Promise<PostPublicResponse[]> {
     const rows = await this.client.post.findMany({
-      where: { status: "PUBLISHED" },
+      where: { status: "PUBLISHED", publishedAt: { not: null } },
       orderBy: { publishedAt: "desc" },
       include: { downloads: true },
     });

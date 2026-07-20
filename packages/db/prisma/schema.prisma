@@ -173,7 +173,7 @@ model OutingLike {
 }
 
 model Post {
-  // DB: slug @unique, tags String[] @@index([tags], type: Gin), @@index([status, publishedAt]), @@index([createdById])
+  // DB: slug @unique, tags String[] @@index([tags], type: Gin), @@index([status, publishedAt]), @@index([createdById]); migration-owned CHECK requires publishedAt for PUBLISHED posts
   // APP: Publish-readiness guard: status transition requires complete public fields
   id           String        @id @default(uuid())
   slug         String        @unique

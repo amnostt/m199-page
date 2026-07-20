@@ -30,8 +30,6 @@ describe("CreatePostDto validation (1.7)", () => {
     dto.description = "A short description";
     dto.tags = ["ministry", "event"];
     dto.downloadIds = ["file-456"];
-    dto.status = "DRAFT";
-
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
   });
@@ -78,29 +76,29 @@ describe("CreatePostDto validation (1.7)", () => {
     expect(titleErrors).toHaveLength(1);
   });
 
-  it("rejects invalid status enum value", async () => {
+  it("rejects lifecycle fields even when their values are null", async () => {
     const dto = new CreatePostDto();
     dto.title = "Title";
     dto.slug = "slug";
     dto.content = "<p>text</p>";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (dto as any).status = "INVALID_STATUS";
+    Object.assign(dto, { status: null, publishedAt: null });
 
     const errors = await validate(dto);
-    const statusErrors = errors.filter((e) => e.property === "status");
-    expect(statusErrors.length).toBeGreaterThan(0);
+    expect(errors.map((error) => error.property)).toEqual(
+      expect.arrayContaining(["status", "publishedAt"]),
+    );
   });
 
-  it("accepts valid status values (DRAFT, PUBLISHED, ARCHIVED)", async () => {
+  it("rejects every lifecycle status value", async () => {
     for (const status of ["DRAFT", "PUBLISHED", "ARCHIVED"] as const) {
       const dto = new CreatePostDto();
       dto.title = "Title";
       dto.slug = `slug-${status.toLowerCase()}`;
       dto.content = "<p>text</p>";
-      dto.status = status;
+      Object.assign(dto, { status });
 
       const errors = await validate(dto);
-      expect(errors).toHaveLength(0);
+      expect(errors.some((error) => error.property === "status")).toBe(true);
     }
   });
 
@@ -109,7 +107,7 @@ describe("CreatePostDto validation (1.7)", () => {
     dto.title = "Minimal";
     dto.slug = "minimal";
     dto.content = "<p>Just enough</p>";
-    // coverImageId, description, tags, downloadIds, status intentionally left undefined
+    // coverImageId, description, tags, and downloadIds intentionally left undefined
 
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
@@ -185,8 +183,7 @@ describe("CreatePostDto validation (1.7)", () => {
     dto.title = "Title";
     dto.slug = "slug";
     dto.content = "<p>text</p>";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (dto as any).tags = [1, 2, 3]; // numbers, not strings
+    Object.assign(dto, { tags: [1, 2, 3] }); // numbers, not strings
 
     const errors = await validate(dto);
     // There should be validation errors for non-string tag entries
@@ -221,19 +218,18 @@ describe("UpdatePostDto validation (1.7)", () => {
     dto.coverImageId = "img-999";
     dto.description = "Updated desc";
     dto.tags = ["new-tag"];
-    dto.status = "PUBLISHED";
-
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
   });
 
-  it("rejects invalid status on update", async () => {
+  it("rejects lifecycle fields on update, including null", async () => {
     const dto = new UpdatePostDto();
-    (dto as Record<string, unknown>).status = "BOGUS";
+    Object.assign(dto, { status: null, publishedAt: null });
 
     const errors = await validate(dto);
-    const statusErrors = errors.filter((e) => e.property === "status");
-    expect(statusErrors.length).toBeGreaterThan(0);
+    expect(errors.map((error) => error.property)).toEqual(
+      expect.arrayContaining(["status", "publishedAt"]),
+    );
   });
 
   it("rejects invalid slug format on update", async () => {

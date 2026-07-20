@@ -149,37 +149,31 @@ export function PostsListPage({
   // Feature / unfeature handlers
   // ------------------------------------------------------------------
 
-  const handleFeature = useCallback(
-    async (postId: string) => {
-      setActionStates((prev) => ({ ...prev, [postId]: "pending" }));
-      try {
-        await featurePost(postId);
-        setFeaturedPostIds((prev) => new Set(prev).add(postId));
-        setActionStates((prev) => ({ ...prev, [postId]: "idle" }));
-      } catch {
-        setActionStates((prev) => ({ ...prev, [postId]: "error" }));
-      }
-    },
-    [],
-  );
+  const handleFeature = useCallback(async (postId: string) => {
+    setActionStates((prev) => ({ ...prev, [postId]: "pending" }));
+    try {
+      await featurePost(postId);
+      setFeaturedPostIds((prev) => new Set(prev).add(postId));
+      setActionStates((prev) => ({ ...prev, [postId]: "idle" }));
+    } catch {
+      setActionStates((prev) => ({ ...prev, [postId]: "error" }));
+    }
+  }, []);
 
-  const handleUnfeature = useCallback(
-    async (postId: string) => {
-      setActionStates((prev) => ({ ...prev, [postId]: "pending" }));
-      try {
-        await unfeaturePost(postId);
-        setFeaturedPostIds((prev) => {
-          const next = new Set(prev);
-          next.delete(postId);
-          return next;
-        });
-        setActionStates((prev) => ({ ...prev, [postId]: "idle" }));
-      } catch {
-        setActionStates((prev) => ({ ...prev, [postId]: "error" }));
-      }
-    },
-    [],
-  );
+  const handleUnfeature = useCallback(async (postId: string) => {
+    setActionStates((prev) => ({ ...prev, [postId]: "pending" }));
+    try {
+      await unfeaturePost(postId);
+      setFeaturedPostIds((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+      setActionStates((prev) => ({ ...prev, [postId]: "idle" }));
+    } catch {
+      setActionStates((prev) => ({ ...prev, [postId]: "error" }));
+    }
+  }, []);
 
   const featuredCount = featuredPostIds.size;
 
@@ -230,9 +224,7 @@ export function PostsListPage({
         <select
           id="posts-filter-status"
           value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value as PostStatus | "")
-          }
+          onChange={(e) => setStatusFilter(e.target.value as PostStatus | "")}
         >
           <option value="">All</option>
           <option value="DRAFT">DRAFT</option>
@@ -265,9 +257,7 @@ export function PostsListPage({
       <select
         id="posts-filter-status"
         value={statusFilter}
-        onChange={(e) =>
-          setStatusFilter(e.target.value as PostStatus | "")
-        }
+        onChange={(e) => setStatusFilter(e.target.value as PostStatus | "")}
       >
         <option value="">All</option>
         <option value="DRAFT">DRAFT</option>
@@ -321,14 +311,13 @@ export function PostsListPage({
                     type="button"
                     data-testid={`unfeature-${post.id}`}
                     disabled={
-                      featuredLoadError ||
-                      actionStates[post.id] === "pending"
+                      featuredLoadError || actionStates[post.id] === "pending"
                     }
                     onClick={() => handleUnfeature(post.id)}
                   >
                     Featured ★
                   </button>
-                  )}
+                )}
               </td>
               <td>
                 {post.status !== "PUBLISHED" && (

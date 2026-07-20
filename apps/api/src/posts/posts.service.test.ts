@@ -9,6 +9,7 @@
  * Test.createTestingModule with explicit provider overrides.
  */
 import { Test } from "@nestjs/testing";
+import { ConflictException } from "@nestjs/common";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { PostsService } from "./posts.service.js";
@@ -125,10 +126,18 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       const id = args.where?.id as string | undefined;
       const slugCond = args.where?.slug as string | undefined;
-      if (id && overrides.findUniqueReturn && overrides.findUniqueReturn.id === id) {
+      if (
+        id &&
+        overrides.findUniqueReturn &&
+        overrides.findUniqueReturn.id === id
+      ) {
         return overrides.findUniqueReturn;
       }
-      if (slugCond && overrides.findUniqueReturn && overrides.findUniqueReturn.slug === slugCond) {
+      if (
+        slugCond &&
+        overrides.findUniqueReturn &&
+        overrides.findUniqueReturn.slug === slugCond
+      ) {
         return overrides.findUniqueReturn;
       }
       const found = existingPosts.find(
@@ -138,12 +147,27 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const findMany = vi
-    .fn<(args?: { where?: Record<string, unknown>; skip?: number; take?: number }) => Promise<PostRow[]>>()
+    .fn<
+      (args?: {
+        where?: Record<string, unknown>;
+        skip?: number;
+        take?: number;
+      }) => Promise<PostRow[]>
+    >()
     .mockImplementation(
-      async (args?: { where?: Record<string, unknown>; skip?: number; take?: number }) => {
+      async (args?: {
+        where?: Record<string, unknown>;
+        skip?: number;
+        take?: number;
+      }) => {
         let results = existingPosts;
         if (args?.where?.status) {
           results = results.filter((o) => o.status === args.where!.status);
+        }
+        if (
+          (args?.where?.publishedAt as { not?: null } | undefined)?.not === null
+        ) {
+          results = results.filter((post) => post.publishedAt !== null);
         }
         const skip = args?.skip ?? 0;
         const take = args?.take ?? results.length;
@@ -152,13 +176,23 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     );
 
   const update = vi
-    .fn<(args: { where: Record<string, unknown>; data: Record<string, unknown> }) => Promise<PostRow>>()
+    .fn<
+      (args: {
+        where: Record<string, unknown>;
+        data: Record<string, unknown>;
+      }) => Promise<PostRow>
+    >()
     .mockImplementation(
-      async (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
+      async (args: {
+        where: Record<string, unknown>;
+        data: Record<string, unknown>;
+      }) => {
         const id = args.where.id as string;
         const idx = existingPosts.findIndex((o) => o.id === id);
         if (idx === -1) {
-          const err = new Error("Record not found") as Error & { code?: string };
+          const err = new Error("Record not found") as Error & {
+            code?: string;
+          };
           err.code = "P2025";
           throw err;
         }
@@ -193,7 +227,11 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
   const existingFiles = overrides.existingFiles ?? [];
 
   const findUniqueFile = vi
-    .fn<(args: { where: Record<string, unknown> }) => Promise<{ id: string; category?: string } | null>>()
+    .fn<
+      (args: {
+        where: Record<string, unknown>;
+      }) => Promise<{ id: string; category?: string } | null>
+    >()
     .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       const id = args.where?.id as string | undefined;
       if (id && existingFiles.some((f) => f.id === id)) {
@@ -221,7 +259,9 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const downloadDeleteMany = vi
-    .fn<(args: { where: Record<string, unknown> }) => Promise<{ count: number }>>()
+    .fn<
+      (args: { where: Record<string, unknown> }) => Promise<{ count: number }>
+    >()
     .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       const postId = args.where.postId as string;
       const before = existingDownloads.length;
@@ -252,7 +292,11 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const featuredFindUnique = vi
-    .fn<(args: { where: Record<string, unknown> }) => Promise<FeaturedPostRow | null>>()
+    .fn<
+      (args: {
+        where: Record<string, unknown>;
+      }) => Promise<FeaturedPostRow | null>
+    >()
     .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       const postId = args.where?.postId as string | undefined;
       if (postId) {
@@ -262,7 +306,9 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const featuredDelete = vi
-    .fn<(args: { where: Record<string, unknown> }) => Promise<FeaturedPostRow>>()
+    .fn<
+      (args: { where: Record<string, unknown> }) => Promise<FeaturedPostRow>
+    >()
     .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       const postId = args.where?.postId as string | undefined;
       const idx = existingFeatured.findIndex((f) => f.postId === postId);
@@ -280,9 +326,19 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     .mockImplementation(async () => existingFeatured.length);
 
   const featuredFindMany = vi
-    .fn<(args?: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number }) => Promise<FeaturedPostRow[]>>()
+    .fn<
+      (args?: {
+        where?: Record<string, unknown>;
+        orderBy?: Record<string, unknown>;
+        take?: number;
+      }) => Promise<FeaturedPostRow[]>
+    >()
     .mockImplementation(
-      async (args?: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number }) => {
+      async (args?: {
+        where?: Record<string, unknown>;
+        orderBy?: Record<string, unknown>;
+        take?: number;
+      }) => {
         let results = [...existingFeatured];
         if (args?.take != null) {
           results = results.slice(0, args.take);
@@ -301,8 +357,8 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
   // -- $transaction --
   const $transaction = vi
     .fn()
-    .mockImplementation(
-      async <T>(cb: (tx: unknown) => Promise<T>) => cb(client),
+    .mockImplementation(async <T>(cb: (tx: unknown) => Promise<T>) =>
+      cb(client),
     );
 
   const client = {
@@ -359,10 +415,7 @@ async function buildService(
   const dbValue = makeDbValue(dbOverrides);
 
   const module = await Test.createTestingModule({
-    providers: [
-      PostsService,
-      { provide: DbService, useValue: dbValue },
-    ],
+    providers: [PostsService, { provide: DbService, useValue: dbValue }],
   }).compile();
 
   return {
@@ -769,7 +822,9 @@ describe("PostsService (PR 1)", () => {
           sortOrder: 0,
           createdAt: new Date(),
         } as PostDownloadRow)
-        .mockRejectedValueOnce(new Error("DB error during download replacement"));
+        .mockRejectedValueOnce(
+          new Error("DB error during download replacement"),
+        );
 
       await expect(
         service.update("post-001", {
@@ -859,6 +914,31 @@ describe("PostsService (PR 1)", () => {
       const { service } = await buildService({ existingPosts: [] });
 
       await expect(service.archive("nonexistent")).rejects.toThrow();
+    });
+
+    it("rejects archiving a draft without writing", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [DRAFT_POST],
+        findUniqueReturn: DRAFT_POST,
+      });
+
+      await expect(service.archive(DRAFT_POST.id)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(mocks.update).not.toHaveBeenCalled();
+      expect(mocks.featuredDelete).not.toHaveBeenCalled();
+    });
+
+    it("rejects archiving an archived post without writing", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [ARCHIVED_POST],
+        findUniqueReturn: ARCHIVED_POST,
+      });
+
+      await expect(service.archive(ARCHIVED_POST.id)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(mocks.update).not.toHaveBeenCalled();
     });
   });
 
@@ -972,11 +1052,7 @@ describe("PostsService (PR 1)", () => {
   describe("findAllPublic (1.13)", () => {
     it("returns only PUBLISHED posts as PostPublicResponse", async () => {
       const { service } = await buildService({
-        existingPosts: [
-          PUBLISHED_POST,
-          DRAFT_POST,
-          ARCHIVED_POST,
-        ],
+        existingPosts: [PUBLISHED_POST, DRAFT_POST, ARCHIVED_POST],
       });
 
       const result = await service.findAllPublic();
@@ -1033,6 +1109,60 @@ describe("PostsService (PR 1)", () => {
       const result = await service.findAllPublic();
 
       expect(result[0]!.coverImageUrl).toBeNull();
+    });
+
+    it("queries only published posts with a publication timestamp", async () => {
+      const timestampLess = makePost({
+        id: "invalid-published",
+        status: "PUBLISHED",
+        publishedAt: null,
+      });
+      const { service, mocks } = await buildService({
+        existingPosts: [PUBLISHED_POST, timestampLess],
+      });
+
+      await service.findAllPublic();
+
+      expect(mocks.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { status: "PUBLISHED", publishedAt: { not: null } },
+        }),
+      );
+    });
+  });
+
+  describe("safe lifecycle transitions", () => {
+    it("publishes archived posts while preserving their first publication timestamp", async () => {
+      const archivedPublished = makePost({
+        ...ARCHIVED_POST,
+        publishedAt: EARLIER,
+      });
+      const { service, mocks } = await buildService({
+        existingPosts: [archivedPublished],
+        findUniqueReturn: archivedPublished,
+      });
+
+      const result = await service.publish(archivedPublished.id);
+
+      expect(result.status).toBe("PUBLISHED");
+      expect(result.publishedAt?.getTime()).toBe(EARLIER.getTime());
+      expect(mocks.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { status: "PUBLISHED" },
+        }),
+      );
+    });
+
+    it("returns an already published post without a write", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [PUBLISHED_POST],
+        findUniqueReturn: PUBLISHED_POST,
+      });
+
+      const result = await service.publish(PUBLISHED_POST.id);
+
+      expect(result).toEqual(PUBLISHED_POST);
+      expect(mocks.update).not.toHaveBeenCalled();
     });
   });
 
@@ -1150,9 +1280,9 @@ describe("PostsService (PR 1)", () => {
         existingFeatured,
       });
 
-      await expect(
-        service.feature(PUBLISHED_POST.id),
-      ).rejects.toThrow("Maximum 3 featured");
+      await expect(service.feature(PUBLISHED_POST.id)).rejects.toThrow(
+        "Maximum 3 featured",
+      );
 
       // Should NOT have created a new featured row
       expect(mocks.featuredCreate).not.toHaveBeenCalled();
@@ -1198,9 +1328,9 @@ describe("PostsService (PR 1)", () => {
         existingPosts: [DRAFT_POST],
       });
 
-      await expect(
-        service.feature(DRAFT_POST.id),
-      ).rejects.toThrow("Only PUBLISHED posts can be featured");
+      await expect(service.feature(DRAFT_POST.id)).rejects.toThrow(
+        "Only PUBLISHED posts can be featured",
+      );
     });
 
     it("rejects featuring an ARCHIVED post", async () => {
@@ -1208,17 +1338,17 @@ describe("PostsService (PR 1)", () => {
         existingPosts: [ARCHIVED_POST],
       });
 
-      await expect(
-        service.feature(ARCHIVED_POST.id),
-      ).rejects.toThrow("Only PUBLISHED posts can be featured");
+      await expect(service.feature(ARCHIVED_POST.id)).rejects.toThrow(
+        "Only PUBLISHED posts can be featured",
+      );
     });
 
     it("rejects featuring a non-existent post", async () => {
       const { service } = await buildService();
 
-      await expect(
-        service.feature("non-existent-id"),
-      ).rejects.toThrow("not found");
+      await expect(service.feature("non-existent-id")).rejects.toThrow(
+        "not found",
+      );
     });
   });
 

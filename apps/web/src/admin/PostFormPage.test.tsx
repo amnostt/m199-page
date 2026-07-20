@@ -33,7 +33,9 @@ const MOCK_POST = {
   description: "A test post",
   content: "Post body content",
   tags: ["react", "typescript"],
-  downloads: [{ id: "dl1", fileId: "file-1", label: "PDF Guide", sortOrder: 0 }],
+  downloads: [
+    { id: "dl1", fileId: "file-1", label: "PDF Guide", sortOrder: 0 },
+  ],
 };
 
 const MOCK_CREATED_POST = {
@@ -62,21 +64,15 @@ afterEach(() => {
 // =========================================================================
 
 describe("PostFormPage create mode", () => {
-  it("renders empty form fields: title, slug, content (textarea), description, tags, status", () => {
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+  it("renders content-only fields without an editable lifecycle status", () => {
+    render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     expect(screen.getByLabelText(/title/i)).toBeTruthy();
     expect(screen.getByLabelText(/slug/i)).toBeTruthy();
     expect(screen.getByLabelText(/content/i)).toBeTruthy();
     expect(screen.getByLabelText(/description/i)).toBeTruthy();
     expect(screen.getByLabelText(/tags/i)).toBeTruthy();
-    expect(screen.getByLabelText(/status/i)).toBeTruthy();
+    expect(screen.queryByLabelText(/status/i)).toBeNull();
 
     // Content field should be a textarea per spec
     const contentField = screen.getByLabelText(/content/i);
@@ -86,29 +82,22 @@ describe("PostFormPage create mode", () => {
   it("starts with empty values — no GET request", () => {
     globalThis.fetch = vi.fn();
 
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     // No fetch should have been called (create mode doesn't load)
     expect(globalThis.fetch).not.toHaveBeenCalled();
 
     // Fields start empty
-    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+      "",
+    );
     expect((screen.getByLabelText(/slug/i) as HTMLInputElement).value).toBe("");
     expect(
       (screen.getByLabelText(/description/i) as HTMLInputElement).value,
     ).toBe("");
     expect((screen.getByLabelText(/tags/i) as HTMLInputElement).value).toBe("");
 
-    // Status defaults to DRAFT
-    expect(
-      (screen.getByLabelText(/status/i) as HTMLSelectElement).value,
-    ).toBe("DRAFT");
+    expect(screen.queryByLabelText(/status/i)).toBeNull();
   });
 
   it("fills all fields and submits POST /posts/admin with correct body", async () => {
@@ -119,13 +108,7 @@ describe("PostFormPage create mode", () => {
       json: () => Promise.resolve(MOCK_CREATED_POST),
     });
 
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     // Fill the form
     fireEvent.change(screen.getByLabelText(/^title/i), {
@@ -143,9 +126,6 @@ describe("PostFormPage create mode", () => {
     fireEvent.change(screen.getByLabelText(/tags/i), {
       target: { value: "react, typescript, ssr" },
     });
-    fireEvent.change(screen.getByLabelText(/status/i), {
-      target: { value: "DRAFT" },
-    });
 
     // Submit
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
@@ -158,8 +138,7 @@ describe("PostFormPage create mode", () => {
     const postCall = (
       globalThis.fetch as ReturnType<typeof vi.fn>
     ).mock.calls.find(
-      ([, init]) =>
-        (init as RequestInit | undefined)?.method === "POST",
+      ([, init]) => (init as RequestInit | undefined)?.method === "POST",
     );
 
     expect(postCall).toBeTruthy();
@@ -174,7 +153,8 @@ describe("PostFormPage create mode", () => {
     expect(body.content).toBe("Some content here");
     expect(body.description).toBe("A short description");
     expect(body.tags).toEqual(["react", "typescript", "ssr"]);
-    expect(body.status).toBe("DRAFT");
+    expect(body).not.toHaveProperty("status");
+    expect(body).not.toHaveProperty("publishedAt");
     expect(body.coverImageId).toBeNull();
     expect(body.downloadIds).toEqual([]);
   });
@@ -187,13 +167,7 @@ describe("PostFormPage create mode", () => {
       json: () => Promise.resolve(MOCK_CREATED_POST),
     });
 
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText(/^title/i), {
       target: { value: "T" },
@@ -211,8 +185,7 @@ describe("PostFormPage create mode", () => {
       const postCall = (
         globalThis.fetch as ReturnType<typeof vi.fn>
       ).mock.calls.find(
-        ([, init]) =>
-          (init as RequestInit | undefined)?.method === "POST",
+        ([, init]) => (init as RequestInit | undefined)?.method === "POST",
       );
       if (postCall) {
         const body = JSON.parse(
@@ -233,13 +206,7 @@ describe("PostFormPage create mode", () => {
 
     const onSaved = vi.fn();
 
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={onSaved}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<PostFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText(/^title/i), {
       target: { value: "T" },
@@ -259,11 +226,7 @@ describe("PostFormPage create mode", () => {
     const onCancel = vi.fn();
 
     render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={onCancel}
-      />,
+      <PostFormPage mode="create" onSaved={vi.fn()} onCancel={onCancel} />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
@@ -354,9 +317,7 @@ describe("PostFormPage edit mode", () => {
     expect((screen.getByLabelText(/tags/i) as HTMLInputElement).value).toBe(
       "react, typescript",
     );
-    expect(
-      (screen.getByLabelText(/status/i) as HTMLSelectElement).value,
-    ).toBe("PUBLISHED");
+    expect(screen.getByText("Status: PUBLISHED")).toBeTruthy();
   });
 
   it("joins tags array to comma-separated string for the input", async () => {
@@ -430,8 +391,7 @@ describe("PostFormPage edit mode", () => {
       const patchCall = (
         globalThis.fetch as ReturnType<typeof vi.fn>
       ).mock.calls.find(
-        ([, init]) =>
-          (init as RequestInit | undefined)?.method === "PATCH",
+        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
       );
 
       expect(patchCall).toBeTruthy();
@@ -480,8 +440,7 @@ describe("PostFormPage edit mode", () => {
       const patchCall = (
         globalThis.fetch as ReturnType<typeof vi.fn>
       ).mock.calls.find(
-        ([, init]) =>
-          (init as RequestInit | undefined)?.method === "PATCH",
+        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
       );
 
       expect(patchCall).toBeTruthy();
@@ -525,13 +484,7 @@ describe("PostFormPage states", () => {
       json: () => Promise.resolve(MOCK_CREATED_POST),
     });
 
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText(/^title/i), {
       target: { value: "T" },
@@ -546,9 +499,7 @@ describe("PostFormPage states", () => {
       expect(screen.getByTestId("post-form-save-success")).toBeTruthy();
     });
 
-    expect(
-      screen.getByText(/saved successfully|post saved/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/saved successfully|post saved/i)).toBeTruthy();
   });
 
   it("shows save error message on POST failure", async () => {
@@ -556,13 +507,7 @@ describe("PostFormPage states", () => {
 
     globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText(/^title/i), {
       target: { value: "T" },
@@ -584,17 +529,11 @@ describe("PostFormPage states", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
     // POST never resolves — save stays "submitting"
-    globalThis.fetch = vi.fn().mockImplementation(
-      () => new Promise<Response>(() => {}),
-    );
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() => new Promise<Response>(() => {}));
 
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText(/^title/i), {
       target: { value: "T" },
@@ -614,13 +553,7 @@ describe("PostFormPage states", () => {
   it("shows validation error and prevents save when title is empty", async () => {
     globalThis.fetch = vi.fn();
 
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     // Title is empty; fill other required fields
     fireEvent.change(screen.getByLabelText(/^slug/i), {
@@ -684,13 +617,7 @@ describe("PostFormPage states", () => {
 
 describe("PostFormPage triangulation", () => {
   it("create mode renders form immediately (no loading state)", () => {
-    render(
-      <PostFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
+    render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     // Form should be visible immediately, not loading
     expect(screen.queryByTestId("post-form-loading")).toBeNull();
@@ -773,9 +700,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
   // ------------------------------------------------------------------
 
   it("shows two sequential window.confirm when slug is changed on a PUBLISHED post: URL-breakage then save", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     globalThis.fetch = vi
       .fn()
@@ -828,8 +753,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
       const patchCall = (
         globalThis.fetch as ReturnType<typeof vi.fn>
       ).mock.calls.find(
-        ([, init]) =>
-          (init as RequestInit | undefined)?.method === "PATCH",
+        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
       );
       expect(patchCall).toBeTruthy();
     });
@@ -842,16 +766,12 @@ describe("PostFormPage P-07 slug-change gate", () => {
   // ------------------------------------------------------------------
 
   it("cancelling the URL-breakage confirm does NOT send a PATCH request", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(false); // first call returns false
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false); // first call returns false
 
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(PUBLISHED_POST),
-      });
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(PUBLISHED_POST),
+    });
 
     render(
       <PostFormPage
@@ -880,8 +800,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
     const patchCalls = (
       globalThis.fetch as ReturnType<typeof vi.fn>
     ).mock.calls.filter(
-      ([, init]) =>
-        (init as RequestInit | undefined)?.method === "PATCH",
+      ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
     );
     expect(patchCalls).toHaveLength(0);
 
@@ -898,12 +817,10 @@ describe("PostFormPage P-07 slug-change gate", () => {
       .mockReturnValueOnce(true) // URL-breakage: accept
       .mockReturnValueOnce(false); // save: decline
 
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(PUBLISHED_POST),
-      });
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(PUBLISHED_POST),
+    });
 
     render(
       <PostFormPage
@@ -932,8 +849,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
     const patchCalls = (
       globalThis.fetch as ReturnType<typeof vi.fn>
     ).mock.calls.filter(
-      ([, init]) =>
-        (init as RequestInit | undefined)?.method === "PATCH",
+      ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
     );
     expect(patchCalls).toHaveLength(0);
 
@@ -982,17 +898,14 @@ describe("PostFormPage P-07 slug-change gate", () => {
       const patchCall = (
         globalThis.fetch as ReturnType<typeof vi.fn>
       ).mock.calls.find(
-        ([, init]) =>
-          (init as RequestInit | undefined)?.method === "PATCH",
+        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
       );
       expect(patchCall).toBeTruthy();
     });
 
     // Only the general save confirm was called — no URL-breakage confirm
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/save/i),
-    );
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/save/i));
 
     confirmSpy.mockRestore();
   });
@@ -1034,17 +947,14 @@ describe("PostFormPage P-07 slug-change gate", () => {
       const patchCall = (
         globalThis.fetch as ReturnType<typeof vi.fn>
       ).mock.calls.find(
-        ([, init]) =>
-          (init as RequestInit | undefined)?.method === "PATCH",
+        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
       );
       expect(patchCall).toBeTruthy();
     });
 
     // Only the general save confirm was called — no URL-breakage confirm
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/save/i),
-    );
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/save/i));
 
     confirmSpy.mockRestore();
   });
@@ -1087,17 +997,14 @@ describe("PostFormPage P-07 slug-change gate", () => {
       const patchCall = (
         globalThis.fetch as ReturnType<typeof vi.fn>
       ).mock.calls.find(
-        ([, init]) =>
-          (init as RequestInit | undefined)?.method === "PATCH",
+        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
       );
       expect(patchCall).toBeTruthy();
     });
 
     // Only the general save confirm was called (slug not changed)
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/save/i),
-    );
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/save/i));
 
     confirmSpy.mockRestore();
   });
@@ -1208,17 +1115,13 @@ describe("PostFormPage downloads", () => {
     expect((link as HTMLAnchorElement).href).toContain("/files/file-1");
 
     // Label input with current value
-    const labelInput = screen.getByTestId(
-      "post-form-download-label-file-1",
-    );
+    const labelInput = screen.getByTestId("post-form-download-label-file-1");
     expect(labelInput).toBeTruthy();
     expect(labelInput.tagName).toBe("INPUT");
     expect((labelInput as HTMLInputElement).value).toBe("PDF Guide");
 
     // Remove widget per download
-    expect(
-      screen.getByTestId("post-form-download-widget-file-1"),
-    ).toBeTruthy();
+    expect(screen.getByTestId("post-form-download-widget-file-1")).toBeTruthy();
   });
 
   it("allows editing a download label via text input", async () => {

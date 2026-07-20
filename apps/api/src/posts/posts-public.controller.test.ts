@@ -5,7 +5,15 @@
  * missing. Follows outings-public.controller.test.ts pattern.
  */
 import { Test } from "@nestjs/testing";
-import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  beforeAll,
+  afterAll,
+} from "vitest";
 import type { INestApplication } from "@nestjs/common";
 import { NotFoundException } from "@nestjs/common";
 import request from "supertest";
@@ -31,21 +39,6 @@ const PUBLISHED_POST = {
   updatedAt: NOW,
 };
 
-const DRAFT_POST = {
-  id: "post-002",
-  slug: "draft-post",
-  title: "Draft Post",
-  description: "",
-  coverImageId: null,
-  content: "<p>Draft content</p>",
-  status: "DRAFT" as const,
-  tags: [],
-  createdById: "user-1",
-  publishedAt: null,
-  createdAt: NOW,
-  updatedAt: NOW,
-};
-
 const PUBLIC_RESPONSE = {
   id: "post-001",
   slug: "my-post",
@@ -64,6 +57,7 @@ function mockPostsService(): PostsService {
   return {
     findAllPublic: vi.fn().mockResolvedValue([PUBLIC_RESPONSE]),
     findBySlug: vi.fn().mockResolvedValue(PUBLISHED_POST),
+    findPublicBySlug: vi.fn().mockResolvedValue(PUBLIC_RESPONSE),
     findAll: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
@@ -105,7 +99,9 @@ describe("PostsPublicController", () => {
     });
 
     it("returns empty array when no published posts", async () => {
-      (service.findAllPublic as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
+      (service.findAllPublic as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        [],
+      );
 
       const result = await controller.findAllPublic();
 
@@ -119,39 +115,40 @@ describe("PostsPublicController", () => {
     it("returns a published post by slug", async () => {
       const result = await controller.findBySlug("my-post");
 
-      expect(service.findBySlug).toHaveBeenCalledWith("my-post");
+      expect(service.findPublicBySlug).toHaveBeenCalledWith("my-post");
       expect(result.slug).toBe("my-post");
       expect(result.title).toBe("My Post");
       expect(result.coverImageUrl).toBe("/files/img-001");
     });
 
     it("returns 404 for a DRAFT post", async () => {
-      (service.findBySlug as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-        DRAFT_POST,
-      );
+      (
+        service.findPublicBySlug as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null);
 
-      await expect(
-        controller.findBySlug("draft-post"),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.findBySlug("draft-post")).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it("returns 404 for an ARCHIVED post", async () => {
-      const archivedPost = { ...DRAFT_POST, status: "ARCHIVED" as const };
-      (service.findBySlug as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-        archivedPost,
-      );
+      (
+        service.findPublicBySlug as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null);
 
-      await expect(
-        controller.findBySlug("archived-post"),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.findBySlug("archived-post")).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it("returns 404 for a missing post", async () => {
-      (service.findBySlug as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+      (
+        service.findPublicBySlug as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(null);
 
-      await expect(
-        controller.findBySlug("non-existent"),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.findBySlug("non-existent")).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -162,8 +159,10 @@ describe("PostsPublicController", () => {
 
     beforeAll(async () => {
       const svc = mockPostsService();
-      // findBySlug returns null (missing post)
-      (svc.findBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      // findPublicBySlug returns null (missing or ineligible post)
+      (svc.findPublicBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(
+        null,
+      );
 
       const module = await Test.createTestingModule({
         controllers: [PostsPublicController],

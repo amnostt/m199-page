@@ -8,8 +8,7 @@ import type { PostPublicResponse } from "./PostsList.js";
 // ---------------------------------------------------------------------------
 
 /** Format an ISO date string to a locale-friendly short date. */
-function formatDate(iso: string | null): string {
-  if (!iso) return "";
+function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString("es-AR", {
       year: "numeric",
@@ -111,11 +110,7 @@ export function PostDetail({ slug }: { slug: string }) {
           <ul>
             {post.downloads.map((dl, idx) => (
               <li key={idx}>
-                <a
-                  href={dl.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={dl.fileUrl} target="_blank" rel="noopener noreferrer">
                   {dl.label ?? dl.fileUrl}
                 </a>
               </li>
