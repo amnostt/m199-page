@@ -10,6 +10,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState } from "react";
+import { FileUploadWidget } from "./FileUploadWidget.js";
 import type { LandingSettings, LandingSettingsForm } from "./adminTypes.js";
 import { adminFetch } from "./session.js";
 
@@ -18,6 +19,9 @@ import { adminFetch } from "./session.js";
 // ---------------------------------------------------------------------------
 
 const EMPTY: LandingSettingsForm = {
+  heroTitle: "",
+  heroSubtitle: "",
+  heroImageId: null,
   mission: "",
   vision: "",
   description: "",
@@ -39,6 +43,9 @@ export function normalizeLandingSettings(
 ): LandingSettingsForm {
   if (!data) return { ...EMPTY };
   return {
+    heroTitle: data.heroTitle ?? "",
+    heroSubtitle: data.heroSubtitle ?? "",
+    heroImageId: data.heroImageId,
     mission: data.mission ?? "",
     vision: data.vision ?? "",
     description: data.description ?? "",
@@ -78,8 +85,17 @@ export function LandingSettingsPage() {
   // Handlers
   // ------------------------------------------------------------------
 
-  const handleChange = (field: keyof LandingSettingsForm, value: string) => {
+  const handleChange = (
+    field: Exclude<keyof LandingSettingsForm, "heroImageId">,
+    value: string,
+  ) => {
     setSettings((prev) => (prev ? { ...prev, [field]: value } : null));
+    setSaveError(false);
+    setSaveSuccess(false);
+  };
+
+  const handleHeroUploaded = (asset: { id: string }) => {
+    setSettings((prev) => (prev ? { ...prev, heroImageId: asset.id } : null));
     setSaveError(false);
     setSaveSuccess(false);
   };
@@ -93,10 +109,14 @@ export function LandingSettingsPage() {
     setSaveSuccess(false);
 
     try {
+      const { heroImageId, ...copySettings } = settings;
       await adminFetch("/landing/admin", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify({
+          ...copySettings,
+          ...(heroImageId ? { heroImageId } : {}),
+        }),
       });
       setSaveSuccess(true);
     } catch {
@@ -132,6 +152,46 @@ export function LandingSettingsPage() {
   return (
     <div data-testid="landing-settings-form">
       <h2>Landing Settings</h2>
+
+      <fieldset>
+        <legend>Hero</legend>
+        <label htmlFor="ls-hero-title">Hero Title</label>
+        <input
+          id="ls-hero-title"
+          type="text"
+          value={settings.heroTitle}
+          onChange={(e) => handleChange("heroTitle", e.target.value)}
+          disabled={saving}
+        />
+
+        <label htmlFor="ls-hero-subtitle">Hero Subtitle</label>
+        <textarea
+          id="ls-hero-subtitle"
+          value={settings.heroSubtitle}
+          onChange={(e) => handleChange("heroSubtitle", e.target.value)}
+          disabled={saving}
+        />
+
+        {settings.heroImageId && (
+          <a
+            href={`/files/${settings.heroImageId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="landing-hero-asset-link"
+          >
+            {settings.heroImageId}
+          </a>
+        )}
+        <FileUploadWidget
+          category="LANDING_HERO"
+          fileId={null}
+          onUploaded={handleHeroUploaded}
+          onRemove={() => {
+            /* no removal control — disassociation is out of scope */
+          }}
+          data-testid="landing-hero-upload-widget"
+        />
+      </fieldset>
 
       <label htmlFor="ls-mission">Mission</label>
       <textarea

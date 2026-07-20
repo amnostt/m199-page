@@ -44,6 +44,9 @@ export interface CreateVerseInput {
 
 /** LP-01 base landing settings fields used by the admin editor. */
 export interface LandingSettings {
+  heroTitle: string | null;
+  heroSubtitle: string | null;
+  heroImageId: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
@@ -54,6 +57,9 @@ export interface LandingSettings {
 
 /** Normalized form values — every field is a non-null string. */
 export interface LandingSettingsForm {
+  heroTitle: string;
+  heroSubtitle: string;
+  heroImageId: string | null;
   mission: string;
   vision: string;
   description: string;

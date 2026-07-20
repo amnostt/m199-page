@@ -66,6 +66,11 @@ interface VerseRow {
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
 }
 
+interface FileAssetRow {
+  id: string;
+  category: string;
+}
+
 const FULL_SETTINGS: LandingSettingsRow = {
   id: 1,
   heroTitle: "Misión 1-99",
@@ -233,6 +238,7 @@ interface MockDbOverrides {
   featuredPostsReturns?: FeaturedPostRow[];
   outingReturn?: OutingRow | null;
   verseReturn?: VerseRow | null;
+  fileAssetReturn?: FileAssetRow | null;
 }
 
 /** Query shape the service passes to featuredPost.findMany */
@@ -251,15 +257,19 @@ interface VerseQuery {
 
 function makeDbValue(overrides: MockDbOverrides = {}) {
   const findFirst = vi
-    .fn<(args?: Record<string, unknown>) => Promise<LandingSettingsRow | null>>()
+    .fn<
+      (args?: Record<string, unknown>) => Promise<LandingSettingsRow | null>
+    >()
     .mockResolvedValue(overrides.settingsReturn ?? null);
 
   const upsert = vi
-    .fn<(args: {
-      where: Record<string, unknown>;
-      create: Record<string, unknown>;
-      update: Record<string, unknown>;
-    }) => Promise<LandingSettingsRow>>()
+    .fn<
+      (args: {
+        where: Record<string, unknown>;
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
+      }) => Promise<LandingSettingsRow>
+    >()
     .mockImplementation(
       async (args: {
         where: Record<string, unknown>;
@@ -268,7 +278,10 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
       }) => {
         // Simulate upsert: merge update over base settings
         const base = overrides.settingsReturn ?? FULL_SETTINGS;
-        const merged = { ...base, ...(args.update as Partial<LandingSettingsRow>) };
+        const merged = {
+          ...base,
+          ...(args.update as Partial<LandingSettingsRow>),
+        };
         return merged;
       },
     );
@@ -299,7 +312,9 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
 
   // outing.findUnique — returns the override or null
   const findUnique = vi
-    .fn<(args: { where: Record<string, unknown> }) => Promise<OutingRow | null>>()
+    .fn<
+      (args: { where: Record<string, unknown> }) => Promise<OutingRow | null>
+    >()
     .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       const id = args.where?.id as string | undefined;
       // Only return if the id matches the override
@@ -324,14 +339,30 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
       return candidate;
     });
 
+  const fileAssetFindUnique = vi
+    .fn<(args: { where: { id: string } }) => Promise<FileAssetRow | null>>()
+    .mockImplementation(async (args) => {
+      const asset = overrides.fileAssetReturn ?? null;
+      return asset?.id === args.where.id ? asset : null;
+    });
+
   const client = {
     landingSettings: { findFirst, upsert },
+    fileAsset: { findUnique: fileAssetFindUnique },
     featuredPost: { findMany },
     outing: { findUnique },
     verse: { findFirst: verseFindFirst },
   };
 
-  return { client, findFirst, upsert, findMany, findUnique, verseFindFirst };
+  return {
+    client,
+    findFirst,
+    upsert,
+    findMany,
+    findUnique,
+    verseFindFirst,
+    fileAssetFindUnique,
+  };
 }
 
 interface ServiceFixture {
@@ -345,10 +376,7 @@ async function buildService(
   const dbValue = makeDbValue(dbOverrides);
 
   const module = await Test.createTestingModule({
-    providers: [
-      LandingService,
-      { provide: DbService, useValue: dbValue },
-    ],
+    providers: [LandingService, { provide: DbService, useValue: dbValue }],
   }).compile();
 
   return {
@@ -394,6 +422,71 @@ describe("LandingService", () => {
   // ---- updateSettings (LP-01) ---------------------------------------------
 
   describe("updateSettings (LP-01)", () => {
+    it("validates a LANDING_HERO asset before persisting its ID", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        fileAssetReturn: { id: "hero-asset", category: "LANDING_HERO" },
+      });
+
+      const result = await service.updateSettings({
+        heroImageId: "hero-asset",
+      });
+
+      expect(mocks.fileAssetFindUnique).toHaveBeenCalledWith({
+        where: { id: "hero-asset" },
+      });
+      expect(mocks.upsert).toHaveBeenCalledOnce();
+      expect(result.heroImageId).toBe("hero-asset");
+    });
+
+    it("preserves an omitted hero image ID without an asset lookup", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+      });
+
+      const result = await service.updateSettings({
+        heroSubtitle: "Updated hero subtitle",
+      });
+
+      expect(mocks.fileAssetFindUnique).not.toHaveBeenCalled();
+      expect(mocks.upsert).toHaveBeenCalledOnce();
+      expect(result.heroSubtitle).toBe("Updated hero subtitle");
+      expect(result.heroImageId).toBe(FULL_SETTINGS.heroImageId);
+    });
+
+    it("rejects a missing hero asset before upserting changed copy", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+      });
+
+      await expect(
+        service.updateSettings({
+          heroTitle: "Changed title",
+          heroImageId: "missing-asset",
+        }),
+      ).rejects.toThrow('FileAsset with id "missing-asset" not found');
+
+      expect(mocks.upsert).not.toHaveBeenCalled();
+    });
+
+    it("rejects a wrong-category hero asset before upserting changed copy", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        fileAssetReturn: { id: "post-asset", category: "POST_COVER_IMAGE" },
+      });
+
+      await expect(
+        service.updateSettings({
+          heroTitle: "Changed title",
+          heroImageId: "post-asset",
+        }),
+      ).rejects.toThrow(
+        'FileAsset "post-asset" must have category LANDING_HERO',
+      );
+
+      expect(mocks.upsert).not.toHaveBeenCalled();
+    });
+
     it("upserts settings with provided fields only (partial merge)", async () => {
       const { service, mocks } = await buildService({
         settingsReturn: FULL_SETTINGS,
@@ -503,7 +596,9 @@ describe("LandingService", () => {
       expect(result.featuredPosts[0]!.id).toBe("post-001");
       expect(result.featuredPosts[0]!.title).toBe("Primer Post");
       expect(result.featuredPosts[0]!.slug).toBe("primer-post");
-      expect(result.featuredPosts[0]!.coverImageUrl).toBe("/files/img-post-001");
+      expect(result.featuredPosts[0]!.coverImageUrl).toBe(
+        "/files/img-post-001",
+      );
 
       // Current verse
       expect(result.currentVerse).not.toBeNull();
@@ -604,7 +699,10 @@ describe("LandingService", () => {
       // featuredOutingId is set to an ID that doesn't match any outing.
       // The mock findUnique returns null for unknown IDs.
       const { service, mocks } = await buildService({
-        settingsReturn: { ...FULL_SETTINGS, featuredOutingId: "out-nonexistent" },
+        settingsReturn: {
+          ...FULL_SETTINGS,
+          featuredOutingId: "out-nonexistent",
+        },
         featuredPostsReturns: [FEATURED_PUBLISHED],
         outingReturn: null,
         verseReturn: CURRENT_VERSE,

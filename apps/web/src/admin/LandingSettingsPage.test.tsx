@@ -29,6 +29,9 @@ import { LandingSettingsPage } from "./LandingSettingsPage.js";
 // ---------------------------------------------------------------------------
 
 const SAMPLE_SETTINGS = {
+  heroTitle: "Welcome to M199",
+  heroSubtitle: "Serving the community",
+  heroImageId: "existing-hero",
   mission: "Our mission text",
   vision: "Our vision text",
   description: "Our description text",
@@ -89,20 +92,29 @@ describe("LandingSettingsPage load", () => {
       (screen.getByLabelText(/mission/i) as HTMLTextAreaElement).value,
     ).toBe(SAMPLE_SETTINGS.mission);
     expect(
+      (screen.getByLabelText(/hero title/i) as HTMLInputElement).value,
+    ).toBe(SAMPLE_SETTINGS.heroTitle);
+    expect(
+      (screen.getByLabelText(/hero subtitle/i) as HTMLTextAreaElement).value,
+    ).toBe(SAMPLE_SETTINGS.heroSubtitle);
+    expect(screen.getByTestId("landing-hero-asset-link").textContent).toBe(
+      SAMPLE_SETTINGS.heroImageId,
+    );
+    expect(
       (screen.getByLabelText(/vision/i) as HTMLTextAreaElement).value,
     ).toBe(SAMPLE_SETTINGS.vision);
     expect(
       (screen.getByLabelText(/description/i) as HTMLTextAreaElement).value,
     ).toBe(SAMPLE_SETTINGS.description);
-    expect(
-      (screen.getByLabelText(/video/i) as HTMLInputElement).value,
-    ).toBe(SAMPLE_SETTINGS.featuredVideoUrl);
-    expect(
-      (screen.getByLabelText(/email/i) as HTMLInputElement).value,
-    ).toBe(SAMPLE_SETTINGS.contactEmail);
-    expect(
-      (screen.getByLabelText(/phone/i) as HTMLInputElement).value,
-    ).toBe(SAMPLE_SETTINGS.contactPhone);
+    expect((screen.getByLabelText(/video/i) as HTMLInputElement).value).toBe(
+      SAMPLE_SETTINGS.featuredVideoUrl,
+    );
+    expect((screen.getByLabelText(/email/i) as HTMLInputElement).value).toBe(
+      SAMPLE_SETTINGS.contactEmail,
+    );
+    expect((screen.getByLabelText(/phone/i) as HTMLInputElement).value).toBe(
+      SAMPLE_SETTINGS.contactPhone,
+    );
   });
 
   it("normalizes null API response to empty form values", async () => {
@@ -127,15 +139,15 @@ describe("LandingSettingsPage load", () => {
     expect(
       (screen.getByLabelText(/description/i) as HTMLTextAreaElement).value,
     ).toBe("");
-    expect(
-      (screen.getByLabelText(/video/i) as HTMLInputElement).value,
-    ).toBe("");
-    expect(
-      (screen.getByLabelText(/email/i) as HTMLInputElement).value,
-    ).toBe("");
-    expect(
-      (screen.getByLabelText(/phone/i) as HTMLInputElement).value,
-    ).toBe("");
+    expect((screen.getByLabelText(/video/i) as HTMLInputElement).value).toBe(
+      "",
+    );
+    expect((screen.getByLabelText(/email/i) as HTMLInputElement).value).toBe(
+      "",
+    );
+    expect((screen.getByLabelText(/phone/i) as HTMLInputElement).value).toBe(
+      "",
+    );
   });
 
   it("shows error banner on GET failure", async () => {
@@ -245,9 +257,7 @@ describe("LandingSettingsPage edit and save", () => {
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/save/i),
-    );
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/save/i));
   });
 
   it("does NOT send PUT when confirm is cancelled", async () => {
@@ -299,8 +309,7 @@ describe("LandingSettingsPage edit and save", () => {
     const putCall = (
       globalThis.fetch as ReturnType<typeof vi.fn>
     ).mock.calls.find(
-      ([, init]) =>
-        (init as RequestInit | undefined)?.method === "PUT",
+      ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
     );
     const body = JSON.parse(
       (putCall![1] as RequestInit).body as string,
@@ -311,6 +320,125 @@ describe("LandingSettingsPage edit and save", () => {
     expect(body.featuredVideoUrl).toBe(SAMPLE_SETTINGS.featuredVideoUrl);
     expect(body.contactEmail).toBe(SAMPLE_SETTINGS.contactEmail);
     expect(body.contactPhone).toBe(SAMPLE_SETTINGS.contactPhone);
+  });
+
+  it("stages a LANDING_HERO upload and saves its ID with hero copy", async () => {
+    await renderWithSettings();
+
+    const uploadedAsset = {
+      id: "new-hero",
+      url: "/files/new-hero",
+      thumbnailUrl: null,
+      mimeType: "image/png",
+      fileSize: 1024,
+      originalFilename: "hero.png",
+      category: "LANDING_HERO",
+      createdAt: "2026-07-19T00:00:00.000Z",
+    };
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(uploadedAsset),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ ...SAMPLE_SETTINGS, ...uploadedAsset }),
+      });
+
+    fireEvent.change(screen.getByLabelText(/hero title/i), {
+      target: { value: "Updated hero" },
+    });
+    fireEvent.change(screen.getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["image"], "hero.png", { type: "image/png" })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/files/LANDING_HERO",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+    expect(screen.getByTestId("landing-hero-asset-link").textContent).toBe(
+      "new-hero",
+    );
+
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      const putCall = (
+        globalThis.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+      );
+      const body = JSON.parse(
+        (putCall![1] as RequestInit).body as string,
+      ) as Record<string, string>;
+      expect(body.heroTitle).toBe("Updated hero");
+      expect(body.heroImageId).toBe("new-hero");
+    });
+  });
+
+  it("omits an absent hero image ID while retaining hero copy on save failure", async () => {
+    const settingsWithoutHeroImage = { ...SAMPLE_SETTINGS, heroImageId: null };
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(settingsWithoutHeroImage),
+      })
+      .mockRejectedValueOnce(new Error("Network error"));
+
+    render(<LandingSettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText(/hero subtitle/i), {
+      target: { value: "Retry this subtitle" },
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-save-error")).toBeTruthy();
+    });
+    const putCall = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+    );
+    const body = JSON.parse(
+      (putCall![1] as RequestInit).body as string,
+    ) as Record<string, string>;
+    expect(body).not.toHaveProperty("heroImageId");
+    expect(body.heroSubtitle).toBe("Retry this subtitle");
+    expect(
+      (screen.getByLabelText(/hero subtitle/i) as HTMLInputElement).value,
+    ).toBe("Retry this subtitle");
+  });
+
+  it("keeps the current hero visible when its replacement upload fails", async () => {
+    await renderWithSettings();
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Upload failed"));
+
+    fireEvent.change(screen.getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["image"], "hero.png", { type: "image/png" })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("file-upload-error").textContent).toBe(
+        "Upload failed",
+      );
+    });
+    expect(screen.getByTestId("landing-hero-asset-link").textContent).toBe(
+      "existing-hero",
+    );
   });
 
   it("shows success message after save", async () => {
@@ -329,9 +457,7 @@ describe("LandingSettingsPage edit and save", () => {
       expect(screen.getByTestId("landing-settings-save-success")).toBeTruthy();
     });
 
-    expect(
-      screen.getByText(/settings saved|saved successfully/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/settings saved|saved successfully/i)).toBeTruthy();
   });
 
   it("shows error message on save failure", async () => {
@@ -354,9 +480,11 @@ describe("LandingSettingsPage edit and save", () => {
     await renderWithSettings();
 
     // PUT never resolves — save stays "submitting"
-    globalThis.fetch = vi.fn().mockImplementation(
-      () => new Promise<Response>(() => {}),
-    ) as unknown as typeof globalThis.fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof globalThis.fetch;
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
@@ -402,8 +530,8 @@ describe("LandingSettingsPage triangulation", () => {
     expect(
       (screen.getByLabelText(/mission/i) as HTMLTextAreaElement).disabled,
     ).toBe(false);
-    expect(
-      (screen.getByLabelText(/email/i) as HTMLInputElement).disabled,
-    ).toBe(false);
+    expect((screen.getByLabelText(/email/i) as HTMLInputElement).disabled).toBe(
+      false,
+    );
   });
 });

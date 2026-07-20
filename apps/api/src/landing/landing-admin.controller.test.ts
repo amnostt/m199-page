@@ -151,13 +151,42 @@ describe("LandingAdminController", () => {
         .useValue({ canActivate: vi.fn().mockResolvedValue(true) })
         .compile();
       const app = module.createNestApplication();
-      app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+      app.useGlobalPipes(
+        new ValidationPipe({ whitelist: true, transform: true }),
+      );
       await app.init();
 
       try {
         const res = await request(app.getHttpServer())
           .put("/landing/admin")
           .send({ featuredVideoUrl: "javascript:alert(1)" });
+
+        expect(res.status).toBe(400);
+        expect(landingService.updateSettings).not.toHaveBeenCalled();
+      } finally {
+        await app.close();
+      }
+    });
+
+    it("rejects an explicit null hero image before calling the service", async () => {
+      const landingService = mockLandingService();
+      const module = await Test.createTestingModule({
+        controllers: [LandingAdminController],
+        providers: [{ provide: LandingService, useValue: landingService }],
+      })
+        .overrideGuard(AuthGuard)
+        .useValue({ canActivate: vi.fn().mockResolvedValue(true) })
+        .compile();
+      const app = module.createNestApplication();
+      app.useGlobalPipes(
+        new ValidationPipe({ whitelist: true, transform: true }),
+      );
+      await app.init();
+
+      try {
+        const res = await request(app.getHttpServer())
+          .put("/landing/admin")
+          .send({ heroImageId: null });
 
         expect(res.status).toBe(400);
         expect(landingService.updateSettings).not.toHaveBeenCalled();

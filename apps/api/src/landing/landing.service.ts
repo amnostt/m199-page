@@ -9,7 +9,7 @@
  * Follows the same pattern as ResponsiblesService: minimal Prisma interfaces
  * avoid static @prisma/client imports in apps/api/ (BF-02).
  */
-import { Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { DbService } from "../db/db.service.js";
 import type { UpdateLandingSettingsDto } from "./dto/update-landing-settings.dto.js";
 
@@ -65,14 +65,24 @@ interface VerseRow {
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
 }
 
+interface FileAssetRow {
+  id: string;
+  category: string;
+}
+
 interface LandingPrismaClient {
   landingSettings: {
-    findFirst(args?: Record<string, unknown>): Promise<LandingSettingsRow | null>;
+    findFirst(
+      args?: Record<string, unknown>,
+    ): Promise<LandingSettingsRow | null>;
     upsert(args: {
       where: { id: number };
       create: { id: number } & Record<string, unknown>;
       update: Record<string, unknown>;
     }): Promise<LandingSettingsRow>;
+  };
+  fileAsset: {
+    findUnique(args: { where: { id: string } }): Promise<FileAssetRow | null>;
   };
   featuredPost: {
     findMany(args?: {
@@ -88,7 +98,8 @@ interface LandingPrismaClient {
   verse: {
     findFirst(args?: {
       where?: { status?: string };
-      orderBy?: { publishedAt?: string } | { publishedAt?: string; id?: string }[];
+      orderBy?:
+        { publishedAt?: string } | { publishedAt?: string; id?: string }[];
     }): Promise<VerseRow | null>;
   };
 }
@@ -156,6 +167,21 @@ export class LandingService {
     return `/files/${fileId}`;
   }
 
+  /** Validates that a hero asset exists and belongs to the hero category. */
+  private async validateHeroImage(fileId: string): Promise<void> {
+    const asset = await this.client.fileAsset.findUnique({
+      where: { id: fileId },
+    });
+    if (!asset) {
+      throw new BadRequestException(`FileAsset with id "${fileId}" not found`);
+    }
+    if (asset.category !== "LANDING_HERO") {
+      throw new BadRequestException(
+        `FileAsset "${fileId}" must have category LANDING_HERO`,
+      );
+    }
+  }
+
   // -----------------------------------------------------------------------
   // Public API — LP-01: Admin Landing Settings
   // -----------------------------------------------------------------------
@@ -179,6 +205,10 @@ export class LandingService {
   async updateSettings(
     dto: UpdateLandingSettingsDto,
   ): Promise<LandingSettingsRow> {
+    if (dto.heroImageId !== undefined) {
+      await this.validateHeroImage(dto.heroImageId);
+    }
+
     // Build the update payload from only the fields that were actually provided.
     const data: Record<string, unknown> = {};
     if (dto.heroTitle !== undefined) data.heroTitle = dto.heroTitle;
