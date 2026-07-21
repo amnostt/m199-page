@@ -29,6 +29,3 @@ yarn-error.log*
 
 # Uploaded files
 uploads/
-
-# Local AI/tooling metadata
-.atl/

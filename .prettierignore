@@ -7,4 +7,3 @@ coverage
 pnpm-lock.yaml
 packages/db/prisma
 docs
-.atl
