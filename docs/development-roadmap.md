@@ -6,7 +6,7 @@ La hoja de ruta ordena resultados y capacidades; no reemplaza las tareas de cada
 | ------------------- | ------------------------------------------------------------------------------------------------------ |
 | Estado              | Vigente; contiene estado actual volátil.                                                               |
 | Responsable         | Equipo de producto y desarrollo.                                                                       |
-| Última verificación | 2026-07-19                                                                                             |
+| Última verificación | 2026-07-21                                                                                             |
 | Actualizar cuando   | Se verifique un slice, cambie una prioridad o dependencia, o el código contradiga un estado declarado. |
 
 ## Estado actual
@@ -30,7 +30,7 @@ El orden de esta sección es intencional. Cada fila posterior al arreglo directo
 | 2     | Gestión del héroe             | Un responsable administra `heroTitle`, `heroSubtitle` y la imagen `LANDING_HERO`, y verifica el resultado público. | Implementado y verificado.            | Editor administrativo, validación `LANDING_HERO` y recorrido público verificados de extremo a extremo.         |
 | 3     | Selección de salida destacada | Un responsable selecciona una salida `PUBLISHED` y ve el resultado en la landing.                                  | Implementado y verificado.            | Selección y deselección manuales, reemplazo confirmado y presentación pública tras el héroe, con `LandingSettings.featuredOutingId` como fuente única. |
 | 4     | Transición segura de posts    | Toda publicación pasa por una única regla y garantiza `publishedAt`; crear o editar no puede eludirla.             | Implementado y verificado.            | Migración reclasifica a DRAFT las publicaciones sin fecha sin perder datos; el API aplica transiciones explícitas y las lecturas públicas exigen estado publicado con fecha. |
-| 5     | Etiquetas de descargas        | Las etiquetas y el orden enviados por el editor se persisten y vuelven en lectura administrativa y pública.        | Pendiente; contrato incompleto.       | Alinear DTO, servicio, UI y datos existentes.                                                                  |
+| 5     | Etiquetas de descargas        | Las etiquetas y el orden enviados por el editor se persisten y vuelven en lectura administrativa y pública.        | Implementado y verificado.            | El editor envía etiquetas opcionales; el DTO las valida contra `downloadIds`; el servicio persiste etiqueta y orden de forma transaccional; las lecturas administrativa y pública las devuelven. |
 
 Los posts destacados ya se gestionan desde Posts. No deben añadirse controles duplicados en Landing Settings sin una decisión de producto explícita.
 
