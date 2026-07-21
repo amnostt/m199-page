@@ -3,6 +3,10 @@
  *
  * Validates CreatePostDto, UpdatePostDto, and PostListQueryDto
  * using class-validator. Tests required fields, enums, and optional arrays.
+ *
+ * The `downloadLabels` block (Phase 1, TDD 1.1) covers the per-download
+ * label map contract: subset rule, sibling `downloadIds` invariant, and
+ * normalized-value rules (trim, 120 chars, string-only).
  */
 import { describe, it, expect } from "vitest";
 import { validate } from "class-validator";
@@ -247,6 +251,206 @@ describe("UpdatePostDto validation (1.7)", () => {
 
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
+  });
+});
+
+describe("downloadLabels map (Phase 1, TDD 1.1)", () => {
+  it("CreatePostDto accepts a valid label map with a subset of downloadIds", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a", "file-b"];
+    dto.downloadLabels = { "file-a": "Study Guide" };
+
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("CreatePostDto accepts an empty label map paired with downloadIds", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    dto.downloadLabels = {};
+
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("UpdatePostDto accepts a valid label map covering every downloadId", async () => {
+    const dto = new UpdatePostDto();
+    dto.downloadIds = ["file-a", "file-b"];
+    dto.downloadLabels = { "file-a": "Guide", "file-b": "Slides" };
+
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("CreatePostDto accepts a label whose value has surrounding whitespace only when valid after trim", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    dto.downloadLabels = { "file-a": "  Guide  " };
+
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("CreatePostDto accepts a label whose value is exactly 120 characters", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    dto.downloadLabels = { "file-a": "x".repeat(120) };
+
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("CreatePostDto rejects downloadLabels when downloadIds is omitted", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadLabels = { "file-a": "Guide" };
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
+  });
+
+  it("CreatePostDto rejects downloadLabels with a key outside downloadIds", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    dto.downloadLabels = { "file-b": "Guide" };
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
+  });
+
+  it("UpdatePostDto rejects downloadLabels with multiple foreign keys (one valid, one not)", async () => {
+    const dto = new UpdatePostDto();
+    dto.downloadIds = ["file-a"];
+    dto.downloadLabels = { "file-a": "Guide", "file-foreign": "Other" };
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
+  });
+
+  it("CreatePostDto rejects downloadLabels as an array (non-object)", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    Object.assign(dto, { downloadLabels: ["file-a", "Guide"] });
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
+  });
+
+  it("CreatePostDto rejects downloadLabels with a non-string value", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    Object.assign(dto, { downloadLabels: { "file-a": 42 } });
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
+  });
+
+  it("CreatePostDto rejects downloadLabels with a blank-after-trimming value", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    dto.downloadLabels = { "file-a": "   " };
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
+  });
+
+  it("CreatePostDto rejects downloadLabels with a value longer than 120 characters", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    dto.downloadLabels = { "file-a": "x".repeat(121) };
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
+  });
+
+  it("CreatePostDto rejects a downloadLabels object containing a nested non-string value", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    Object.assign(dto, {
+      downloadLabels: { "file-a": { nested: "no" } },
+    });
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
+  });
+
+  // -- Phase 5 remediation: null must be rejected (not bypassed by @IsOptional)
+
+  it("CreatePostDto rejects downloadLabels: null when downloadIds is supplied", async () => {
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    dto.downloadIds = ["file-a"];
+    Object.assign(dto, { downloadLabels: null });
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
+  });
+
+  it("CreatePostDto accepts downloadLabels: undefined (no downloadIds coupling)", async () => {
+    // Triangulation: undefined must still skip validation (control case
+    // for the @ValidateIf fix). Only null must now error.
+    const dto = new CreatePostDto();
+    dto.title = "T";
+    dto.slug = "t";
+    dto.content = "<p>x</p>";
+    // downloadLabels intentionally not set
+    expect(dto.downloadLabels).toBeUndefined();
+
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("UpdatePostDto rejects downloadLabels: null when downloadIds is supplied", async () => {
+    const dto = new UpdatePostDto();
+    dto.downloadIds = ["file-a"];
+    Object.assign(dto, { downloadLabels: null });
+
+    const errors = await validate(dto);
+    const labelErrors = errors.filter((e) => e.property === "downloadLabels");
+    expect(labelErrors).toHaveLength(1);
   });
 });
 

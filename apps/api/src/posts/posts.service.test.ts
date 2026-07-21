@@ -628,6 +628,106 @@ describe("PostsService (PR 1)", () => {
     });
   });
 
+  // -- Phase 2, TDD 2.1: downloadLabels persistence (create) -------------
+
+  describe("create downloadLabels (Phase 2, TDD 2.1)", () => {
+    it("persists each supplied label on the matching download", async () => {
+      const { service, mocks } = await buildService({
+        existingFiles: [
+          { id: "dl-001", category: "POST_DOWNLOAD" },
+          { id: "dl-002", category: "POST_DOWNLOAD" },
+        ],
+      });
+
+      await service.create({
+        title: "With Labels",
+        slug: "with-labels",
+        content: "<p>text</p>",
+        downloadIds: ["dl-001", "dl-002"],
+        downloadLabels: { "dl-001": "Study Guide", "dl-002": "Slides" },
+      });
+
+      const dl001Call = mocks.downloadCreate.mock.calls.find(
+        ([args]) =>
+          (args as { data: { fileId: string } }).data.fileId === "dl-001",
+      );
+      const dl002Call = mocks.downloadCreate.mock.calls.find(
+        ([args]) =>
+          (args as { data: { fileId: string } }).data.fileId === "dl-002",
+      );
+      expect((dl001Call![0] as { data: { label: unknown } }).data.label).toBe(
+        "Study Guide",
+      );
+      expect((dl002Call![0] as { data: { label: unknown } }).data.label).toBe(
+        "Slides",
+      );
+    });
+
+    it("persists null for downloads absent from the label map", async () => {
+      const { service, mocks } = await buildService({
+        existingFiles: [
+          { id: "dl-001", category: "POST_DOWNLOAD" },
+          { id: "dl-002", category: "POST_DOWNLOAD" },
+        ],
+      });
+
+      await service.create({
+        title: "Partial Labels",
+        slug: "partial-labels",
+        content: "<p>text</p>",
+        downloadIds: ["dl-001", "dl-002"],
+        downloadLabels: { "dl-001": "Study Guide" },
+      });
+
+      const dl002Call = mocks.downloadCreate.mock.calls.find(
+        ([args]) =>
+          (args as { data: { fileId: string } }).data.fileId === "dl-002",
+      );
+      expect(
+        (dl002Call![0] as { data: { label: unknown } }).data.label,
+      ).toBeNull();
+    });
+
+    it("persists null for every download when no label map is provided", async () => {
+      const { service, mocks } = await buildService({
+        existingFiles: [{ id: "dl-001", category: "POST_DOWNLOAD" }],
+      });
+
+      await service.create({
+        title: "No Map",
+        slug: "no-map",
+        content: "<p>text</p>",
+        downloadIds: ["dl-001"],
+      });
+
+      const call = mocks.downloadCreate.mock.calls[0]![0] as {
+        data: { label: unknown };
+      };
+      expect(call.data.label).toBeNull();
+    });
+
+    // -- Phase 5 remediation: trimmed values must be persisted, not the raw padded value
+
+    it("persists the trimmed label when input has surrounding whitespace", async () => {
+      const { service, mocks } = await buildService({
+        existingFiles: [{ id: "dl-001", category: "POST_DOWNLOAD" }],
+      });
+
+      await service.create({
+        title: "Padded",
+        slug: "padded",
+        content: "<p>text</p>",
+        downloadIds: ["dl-001"],
+        downloadLabels: { "dl-001": "  Guide  " },
+      });
+
+      const call = mocks.downloadCreate.mock.calls[0]![0] as {
+        data: { label: unknown };
+      };
+      expect(call.data.label).toBe("Guide");
+    });
+  });
+
   // -- 1.10: update --------------------------------------------------------
 
   describe("update (1.10)", () => {
@@ -834,6 +934,136 @@ describe("PostsService (PR 1)", () => {
 
       // Must use $transaction so the post update is rolled back
       expect(mocks.$transaction).toHaveBeenCalledOnce();
+    });
+  });
+
+  // -- Phase 2, TDD 2.1: downloadLabels persistence (update) -------------
+
+  describe("update downloadLabels (Phase 2, TDD 2.1)", () => {
+    it("writes supplied labels on the replacement download rows", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [DRAFT_POST],
+        findUniqueReturn: DRAFT_POST,
+        existingFiles: [
+          { id: "dl-001", category: "POST_DOWNLOAD" },
+          { id: "dl-002", category: "POST_DOWNLOAD" },
+        ],
+        existingDownloads: [
+          { ...DOWNLOAD_ROW, postId: "post-001", fileId: "old-dl" },
+        ],
+      });
+
+      await service.update("post-001", {
+        downloadIds: ["dl-001", "dl-002"],
+        downloadLabels: { "dl-001": "Guide", "dl-002": "Slides" },
+      });
+
+      const dl001Call = mocks.downloadCreate.mock.calls.find(
+        ([args]) =>
+          (args as { data: { fileId: string } }).data.fileId === "dl-001",
+      );
+      const dl002Call = mocks.downloadCreate.mock.calls.find(
+        ([args]) =>
+          (args as { data: { fileId: string } }).data.fileId === "dl-002",
+      );
+      expect((dl001Call![0] as { data: { label: unknown } }).data.label).toBe(
+        "Guide",
+      );
+      expect((dl002Call![0] as { data: { label: unknown } }).data.label).toBe(
+        "Slides",
+      );
+    });
+
+    it("writes null for replacement downloads absent from the label map", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [DRAFT_POST],
+        findUniqueReturn: DRAFT_POST,
+        existingFiles: [
+          { id: "dl-001", category: "POST_DOWNLOAD" },
+          { id: "dl-002", category: "POST_DOWNLOAD" },
+        ],
+        existingDownloads: [
+          { ...DOWNLOAD_ROW, postId: "post-001", fileId: "old-dl" },
+        ],
+      });
+
+      await service.update("post-001", {
+        downloadIds: ["dl-001", "dl-002"],
+        downloadLabels: { "dl-001": "Guide" },
+      });
+
+      const dl002Call = mocks.downloadCreate.mock.calls.find(
+        ([args]) =>
+          (args as { data: { fileId: string } }).data.fileId === "dl-002",
+      );
+      expect(
+        (dl002Call![0] as { data: { label: unknown } }).data.label,
+      ).toBeNull();
+    });
+
+    it("writes null for every replacement when no label map is provided", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [DRAFT_POST],
+        findUniqueReturn: DRAFT_POST,
+        existingFiles: [{ id: "dl-001", category: "POST_DOWNLOAD" }],
+        existingDownloads: [
+          { ...DOWNLOAD_ROW, postId: "post-001", fileId: "old-dl" },
+        ],
+      });
+
+      await service.update("post-001", {
+        downloadIds: ["dl-001"],
+      });
+
+      const call = mocks.downloadCreate.mock.calls[0]![0] as {
+        data: { label: unknown };
+      };
+      expect(call.data.label).toBeNull();
+    });
+
+    it("preserves existing downloads and labels when both fields are omitted", async () => {
+      // Phase 2, TDD 2.1 — Omission Preservation.
+      const { service, mocks } = await buildService({
+        existingPosts: [DRAFT_POST],
+        findUniqueReturn: DRAFT_POST,
+        existingDownloads: [
+          {
+            ...DOWNLOAD_ROW,
+            postId: "post-001",
+            fileId: "existing-dl",
+            label: "Existing Label",
+          },
+        ],
+      });
+
+      await service.update("post-001", { title: "New Title" });
+
+      // No delete and no create of downloads must happen
+      expect(mocks.downloadDeleteMany).not.toHaveBeenCalled();
+      expect(mocks.downloadCreate).not.toHaveBeenCalled();
+    });
+
+    // -- Phase 5 remediation: trimmed values must be persisted on update too
+
+    it("persists the trimmed label on replacement rows when input has surrounding whitespace", async () => {
+      const { service, mocks } = await buildService({
+        existingPosts: [DRAFT_POST],
+        findUniqueReturn: DRAFT_POST,
+        existingFiles: [{ id: "dl-001", category: "POST_DOWNLOAD" }],
+        existingDownloads: [
+          { ...DOWNLOAD_ROW, postId: "post-001", fileId: "old-dl" },
+        ],
+      });
+
+      await service.update("post-001", {
+        downloadIds: ["dl-001"],
+        downloadLabels: { "dl-001": "   Slides   " },
+      });
+
+      const call = mocks.downloadCreate.mock.calls[0]![0] as {
+        data: { label: unknown };
+      };
+      expect(call.data.label).toBe("Slides");
     });
   });
 
@@ -1128,6 +1358,49 @@ describe("PostsService (PR 1)", () => {
           where: { status: "PUBLISHED", publishedAt: { not: null } },
         }),
       );
+    });
+
+    // -- Phase 5 remediation: prove the public response exposes a null label
+    //    through the real toPublicResponse mapping (not just a mock passthrough).
+
+    it("surfaces label: null for an unlabeled persisted download", async () => {
+      const publishedWithNullLabel = makePost({
+        id: "post-with-null-dl",
+        slug: "post-with-null-dl",
+        status: "PUBLISHED",
+        publishedAt: NOW,
+        downloads: [
+          {
+            id: "dl-null-1",
+            postId: "post-with-null-dl",
+            fileId: "file-1",
+            label: null,
+            sortOrder: 0,
+            createdAt: NOW,
+          },
+          {
+            id: "dl-labeled-1",
+            postId: "post-with-null-dl",
+            fileId: "file-2",
+            label: "Study Guide",
+            sortOrder: 1,
+            createdAt: NOW,
+          },
+        ],
+      });
+      const { service } = await buildService({
+        existingPosts: [publishedWithNullLabel],
+      });
+
+      const result = await service.findAllPublic();
+
+      expect(result).toHaveLength(1);
+      const post = result[0]!;
+      expect(post.downloads).toHaveLength(2);
+      expect(post.downloads[0]!.label).toBeNull();
+      expect(post.downloads[0]!.fileUrl).toBe("/files/file-1");
+      expect(post.downloads[1]!.label).toBe("Study Guide");
+      expect(post.downloads[1]!.fileUrl).toBe("/files/file-2");
     });
   });
 

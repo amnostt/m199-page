@@ -150,6 +150,28 @@ describe("PostsPublicController", () => {
         NotFoundException,
       );
     });
+
+    // -- Phase 5 remediation: public API must surface a null label for unlabeled downloads
+
+    it("returns the public response with downloads[] carrying label: null for an unlabeled download", async () => {
+      const responseWithNullLabel = {
+        ...PUBLIC_RESPONSE,
+        downloads: [
+          { label: null, fileUrl: "/files/dl-001" },
+          { label: "Study Guide", fileUrl: "/files/dl-002" },
+        ],
+      };
+      (
+        service.findPublicBySlug as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce(responseWithNullLabel);
+
+      const result = await controller.findBySlug("my-post");
+
+      expect(result.downloads).toHaveLength(2);
+      expect(result.downloads[0]!.label).toBeNull();
+      expect(result.downloads[0]!.fileUrl).toBe("/files/dl-001");
+      expect(result.downloads[1]!.label).toBe("Study Guide");
+    });
   });
 
   // ---- Route-level 404 for non-published via HTTP ---------------------------
@@ -185,6 +207,50 @@ describe("PostsPublicController", () => {
     it("returns 200 for GET /posts (list is always allowed)", async () => {
       const res = await request(app.getHttpServer()).get("/posts");
       expect(res.status).toBe(200);
+    });
+  });
+
+  // -- Phase 5 remediation: end-to-end runtime proof that the public
+  //    post-detail API returns `label: null` for an unlabeled persisted download.
+
+  describe("Runtime: GET /posts/:slug returns label: null over HTTP (Phase 5.3)", () => {
+    let app: INestApplication;
+    let svc: PostsService;
+
+    beforeAll(async () => {
+      svc = mockPostsService();
+      (svc.findPublicBySlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...PUBLIC_RESPONSE,
+        downloads: [
+          { label: null, fileUrl: "/files/dl-001" },
+          { label: "Slides", fileUrl: "/files/dl-002" },
+        ],
+      });
+
+      const module = await Test.createTestingModule({
+        controllers: [PostsPublicController],
+        providers: [{ provide: PostsService, useValue: svc }],
+      }).compile();
+
+      app = module.createNestApplication();
+      await app.init();
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it("response body includes downloads[].label === null for an unlabeled download", async () => {
+      const res = await request(app.getHttpServer()).get("/posts/my-post");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("downloads");
+      expect(Array.isArray(res.body.downloads)).toBe(true);
+      expect(res.body.downloads).toHaveLength(2);
+      expect(res.body.downloads[0].label).toBeNull();
+      expect(res.body.downloads[0].fileUrl).toBe("/files/dl-001");
+      expect(res.body.downloads[1].label).toBe("Slides");
+      expect(res.body.downloads[1].fileUrl).toBe("/files/dl-002");
     });
   });
 });

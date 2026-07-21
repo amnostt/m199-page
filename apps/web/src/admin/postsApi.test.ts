@@ -232,6 +232,62 @@ describe("post mutation payloads", () => {
     expect(bodies[1]).not.toHaveProperty("status");
     expect(bodies[1]).not.toHaveProperty("publishedAt");
   });
+
+  it("forwards a non-empty downloadLabels map in create and update payloads", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    const labels = { "file-1": "Study Guide", "file-2": "Slides" };
+    await createPost(form, labels);
+    await updatePost("post-1", form, labels);
+
+    const bodies = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.map(([, init]) =>
+      JSON.parse((init as RequestInit).body as string),
+    ) as Record<string, unknown>[];
+    expect(bodies).toHaveLength(2);
+    expect(bodies[0]?.downloadLabels).toEqual(labels);
+    expect(bodies[1]?.downloadLabels).toEqual(labels);
+  });
+
+  it("omits the downloadLabels field when no map is supplied", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    await createPost(form);
+    await updatePost("post-1", form);
+
+    const bodies = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.map(([, init]) =>
+      JSON.parse((init as RequestInit).body as string),
+    ) as Record<string, unknown>[];
+    expect(bodies[0]).not.toHaveProperty("downloadLabels");
+    expect(bodies[1]).not.toHaveProperty("downloadLabels");
+  });
+
+  it("omits the downloadLabels field when the map is empty", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    await createPost(form, {});
+    await updatePost("post-1", form, {});
+
+    const bodies = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.map(([, init]) =>
+      JSON.parse((init as RequestInit).body as string),
+    ) as Record<string, unknown>[];
+    expect(bodies[0]).not.toHaveProperty("downloadLabels");
+    expect(bodies[1]).not.toHaveProperty("downloadLabels");
+  });
 });
 
 // ---------------------------------------------------------------------------

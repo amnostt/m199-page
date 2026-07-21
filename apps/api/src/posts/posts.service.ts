@@ -159,6 +159,28 @@ export class PostsService {
     return `/files/${fileId}`;
   }
 
+  /**
+   * Resolves the persisted label for a single download row.
+   * Returns null when the map is missing or does not contain the fileId.
+   * The DTO contract guarantees keys are a subset of `downloadIds`, so a
+   * missing entry here means the caller intentionally omits the label.
+   *
+   * The DTO decorator validates the trimmed projection, so the service
+   * normalizes by trimming here to keep the persisted value aligned with
+   * the validated (trimmed) form. Blank-after-trim is impossible because
+   * the decorator rejects it at the boundary.
+   */
+  private resolveDownloadLabel(
+    labels: Record<string, string> | undefined,
+    fileId: string,
+  ): string | null {
+    if (!labels) return null;
+    const label = labels[fileId];
+    if (label === undefined) return null;
+    const trimmed = label.trim();
+    return trimmed.length === 0 ? null : trimmed;
+  }
+
   /** Maps an internal PostRow to the public PostPublicResponse shape. */
   private toPublicResponse(row: PostRow): PostPublicResponse {
     return {
@@ -243,10 +265,12 @@ export class PostsService {
         // are committed atomically or not at all.
         if (dto.downloadIds && dto.downloadIds.length > 0) {
           for (let i = 0; i < dto.downloadIds.length; i++) {
+            const fileId = dto.downloadIds[i]!;
             await tx.postDownload.create({
               data: {
                 postId: post.id,
-                fileId: dto.downloadIds[i]!,
+                fileId,
+                label: this.resolveDownloadLabel(dto.downloadLabels, fileId),
                 sortOrder: i,
               },
             });
@@ -315,10 +339,12 @@ export class PostsService {
             where: { postId: id },
           });
           for (let i = 0; i < dto.downloadIds.length; i++) {
+            const fileId = dto.downloadIds[i]!;
             await tx.postDownload.create({
               data: {
                 postId: id,
-                fileId: dto.downloadIds[i]!,
+                fileId,
+                label: this.resolveDownloadLabel(dto.downloadLabels, fileId),
                 sortOrder: i,
               },
             });

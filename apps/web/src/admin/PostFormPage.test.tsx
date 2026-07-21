@@ -1207,4 +1207,109 @@ describe("PostFormPage downloads", () => {
     // Add-new slot still exists
     expect(screen.getByTestId("post-form-download-add")).toBeTruthy();
   });
+
+  it("includes the edited download label in the PATCH payload (Phase 3, TDD 3.2)", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    globalThis.fetch = vi
+      .fn()
+      // First call: GET for loading
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(MOCK_POST),
+      })
+      // Second call: PATCH for saving
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(MOCK_POST),
+      });
+
+    render(
+      <PostFormPage
+        mode="edit"
+        slug="hello-world"
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("post-form")).toBeTruthy();
+    });
+
+    // Edit the download label
+    const labelInput = screen.getByTestId(
+      "post-form-download-label-file-1",
+    ) as HTMLInputElement;
+    fireEvent.change(labelInput, { target: { value: "Updated Guide" } });
+
+    // Submit
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      const patchCall = (
+        globalThis.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
+      );
+      expect(patchCall).toBeTruthy();
+
+      const body = JSON.parse(
+        (patchCall![1] as RequestInit).body as string,
+      ) as Record<string, unknown>;
+
+      expect(body.downloadLabels).toEqual({ "file-1": "Updated Guide" });
+    });
+  });
+
+  it("omits the downloadLabels field from the PATCH payload when all labels are cleared (Phase 3, TDD 3.2)", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(MOCK_POST),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(MOCK_POST),
+      });
+
+    render(
+      <PostFormPage
+        mode="edit"
+        slug="hello-world"
+        onSaved={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("post-form")).toBeTruthy();
+    });
+
+    // Clear the existing label
+    const labelInput = screen.getByTestId(
+      "post-form-download-label-file-1",
+    ) as HTMLInputElement;
+    fireEvent.change(labelInput, { target: { value: "" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      const patchCall = (
+        globalThis.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
+      );
+      expect(patchCall).toBeTruthy();
+
+      const body = JSON.parse(
+        (patchCall![1] as RequestInit).body as string,
+      ) as Record<string, unknown>;
+
+      expect(body).not.toHaveProperty("downloadLabels");
+    });
+  });
 });

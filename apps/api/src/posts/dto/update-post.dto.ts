@@ -11,8 +11,10 @@ import {
   IsArray,
   ArrayMaxSize,
   Matches,
+  ValidateIf,
 } from "class-validator";
 import { IsAbsent } from "./is-absent.decorator.js";
+import { DownloadLabels } from "./download-labels.decorator.js";
 
 export class UpdatePostDto {
   @IsOptional()
@@ -52,6 +54,10 @@ export class UpdatePostDto {
   @IsArray()
   @IsString({ each: true })
   downloadIds?: string[];
+
+  @ValidateIf((o) => o.downloadLabels !== undefined)
+  @DownloadLabels()
+  downloadLabels?: Record<string, string>;
 
   @IsAbsent()
   declare status?: never;
