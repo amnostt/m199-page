@@ -29,3 +29,5 @@ yarn-error.log*
 
 # Uploaded files
 uploads/
+# Local AI runtime state
+.atl/
