@@ -26,6 +26,7 @@ yarn-error.log*
 .DS_Store
 .idea/
 .vscode/
+.windsurf/
 
 # Uploaded files
 uploads/
