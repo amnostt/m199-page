@@ -32,3 +32,6 @@ yarn-error.log*
 uploads/
 # Local AI runtime state
 .atl/
+
+# Local code-navigation index
+.codegraph/
