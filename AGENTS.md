@@ -5,11 +5,6 @@ smallest bounded change, keep tests with the behavior they protect, and verify
 claims against code and configuration because some documentation retains
 historical implementation notes.
 
-The normative workflow for SDD sequencing, runtime evidence, rollback
-boundaries, and review budget is [docs/development-process.md](docs/development-process.md).
-Use it together with this contributor guide; each document links back to the
-other.
-
 ## Repository Map
 
 | Path          | Responsibility                                                                                            |

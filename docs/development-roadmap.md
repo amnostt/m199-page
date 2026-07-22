@@ -1,6 +1,6 @@
 # Hoja de ruta de desarrollo
 
-La hoja de ruta ordena resultados y capacidades; no reemplaza las tareas de cada SDD change. El estado se basa en el código actual y debe actualizarse cuando una capacidad se verifique de extremo a extremo.
+La hoja de ruta ordena resultados y capacidades. El estado se basa en el código actual y debe actualizarse cuando una capacidad se verifique de extremo a extremo.
 
 | Mantenimiento       | Valor                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -22,7 +22,7 @@ La hoja de ruta ordena resultados y capacidades; no reemplaza las tareas de cada
 
 ## Ahora
 
-El orden de esta sección es intencional. Cada fila posterior al arreglo directo pequeño debe tratarse como un vertical slice independiente y, normalmente, como un SDD change propio.
+El orden de esta sección es intencional. Cada fila posterior al arreglo directo pequeño debe tratarse como un vertical slice independiente.
 
 | Orden | Slice                         | Resultado                                                                                                          | Estado                                | Dependencia                                                                                                    |
 | ----- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -61,5 +61,5 @@ Los posts destacados ya se gestionan desde Posts. No deben añadirse controles d
 
 - Mover una capacidad de estado solo con evidencia del recorrido completo; una API aislada no equivale a una capacidad terminada.
 - Mantener un resultado observable por slice y registrar dependencias antes de comprometer una fecha.
-- Convertir cada slice acotado en tareas y unidades de trabajo mediante el [proceso de desarrollo](./development-process.md).
+- Convertir cada slice acotado en tareas antes de iniciar su implementación.
 - Usar las definiciones del [glosario](./glossary.md) para evitar que milestone, capability, slice y task se vuelvan sinónimos.

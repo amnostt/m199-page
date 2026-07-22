@@ -56,13 +56,12 @@ El MVP busca completar estas capacidades, no solo exponer endpoints:
 - Un responsable puede completar cada flujo editorial previsto sin asistencia técnica ni acceso directo a la base de datos.
 - Las transiciones de publicación, desactivación y archivos mantienen sus invariantes aunque la interfaz cliente falle o sea omitida.
 - El despliegue conserva base de datos y archivos, dispone de copias de seguridad recuperables y expone una señal de salud útil.
-- Cada slice se entrega con criterios de aceptación, pruebas pertinentes, verificación en runtime o justificación `N/A`, y un límite de rollback explícito.
+- Cada slice se entrega con criterios de aceptación, pruebas pertinentes y verificación apropiada.
 
 ## Navegación documental
 
-- [Índice de documentación](./README.md): fuentes normativas, material educativo y ruta de lectura recomendada.
+- [Índice de documentación](./README.md): fuentes normativas y ruta de lectura recomendada.
 - [Fundamento técnico](./technical-foundation.md): arquitectura, decisiones e invariantes actuales.
 - [Hoja de ruta](./development-roadmap.md): orden de capacidades y slices pendientes.
-- [Proceso de desarrollo](./development-process.md): recorrido desde una idea hasta su entrega.
 - [Glosario](./glossary.md): vocabulario compartido de producto y desarrollo.
 - [`AGENTS.md`](../AGENTS.md): comandos y reglas detalladas de contribución.

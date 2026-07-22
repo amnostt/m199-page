@@ -1,6 +1,6 @@
 # Glosario
 
-Vocabulario común para interpretar el resumen ejecutivo, el fundamento técnico, la hoja de ruta y el proceso de desarrollo. Los identificadores de código y términos establecidos se conservan en su forma original.
+Vocabulario común para interpretar el resumen ejecutivo, el fundamento técnico y la hoja de ruta. Los identificadores de código y términos establecidos se conservan en su forma original.
 
 ## Producto y dominio
 
@@ -33,35 +33,17 @@ Vocabulario común para interpretar el resumen ejecutivo, el fundamento técnico
 | Vertical slice                                | Recorrido mínimo útil que atraviesa las capas necesarias y produce un outcome verificable de extremo a extremo.                             |
 | Walking skeleton                              | Primer recorrido mínimo ejecutable que conecta las fronteras principales del sistema y prueba que la arquitectura puede entregar valor.     |
 
-## SDD
-
-| Término             | Definición                                                                                                       |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Apply               | Fase que implementa las tasks de acuerdo con proposal, spec y design, y registra la evidencia correspondiente.   |
-| Change / SDD change | Contenedor de un cambio acotado dirigido por especificación. Normalmente representa un vertical slice.           |
-| Design              | Documento que fija decisiones técnicas, límites, flujo de datos, riesgos y alternativas para satisfacer la spec. |
-| Explore             | Fase opcional para investigar el problema y reducir incertidumbre antes de comprometer una solución.             |
-| Proposal            | Documento breve que establece intención, outcome, scope, no objetivos y enfoque de un change.                    |
-| Spec                | Contrato de comportamiento observable expresado mediante requisitos y escenarios verificables.                   |
-| Task                | Paso concreto y ejecutable necesario para completar un slice; no debe confundirse con el outcome.                |
-| Verify              | Fase que compara implementación, spec, design y evidencia para determinar si el change está completo.            |
-| Archive             | Fase que consolida los artefactos del change verificado y cierra su ciclo.                                       |
-
 ## Entrega y calidad
 
 | Término                 | Definición                                                                                                                                                                                                                                                            |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Arreglo directo pequeño | Corrección local pequeña cuya causa y solución son inequívocas y que no requiere el ciclo SDD completo; conserva verificación y rollback directos.                                                                                                                    |
+| Arreglo directo pequeño | Corrección local pequeña cuya causa y solución son inequívocas; conserva verificación pertinente.                                                                                                                                         |
 | Definition of Done      | Lista de condiciones que demuestra que un slice está implementado, verificado, documentado y listo para entrega.                                                                                                                                                      |
 | Definition of Ready     | Condiciones mínimas que debe cumplir un slice antes de comenzar su implementación.                                                                                                                                                                                    |
-| Hotfix                  | Corrección urgente de un defecto en producción, priorizada para restaurar o proteger el servicio; requiere verificación y rollback.                                                                                                                                   |
+| Hotfix                  | Corrección urgente de un defecto en producción, priorizada para restaurar o proteger el servicio; requiere verificación.                                                                                                                                             |
 | Invariant / invariante  | Regla que debe mantenerse verdadera ante cualquier cliente o recorrido válido; se protege en API o base de datos cuando corresponde.                                                                                                                                  |
 | Regression / regresión  | Pérdida o alteración accidental de un comportamiento que antes funcionaba.                                                                                                                                                                                            |
-| Release                 | Evento explícito que versiona o promueve una entrega verificada a un entorno objetivo. Ocurre después de reunir evidencia y preparar rollback; no equivale a completar un PR, entregar un work unit ni ejecutar `archive`. Si se difiere, el cierre debe registrarlo. |
-| Review budget           | Límite orientativo de carga cognitiva para una revisión. En este proyecto se reevalúa la división al acercarse a 400 líneas authored modificadas.                                                                                                                     |
-| Rollback boundary       | Conjunto exacto de archivos, migraciones y comportamiento que puede revertirse sin retirar trabajo no relacionado.                                                                                                                                                    |
-| Runtime verification    | Ejecución de un escenario sobre la frontera real del cambio para comprobar su comportamiento observable, además de las pruebas automatizadas.                                                                                                                         |
-| Work unit               | Unidad coherente de entrega que reúne comportamiento, pruebas y documentación con un propósito revisable y reversible.                                                                                                                                                |
+| Release                 | Evento explícito que versiona o promueve una entrega verificada a un entorno objetivo; no equivale a completar un PR.                                                                                                                                                 |
 
 ## Estados y términos técnicos
 

@@ -16,11 +16,10 @@ Este documento describe la arquitectura que existe hoy, sus límites obligatorio
 | Propósito y alcance del producto              | [Resumen ejecutivo](./executive-summary.md)       |
 | Arquitectura, decisiones e invariantes        | Este documento                                    |
 | Prioridad y estado de entrega                 | [Hoja de ruta](./development-roadmap.md)          |
-| Flujo de trabajo y criterios de entrega       | [Proceso de desarrollo](./development-process.md) |
 | Terminología compartida                       | [Glosario](./glossary.md)                         |
 | Comandos, estructura y reglas para contribuir | [`AGENTS.md`](../AGENTS.md)                       |
 
-Para afirmar el estado actual prevalecen la fuente ejecutable, la configuración efectiva, las declaraciones del esquema, las migraciones y las pruebas. Los comentarios y las descripciones de paquetes orientan, pero pueden conservar contexto histórico y no demuestran por sí solos el comportamiento vigente. Si esas fuentes ejecutables se contradicen, se debe verificar el recorrido real y corregir la inconsistencia en lugar de elegir la afirmación más conveniente. Las decisiones de producto pendientes deben resolverse en un SDD change antes de modificar comportamiento.
+Para afirmar el estado actual prevalecen la fuente ejecutable, la configuración efectiva, las declaraciones del esquema, las migraciones y las pruebas. Los comentarios y las descripciones de paquetes orientan, pero pueden conservar contexto histórico y no demuestran por sí solos el comportamiento vigente. Si esas fuentes ejecutables se contradicen, se debe verificar el recorrido real y corregir la inconsistencia en lugar de elegir la afirmación más conveniente. Las decisiones de producto pendientes deben resolverse antes de modificar comportamiento.
 
 ## Estado actual: arquitectura
 
