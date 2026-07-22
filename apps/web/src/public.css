@@ -1,0 +1,610 @@
+/* ---------------------------------------------------------------------------
+ * public.css — public-only visual system for the Mision 1-99 web app.
+ *
+ * Imports Tailwind CSS v4 in pieces:
+ *   - theme.css   → design tokens (CSS custom properties)
+ *   - utilities.css → utility classes
+ *
+ * Deliberately OMITS preflight.css. Preflight is Tailwind's global reset and
+ * would restyle the admin UI; the design scopes all authored rules and tokens
+ * under `.public-ui` so the admin presentation stays unchanged.
+ *
+ * Every public top-level state must carry the `.public-ui` root class for
+ * these tokens and reusable classes to apply. Admin markup does not.
+ * ------------------------------------------------------------------------- */
+
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* ---------------------------------------------------------------------------
+ * Component layer — public-ui tokens and reusable classes.
+ *
+ * All custom properties are declared under `.public-ui` so they only leak
+ * into the public surface. The reusable classes are also scoped to that
+ * root so the admin tree, which never carries `.public-ui`, is unaffected.
+ * ------------------------------------------------------------------------- */
+
+@layer components {
+  /* ---------------------------------------------------------------------------
+   * Box-sizing reset — scoped to .public-ui and its descendants.
+   *
+   * Tailwind's preflight provides a global `box-sizing: border-box` reset
+   * for every element. We deliberately omit preflight to keep the admin
+   * presentation unchanged, but we MUST restore the border-box contract
+   * inside .public-ui. Without it, padding and border on every public
+   * surface (.public-page, .public-hero, .public-card, .public-state,
+   * .public-verse, .public-action, etc.) are added to the element's
+   * declared width instead of being included in it. That makes the page
+   * root exceed the viewport at 320px and makes grid cards exceed their
+   * columns at >=1024px, producing the horizontal overflow observed on
+   * every public route.
+   *
+   * Scoping to .public-ui and its descendants preserves admin isolation:
+   * the admin tree never carries .public-ui, so this rule does not
+   * change any admin element's box-sizing. Verified by public.css.test.ts.
+   * ------------------------------------------------------------------------- */
+  .public-ui,
+  .public-ui *,
+  .public-ui *::before,
+  .public-ui *::after {
+    box-sizing: border-box;
+  }
+
+  .public-ui {
+    /* Color tokens — AA-grade pairs (verified by public.css.test.ts) */
+    --public-color-surface: #ffffff;
+    --public-color-surface-muted: #f7f7f8;
+    --public-color-surface-raised: #ffffff;
+    --public-color-text: #1f2937; /* ~14.96:1 on surface */
+    --public-color-text-muted: #4b5563; /* ~7.5:1 on surface */
+    --public-color-primary: #1d4ed8; /* ~8.6:1 on surface */
+    --public-color-primary-hover: #1e40af; /* ~10.4:1 on surface */
+    --public-color-primary-text: #ffffff; /* ~8.6:1 on primary */
+    --public-color-accent: #b91c1c; /* ~6.5:1 on surface */
+    --public-color-border: #e5e7eb;
+    --public-color-border-strong: #d1d5db;
+    --public-color-focus-ring: #2563eb; /* ~5.17:1 on surface (>= 3:1) */
+    --public-color-overlay: rgba(31, 41, 55, 0.06);
+
+    /* Typography */
+    --public-font-sans:
+      ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --public-font-display:
+      ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --public-text-xs: 0.75rem;
+    --public-text-sm: 0.875rem;
+    --public-text-base: 1rem;
+    --public-text-lg: 1.125rem;
+    --public-text-xl: 1.25rem;
+    --public-text-2xl: 1.5rem;
+    --public-text-3xl: 1.875rem;
+    --public-text-4xl: 2.25rem;
+    --public-leading-tight: 1.2;
+    --public-leading-normal: 1.5;
+    --public-leading-relaxed: 1.7;
+    --public-weight-normal: 400;
+    --public-weight-medium: 500;
+    --public-weight-semibold: 600;
+    --public-weight-bold: 700;
+
+    /* Spacing scale */
+    --public-space-1: 0.25rem;
+    --public-space-2: 0.5rem;
+    --public-space-3: 0.75rem;
+    --public-space-4: 1rem;
+    --public-space-6: 1.5rem;
+    --public-space-8: 2rem;
+    --public-space-12: 3rem;
+
+    /* Radius */
+    --public-radius-sm: 0.25rem;
+    --public-radius-md: 0.5rem;
+    --public-radius-lg: 0.75rem;
+    --public-radius-full: 9999px;
+
+    /* Elevation */
+    --public-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --public-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+    --public-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+
+    /* Interaction */
+    --public-transition: 150ms ease-out;
+    --public-disabled-opacity: 0.55;
+
+    /* Base font/background for public roots — admin markup has no .public-ui */
+    color: var(--public-color-text);
+    font-family: var(--public-font-sans);
+    line-height: var(--public-leading-normal);
+    background-color: var(--public-color-surface);
+  }
+
+  /* Visible keyboard focus for all interactive public controls. Uses a
+   * 2px outline plus a 2px offset so it stays distinct from the surface
+   * and from any background color used behind it. The outline color is the
+   * focus-ring token whose contrast vs. surface is verified to be >= 3:1. */
+  .public-ui :focus-visible {
+    outline: 2px solid var(--public-color-focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--public-radius-sm);
+  }
+
+  /* Remove the focus ring from elements that should not advertise it
+   * (e.g. decorative icons inside public-action buttons). The host
+   * control still keeps its own focus ring on the outer button. */
+  .public-ui :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Page root — vertical rhythm, max width, responsive gutters.
+   *
+   * Selector note: `.public-ui.public-page` is intentionally a COMPOUND
+   * selector (no whitespace), not a descendant combinator. Every public
+   * route renders the page root as a single element that carries BOTH
+   * classes together (`<main class="public-ui public-page">`); a
+   * descendant combinator (`.public-ui .public-page`) would require a
+   * child element with `.public-page` inside `.public-ui`, which the
+   * markup never produces, and would silently leave the page root
+   * unstyled. The compound form is verified by public.css.test.ts. */
+  .public-ui.public-page {
+    display: block;
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding: var(--public-space-6) var(--public-space-4);
+    background-color: var(--public-color-surface);
+    color: var(--public-color-text);
+  }
+
+  @media (min-width: 768px) {
+    .public-ui.public-page {
+      padding: var(--public-space-8) var(--public-space-6);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .public-ui.public-page {
+      padding: var(--public-space-12) var(--public-space-8);
+    }
+  }
+
+  /* Section — typographic block with consistent vertical spacing. */
+  .public-ui .public-section {
+    display: block;
+    margin-block: var(--public-space-8);
+    color: var(--public-color-text);
+  }
+
+  .public-ui .public-section > h1,
+  .public-ui .public-section > h2,
+  .public-ui .public-section > h3 {
+    font-family: var(--public-font-display);
+    color: var(--public-color-text);
+    line-height: var(--public-leading-tight);
+    margin-block: 0 var(--public-space-4);
+    overflow-wrap: anywhere;
+  }
+
+  .public-ui .public-section > h1 {
+    font-size: var(--public-text-3xl);
+    font-weight: var(--public-weight-bold);
+  }
+
+  .public-ui .public-section > h2 {
+    font-size: var(--public-text-2xl);
+    font-weight: var(--public-weight-semibold);
+  }
+
+  .public-ui .public-section > h3 {
+    font-size: var(--public-text-xl);
+    font-weight: var(--public-weight-semibold);
+  }
+
+  .public-ui .public-section > p {
+    font-size: var(--public-text-base);
+    line-height: var(--public-leading-relaxed);
+    color: var(--public-color-text-muted);
+    margin-block: 0 var(--public-space-3);
+    max-width: 65ch;
+    overflow-wrap: anywhere;
+  }
+
+  @media (min-width: 768px) {
+    .public-ui .public-section > h1 {
+      font-size: var(--public-text-4xl);
+    }
+  }
+
+  /* Card — surface for grouped content, listing, and detail blocks. */
+  .public-ui .public-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--public-space-3);
+    padding: var(--public-space-4);
+    background-color: var(--public-color-surface-raised);
+    color: var(--public-color-text);
+    border: 1px solid var(--public-color-border);
+    border-radius: var(--public-radius-md);
+    box-shadow: var(--public-shadow-sm);
+    min-width: 0;
+  }
+
+  .public-ui .public-card > h1,
+  .public-ui .public-card > h2,
+  .public-ui .public-card > h3 {
+    margin: 0;
+    line-height: var(--public-leading-tight);
+    overflow-wrap: anywhere;
+  }
+
+  .public-ui .public-card > h1 {
+    font-size: var(--public-text-2xl);
+    font-weight: var(--public-weight-bold);
+  }
+
+  .public-ui .public-card > h2 {
+    font-size: var(--public-text-xl);
+    font-weight: var(--public-weight-semibold);
+  }
+
+  .public-ui .public-card > h3 {
+    font-size: var(--public-text-lg);
+    font-weight: var(--public-weight-semibold);
+  }
+
+  .public-ui .public-card > p {
+    margin: 0;
+    color: var(--public-color-text-muted);
+    line-height: var(--public-leading-relaxed);
+    overflow-wrap: anywhere;
+  }
+
+  @media (min-width: 768px) {
+    .public-ui .public-card {
+      padding: var(--public-space-6);
+    }
+  }
+
+  /* Card list — responsive grid wrapper for .public-card children. */
+  .public-ui .public-card-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--public-space-4);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  @media (min-width: 768px) {
+    .public-ui .public-card-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .public-ui .public-card-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* State — loading, empty, error, and not-found containers. */
+  .public-ui .public-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--public-space-3);
+    padding: var(--public-space-8) var(--public-space-4);
+    text-align: center;
+    background-color: var(--public-color-surface-muted);
+    color: var(--public-color-text);
+    border: 1px dashed var(--public-color-border-strong);
+    border-radius: var(--public-radius-md);
+  }
+
+  .public-ui .public-state p {
+    margin: 0;
+    color: var(--public-color-text-muted);
+    font-size: var(--public-text-base);
+    line-height: var(--public-leading-normal);
+  }
+
+  .public-ui .public-state--error {
+    border-color: var(--public-color-accent);
+    color: var(--public-color-text);
+  }
+
+  .public-ui .public-state--error p {
+    color: var(--public-color-accent);
+    font-weight: var(--public-weight-medium);
+  }
+
+  /* Prose — sanitized rich content container for posts. */
+  .public-ui .public-prose {
+    color: var(--public-color-text);
+    line-height: var(--public-leading-relaxed);
+    max-width: 65ch;
+    /* `anywhere` lets unbroken sanitized content reduce its min-content
+     * width inside public-card-list grids while preserving normal wrapping. */
+    overflow-wrap: anywhere;
+  }
+
+  .public-ui .public-prose p {
+    margin-block: 0 var(--public-space-3);
+  }
+
+  .public-ui .public-prose h2,
+  .public-ui .public-prose h3 {
+    font-family: var(--public-font-display);
+    color: var(--public-color-text);
+    line-height: var(--public-leading-tight);
+    margin-block: var(--public-space-6) var(--public-space-3);
+  }
+
+  .public-ui .public-prose h2 {
+    font-size: var(--public-text-2xl);
+    font-weight: var(--public-weight-semibold);
+  }
+
+  .public-ui .public-prose h3 {
+    font-size: var(--public-text-xl);
+    font-weight: var(--public-weight-semibold);
+  }
+
+  .public-ui .public-prose strong {
+    font-weight: var(--public-weight-semibold);
+  }
+
+  .public-ui .public-prose em {
+    font-style: italic;
+  }
+
+  .public-ui .public-prose ul,
+  .public-ui .public-prose ol {
+    margin-block: 0 var(--public-space-3);
+    padding-inline-start: var(--public-space-6);
+  }
+
+  .public-ui .public-prose li {
+    margin-block: var(--public-space-1);
+  }
+
+  .public-ui .public-prose blockquote {
+    margin: var(--public-space-4) 0;
+    padding-inline-start: var(--public-space-4);
+    border-inline-start: 4px solid var(--public-color-primary);
+    color: var(--public-color-text-muted);
+    font-style: italic;
+  }
+
+  .public-ui .public-prose a {
+    color: var(--public-color-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color var(--public-transition);
+  }
+
+  .public-ui .public-prose a:hover {
+    color: var(--public-color-primary-hover);
+  }
+
+  /* Action — interactive controls (button-like anchors, buttons). */
+  .public-ui .public-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--public-space-2);
+    padding: var(--public-space-2) var(--public-space-4);
+    font-family: var(--public-font-sans);
+    font-size: var(--public-text-base);
+    font-weight: var(--public-weight-medium);
+    line-height: var(--public-leading-normal);
+    color: var(--public-color-primary);
+    background-color: transparent;
+    border: 1px solid var(--public-color-border-strong);
+    border-radius: var(--public-radius-md);
+    text-decoration: none;
+    cursor: pointer;
+    /* Constrain action width to the available inline context so a long
+     * title (e.g. a post title rendered as an anchor inside a card title)
+     * wraps inside the card instead of overflowing the card and the
+     * grid column at narrow or wide viewports. `max-width: 100%` is
+     * safe with inline-flex: it only caps the rendered width, not the
+     * intrinsic size used for focus-ring / hit-area calculations. */
+    max-width: 100%;
+    /* `anywhere` lets unbroken action labels reduce their min-content width
+     * so they can wrap within the card. */
+    overflow-wrap: anywhere;
+    transition:
+      background-color var(--public-transition),
+      color var(--public-transition),
+      border-color var(--public-transition);
+  }
+
+  .public-ui .public-action:hover {
+    color: var(--public-color-primary-hover);
+    background-color: var(--public-color-overlay);
+    border-color: var(--public-color-primary);
+  }
+
+  .public-ui .public-action:disabled,
+  .public-ui .public-action[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: var(--public-disabled-opacity);
+  }
+
+  .public-ui .public-action--primary {
+    color: var(--public-color-primary-text);
+    background-color: var(--public-color-primary);
+    border-color: var(--public-color-primary);
+  }
+
+  .public-ui .public-action--primary:hover {
+    color: var(--public-color-primary-text);
+    background-color: var(--public-color-primary-hover);
+    border-color: var(--public-color-primary-hover);
+  }
+
+  .public-ui .public-action--primary:disabled,
+  .public-ui .public-action--primary[aria-disabled="true"] {
+    background-color: var(--public-color-primary);
+    border-color: var(--public-color-primary);
+  }
+
+  .public-ui .public-action--danger {
+    color: var(--public-color-accent);
+    border-color: var(--public-color-accent);
+  }
+
+  /* Action row — horizontal layout of action controls. */
+  .public-ui .public-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--public-space-3);
+    align-items: center;
+    margin-block: var(--public-space-3);
+  }
+
+  /* Media — image wrappers with consistent presentation. */
+  .public-ui .public-media {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--public-radius-md);
+    background-color: var(--public-color-surface-muted);
+  }
+
+  .public-ui .public-media img,
+  .public-ui .public-media iframe {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 0;
+  }
+
+  .public-ui .public-media--cover {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .public-ui .public-media--square {
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+  }
+
+  /* Hero — large landing hero block. */
+  .public-ui .public-hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: var(--public-space-3);
+    padding: var(--public-space-12) var(--public-space-4);
+    border-radius: var(--public-radius-lg);
+    background-color: var(--public-color-surface-muted);
+    color: var(--public-color-text);
+  }
+
+  .public-ui .public-hero h1 {
+    font-family: var(--public-font-display);
+    font-size: var(--public-text-3xl);
+    font-weight: var(--public-weight-bold);
+    line-height: var(--public-leading-tight);
+    margin: 0;
+    max-width: 32ch;
+    overflow-wrap: anywhere;
+  }
+
+  .public-ui .public-hero p {
+    margin: 0;
+    font-size: var(--public-text-lg);
+    color: var(--public-color-text-muted);
+    line-height: var(--public-leading-relaxed);
+    max-width: 56ch;
+    overflow-wrap: anywhere;
+  }
+
+  .public-ui .public-hero img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--public-radius-md);
+  }
+
+  @media (min-width: 768px) {
+    .public-ui .public-hero {
+      padding: var(--public-space-12) var(--public-space-8);
+    }
+
+    .public-ui .public-hero h1 {
+      font-size: var(--public-text-4xl);
+    }
+  }
+
+  /* Tag list — small chip-like elements for post tags. */
+  .public-ui .public-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--public-space-2);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .public-ui .public-tags li {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--public-space-1) var(--public-space-3);
+    background-color: var(--public-color-surface-muted);
+    color: var(--public-color-text-muted);
+    font-size: var(--public-text-sm);
+    border-radius: var(--public-radius-full);
+    border: 1px solid var(--public-color-border);
+    overflow-wrap: anywhere;
+  }
+
+  /* Verse — blockquote wrapper for the daily verse. */
+  .public-ui .public-verse {
+    display: flex;
+    flex-direction: column;
+    gap: var(--public-space-2);
+    padding: var(--public-space-6);
+    background-color: var(--public-color-surface-muted);
+    border-inline-start: 4px solid var(--public-color-primary);
+    border-radius: var(--public-radius-md);
+    color: var(--public-color-text);
+  }
+
+  .public-ui .public-verse blockquote {
+    margin: 0;
+    font-size: var(--public-text-lg);
+    font-style: italic;
+    line-height: var(--public-leading-relaxed);
+    overflow-wrap: anywhere;
+  }
+
+  .public-ui .public-verse cite {
+    font-size: var(--public-text-sm);
+    font-style: normal;
+    color: var(--public-color-text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  /* Responsive visibility helpers — used by public components to adapt
+   * layout across narrow and wide viewports without an unscoped reset. */
+  .public-ui .public-hidden-mobile {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .public-ui .public-hidden-mobile {
+      display: initial;
+    }
+
+    .public-ui .public-hidden-desktop {
+      display: none;
+    }
+  }
+}

@@ -11,8 +11,12 @@ type NullableLandingSeedText = Record<LandingSeedTextField, string | null>;
 
 type LandingSettingsSeedClient = {
   landingSettings: {
-    findUnique: (args: { where: { id: 1 } }) => Promise<Partial<NullableLandingSeedText> | null>;
-    create: (args: { data: { id: 1 } & NullableLandingSeedText }) => Promise<unknown>;
+    findUnique: (args: {
+      where: { id: 1 };
+    }) => Promise<Partial<NullableLandingSeedText> | null>;
+    create: (args: {
+      data: { id: 1 } & NullableLandingSeedText;
+    }) => Promise<unknown>;
     update: (args: {
       where: { id: 1 };
       data: Partial<NullableLandingSeedText>;

@@ -54,10 +54,10 @@ export function FileUploadWidget({
     formData.append("file", file);
 
     try {
-      const asset = await adminFetch<FileAssetResponse>(
-        `/files/${category}`,
-        { method: "POST", body: formData },
-      );
+      const asset = await adminFetch<FileAssetResponse>(`/files/${category}`, {
+        method: "POST",
+        body: formData,
+      });
       setState("idle");
       onUploaded(asset);
     } catch {

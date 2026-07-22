@@ -15,16 +15,12 @@ describe("sanitizeAndMakeSafe", () => {
   // -----------------------------------------------------------------------
 
   it("preserves https:// href", () => {
-    const result = sanitizeAndMakeSafe(
-      '<a href="https://safe.com">Link</a>',
-    );
+    const result = sanitizeAndMakeSafe('<a href="https://safe.com">Link</a>');
     expect(result).toContain('href="https://safe.com"');
   });
 
   it("preserves http:// href", () => {
-    const result = sanitizeAndMakeSafe(
-      '<a href="http://oldsite.com">Link</a>',
-    );
+    const result = sanitizeAndMakeSafe('<a href="http://oldsite.com">Link</a>');
     expect(result).toContain('href="http://oldsite.com"');
   });
 
@@ -128,7 +124,7 @@ describe("sanitizeAndMakeSafe", () => {
 
   it("preserves allowed tags", () => {
     const result = sanitizeAndMakeSafe(
-      '<h2>Title</h2><p>Text with <strong>bold</strong> and <em>italic</em></p><ul><li>Item</li></ul><blockquote>Quote</blockquote>',
+      "<h2>Title</h2><p>Text with <strong>bold</strong> and <em>italic</em></p><ul><li>Item</li></ul><blockquote>Quote</blockquote>",
     );
     expect(result).toContain("<h2>");
     expect(result).toContain("<p>");

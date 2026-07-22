@@ -8,13 +8,7 @@
  * Uses Test.createTestingModule with mocked FileService.
  */
 import { Test } from "@nestjs/testing";
-import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeEach,
-} from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NotFoundException } from "@nestjs/common";
 import type { Response } from "express";
 import path from "path";

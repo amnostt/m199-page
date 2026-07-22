@@ -37,11 +37,7 @@ export const TIMEOUTS = {
 // AdminLogin — inline email/password form
 // ---------------------------------------------------------------------------
 
-function AdminLogin({
-  onLogin,
-}: {
-  onLogin: (user: AuthUser) => void;
-}) {
+function AdminLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
@@ -101,7 +97,9 @@ function AdminLogin({
         </button>
       </form>
       {error && (
-        <div data-testid="admin-login-error">Invalid credentials. Try again.</div>
+        <div data-testid="admin-login-error">
+          Invalid credentials. Try again.
+        </div>
       )}
     </div>
   );
@@ -112,11 +110,7 @@ function AdminLogin({
 // ---------------------------------------------------------------------------
 
 export type AdminSection =
-  | "landing"
-  | "posts"
-  | "outings"
-  | "responsibles"
-  | "verses";
+  "landing" | "posts" | "outings" | "responsibles" | "verses";
 
 const PLACEHOLDER_SECTIONS = ["Files"];
 
@@ -217,11 +211,7 @@ function AdminShell({
         )}
       </main>
       <footer>
-        <button
-          type="button"
-          data-testid="admin-logout"
-          onClick={onLogout}
-        >
+        <button type="button" data-testid="admin-logout" onClick={onLogout}>
           Logout
         </button>
         {logoutError && (

@@ -8,13 +8,7 @@
  * and a real tmpdir for file-system verification.
  */
 import { Test } from "@nestjs/testing";
-import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeEach,
-} from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NotFoundException } from "@nestjs/common";
 import path from "path";
 
@@ -101,9 +95,7 @@ const SAMPLE_DOC_ROW: FileAssetRow = {
 };
 
 const VALID_JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
-const VALID_PNG = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-]);
+const VALID_PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const VALID_PDF = Buffer.from("%PDF-1.7\n");
 
 // ---- helpers ------------------------------------------------------------
@@ -149,10 +141,7 @@ async function buildService(
   const dbValue = makeDbValue(dbOverrides);
 
   const module = await Test.createTestingModule({
-    providers: [
-      FileService,
-      { provide: DbService, useValue: dbValue },
-    ],
+    providers: [FileService, { provide: DbService, useValue: dbValue }],
   }).compile();
 
   return {
@@ -240,7 +229,11 @@ describe("FileService", () => {
 
     it("accepts image/png for image category when signature matches", async () => {
       const { service, mocks } = await buildService({
-        createResult: { ...SAMPLE_IMAGE_ROW, id: "new-png", mimeType: "image/png" },
+        createResult: {
+          ...SAMPLE_IMAGE_ROW,
+          id: "new-png",
+          mimeType: "image/png",
+        },
       });
 
       await service.upload({
@@ -285,7 +278,9 @@ describe("FileService", () => {
 
       const createArg = mocks.create.mock.calls[0]?.[0];
       expect(createArg?.data.storagePath).toMatch(
-        new RegExp(`^${path.resolve("./uploads").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
+        new RegExp(
+          `^${path.resolve("./uploads").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+        ),
       );
       expect(path.isAbsolute(createArg?.data.storagePath ?? "")).toBe(true);
     });
@@ -344,7 +339,11 @@ describe("FileService", () => {
   describe("upload thumbnail failure (FU-04)", () => {
     it("still creates DB record when thumbnail generation fails for a valid image", async () => {
       const { service, mocks } = await buildService({
-        createResult: { ...SAMPLE_IMAGE_ROW, thumbnailPath: null, id: "new-file" },
+        createResult: {
+          ...SAMPLE_IMAGE_ROW,
+          thumbnailPath: null,
+          id: "new-file",
+        },
       });
 
       sharpMock.mockImplementation(() => {
@@ -427,7 +426,9 @@ describe("FileService", () => {
     });
 
     it("returns { path, mimeType } on success", async () => {
-      const { service } = await buildService({ findUniqueResult: SAMPLE_IMAGE_ROW });
+      const { service } = await buildService({
+        findUniqueResult: SAMPLE_IMAGE_ROW,
+      });
 
       const result = await service.serve("file-1");
 
@@ -442,9 +443,7 @@ describe("FileService", () => {
         findUniqueResult: { ...SAMPLE_IMAGE_ROW, storagePath: "/etc/passwd" },
       });
 
-      await expect(service.serve("escaped")).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.serve("escaped")).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -462,7 +461,9 @@ describe("FileService", () => {
     });
 
     it("throws NotFoundException when thumbnailPath is null (non-image)", async () => {
-      const { service } = await buildService({ findUniqueResult: SAMPLE_DOC_ROW });
+      const { service } = await buildService({
+        findUniqueResult: SAMPLE_DOC_ROW,
+      });
 
       await expect(service.serveThumb("file-2")).rejects.toThrow(
         NotFoundException,
@@ -470,7 +471,9 @@ describe("FileService", () => {
     });
 
     it("returns { path, mimeType: 'image/jpeg' } on success", async () => {
-      const { service } = await buildService({ findUniqueResult: SAMPLE_IMAGE_ROW });
+      const { service } = await buildService({
+        findUniqueResult: SAMPLE_IMAGE_ROW,
+      });
 
       const result = await service.serveThumb("file-1");
 
@@ -534,7 +537,9 @@ describe("FileService", () => {
     });
 
     it("unlinks absolute paths stored under relative UPLOAD_DIR", async () => {
-      const storagePath = path.resolve("./uploads/OUTING_MAIN_IMAGE/f1.uuid.jpg");
+      const storagePath = path.resolve(
+        "./uploads/OUTING_MAIN_IMAGE/f1.uuid.jpg",
+      );
       const thumbnailPath = `${storagePath}.thumb.jpg`;
       const { service } = await buildService({
         findUniqueResult: { ...SAMPLE_IMAGE_ROW, storagePath, thumbnailPath },

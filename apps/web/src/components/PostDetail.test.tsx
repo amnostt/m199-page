@@ -32,6 +32,12 @@ function expectNoSection(testId: string): void {
   ).toBe(0);
 }
 
+/** Get the first element with the given test ID (throws if none). */
+function getOne(testId: string): HTMLElement {
+  const elements = screen.getAllByTestId(testId);
+  return elements[0]!;
+}
+
 // ---------------------------------------------------------------------------
 // Test fixtures
 // ---------------------------------------------------------------------------
@@ -376,5 +382,107 @@ describe("PostDetail", () => {
     });
 
     expectNoSection("post-detail-downloads");
+  });
+
+  // -----------------------------------------------------------------------
+  // Task 3.2: Public visual system hooks
+  // -----------------------------------------------------------------------
+
+  it("applies public-state class to loading branch", () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
+
+    render(<PostDetail slug="primer-post" />);
+
+    const loading = screen.getByTestId("post-detail-loading");
+    expect(loading.classList.contains("public-state")).toBe(true);
+  });
+
+  it("applies public-state--error class to not-found branch", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () => Promise.resolve({ message: "Not Found" }),
+    }) as unknown as typeof fetch;
+
+    render(<PostDetail slug="nonexistent" />);
+
+    await waitFor(() => {
+      expectSection("post-detail-not-found");
+    });
+
+    const notFound = screen.getByTestId("post-detail-not-found");
+    expect(notFound.classList.contains("public-state--error")).toBe(true);
+  });
+
+  it("applies public-state--error class to error branch", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Network error")) as unknown as typeof fetch;
+
+    render(<PostDetail slug="primer-post" />);
+
+    await waitFor(() => {
+      expectSection("post-detail-error");
+    });
+
+    const errorEl = screen.getByTestId("post-detail-error");
+    expect(errorEl.classList.contains("public-state--error")).toBe(true);
+  });
+
+  it("applies public-section, public-prose, and public-tags to the detail", async () => {
+    globalThis.fetch = mockFetchOk(POST_DETAIL) as unknown as typeof fetch;
+
+    render(<PostDetail slug="primer-post" />);
+
+    await waitFor(() => {
+      expectSection("post-detail-section");
+    });
+
+    const detail = getOne("post-detail-section");
+    expect(detail.classList.contains("public-section")).toBe(true);
+
+    const content = getOne("post-detail-content");
+    expect(content.classList.contains("public-prose")).toBe(true);
+    // Sanitization still in effect: rich content is preserved.
+    expect(content.innerHTML).toContain("Contenido del post");
+
+    const tags = getOne("post-detail-tags");
+    expect(tags.classList.contains("public-tags")).toBe(true);
+
+    const cover = getOne("post-detail-cover");
+    const mediaWrapper = cover.closest(".public-media");
+    expect(mediaWrapper).toBeTruthy();
+    expect(mediaWrapper!.classList.contains("public-media--cover")).toBe(true);
+  });
+
+  it("applies public-section and public-action classes to download links", async () => {
+    const postWithDownloads = {
+      ...POST_DETAIL,
+      downloads: [DOWNLOAD_1, DOWNLOAD_2],
+    };
+    globalThis.fetch = mockFetchOk(
+      postWithDownloads,
+    ) as unknown as typeof fetch;
+
+    render(<PostDetail slug="primer-post" />);
+
+    await waitFor(() => {
+      expectSection("post-detail-section");
+    });
+
+    const downloads = screen.getByTestId("post-detail-downloads");
+    expect(downloads.classList.contains("public-section")).toBe(true);
+
+    const actionLinks = downloads.querySelectorAll("a.public-action");
+    expect(actionLinks.length).toBe(2);
+    // External link behavior is preserved.
+    for (const link of actionLinks) {
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    }
   });
 });

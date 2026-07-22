@@ -107,8 +107,7 @@ export class OutingsPublicController {
     }
 
     const ip = req.ip ?? "0.0.0.0";
-    const userAgent =
-      (req.headers["user-agent"] as string | undefined) ?? "";
+    const userAgent = (req.headers["user-agent"] as string | undefined) ?? "";
 
     return this.outingsService.addLike(outing.id, ip, userAgent);
   }

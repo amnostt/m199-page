@@ -381,9 +381,7 @@ describe("adminFetch", () => {
   // -----------------------------------------------------------------------
 
   it("login throws on network error", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockRejectedValue(new Error("Network error"));
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
     await expect(login("a@b.com", "pw")).rejects.toThrow("Network error");
   });
@@ -393,9 +391,7 @@ describe("adminFetch", () => {
   // -----------------------------------------------------------------------
 
   it("refreshSession throws on network error", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockRejectedValue(new Error("Network error"));
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
     await expect(refreshSession()).rejects.toThrow("Network error");
   });
@@ -511,7 +507,10 @@ describe("adminFetch — AdminRequestError on non-OK responses", () => {
       ok: false,
       status: 400,
       statusText: "Bad Request",
-      headers: { get: (key: string) => (key === "content-type" ? "application/json" : null) },
+      headers: {
+        get: (key: string) =>
+          key === "content-type" ? "application/json" : null,
+      },
       json: () =>
         Promise.resolve({
           message: "title is required",
@@ -534,7 +533,10 @@ describe("adminFetch — AdminRequestError on non-OK responses", () => {
       ok: false,
       status: 400,
       statusText: "Bad Request",
-      headers: { get: (key: string) => (key === "content-type" ? "application/json" : null) },
+      headers: {
+        get: (key: string) =>
+          key === "content-type" ? "application/json" : null,
+      },
       json: () =>
         Promise.resolve({
           message: ["title is required", "slug must be a string"],
@@ -553,7 +555,10 @@ describe("adminFetch — AdminRequestError on non-OK responses", () => {
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
-      headers: { get: (key: string) => (key === "content-type" ? "application/json" : null) },
+      headers: {
+        get: (key: string) =>
+          key === "content-type" ? "application/json" : null,
+      },
       json: () =>
         Promise.resolve({ error: "Database unavailable", statusCode: 500 }),
     });
@@ -568,7 +573,9 @@ describe("adminFetch — AdminRequestError on non-OK responses", () => {
       ok: false,
       status: 502,
       statusText: "Bad Gateway",
-      headers: { get: (key: string) => (key === "content-type" ? "text/plain" : null) },
+      headers: {
+        get: (key: string) => (key === "content-type" ? "text/plain" : null),
+      },
       text: () => Promise.resolve("Upstream service is unreachable"),
     });
 
@@ -582,8 +589,12 @@ describe("adminFetch — AdminRequestError on non-OK responses", () => {
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
-      headers: { get: (key: string) => (key === "content-type" ? "application/json" : null) },
-      json: () => Promise.reject(new SyntaxError("Unexpected end of JSON input")),
+      headers: {
+        get: (key: string) =>
+          key === "content-type" ? "application/json" : null,
+      },
+      json: () =>
+        Promise.reject(new SyntaxError("Unexpected end of JSON input")),
     });
 
     await expect(adminFetch("/admin/some-endpoint")).rejects.toThrow(
@@ -596,7 +607,9 @@ describe("adminFetch — AdminRequestError on non-OK responses", () => {
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
-      headers: { get: (key: string) => (key === "content-type" ? "text/plain" : null) },
+      headers: {
+        get: (key: string) => (key === "content-type" ? "text/plain" : null),
+      },
       text: () => Promise.resolve(""),
     });
 

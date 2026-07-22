@@ -15,7 +15,11 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { DbService } from "../db/db.service.js";
-import { FileCategory, isAllowedMime, isFileCategory } from "./file-category.js";
+import {
+  FileCategory,
+  isAllowedMime,
+  isFileCategory,
+} from "./file-category.js";
 import type { FileAssetResponse } from "./dto/file-response.dto.js";
 import { randomUUID } from "crypto";
 import path from "path";
@@ -59,7 +63,10 @@ interface FilePrismaClient {
   fileAsset: {
     findUnique(args: { where: { id: string } }): Promise<FileAssetRow | null>;
     create(args: { data: FileAssetCreateInput }): Promise<FileAssetRow>;
-    update(args: { where: { id: string }; data: { url: string } }): Promise<FileAssetRow>;
+    update(args: {
+      where: { id: string };
+      data: { url: string };
+    }): Promise<FileAssetRow>;
     delete(args: { where: { id: string } }): Promise<FileAssetRow>;
   };
 }
@@ -72,9 +79,7 @@ interface FilePrismaClient {
 export class FileService {
   private readonly logger = new Logger(FileService.name);
 
-  constructor(
-    @Inject(DbService) private readonly dbService: DbService,
-  ) {}
+  constructor(@Inject(DbService) private readonly dbService: DbService) {}
 
   /** Casts DbService.client to the minimal Prisma interface this service needs. */
   private get client(): FilePrismaClient {
@@ -96,7 +101,8 @@ export class FileService {
     category: FileCategory;
     uploadedById?: string;
   }): Promise<FileAssetResponse> {
-    const { buffer, originalFilename, mimeType, category, uploadedById } = params;
+    const { buffer, originalFilename, mimeType, category, uploadedById } =
+      params;
 
     if (!isFileCategory(category)) {
       throw new BadRequestException("Invalid file category");
@@ -127,10 +133,7 @@ export class FileService {
         await this.generateThumbnail(buffer, thumbnailPath);
         thumbnailWritten = thumbnailPath;
       } catch (err) {
-        this.logger.warn(
-          { err, storagePath },
-          "Failed to generate thumbnail",
-        );
+        this.logger.warn({ err, storagePath }, "Failed to generate thumbnail");
         // Thumbnail failure is non-fatal — original is preserved
         thumbnailWritten = null;
       }
@@ -207,9 +210,7 @@ export class FileService {
   // -----------------------------------------------------------------------
 
   /** Returns { path, mimeType } for the thumbnail. Throws 404 on miss or null. */
-  async serveThumb(
-    id: string,
-  ): Promise<{ path: string; mimeType: string }> {
+  async serveThumb(id: string): Promise<{ path: string; mimeType: string }> {
     const row = await this.client.fileAsset.findUnique({ where: { id } });
     if (!row || !row.thumbnailPath) {
       throw new NotFoundException("File not found");
@@ -225,7 +226,7 @@ export class FileService {
   // -----------------------------------------------------------------------
 
   /**
-    * Deletes DB record before best-effort unlink of file and thumbnail.
+   * Deletes DB record before best-effort unlink of file and thumbnail.
    */
   async remove(id: string): Promise<void> {
     const row = await this.client.fileAsset.findUnique({ where: { id } });
@@ -275,9 +276,11 @@ export class FileService {
         case "image/png":
           return (
             buffer.length >= 8 &&
-            buffer.subarray(0, 8).equals(
-              Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-            )
+            buffer
+              .subarray(0, 8)
+              .equals(
+                Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+              )
           );
         case "image/gif":
           return (
@@ -292,7 +295,10 @@ export class FileService {
             buffer.subarray(8, 12).equals(Buffer.from("WEBP"))
           );
         case "application/pdf":
-          return buffer.length >= 5 && buffer.subarray(0, 5).equals(Buffer.from("%PDF-"));
+          return (
+            buffer.length >= 5 &&
+            buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))
+          );
         default:
           return false;
       }
@@ -321,7 +327,9 @@ export class FileService {
     outputPath: string,
   ): Promise<void> {
     const sharp = (await import("sharp")).default;
-    await sharp(buffer).resize({ width: 500, fit: "inside" }).toFile(outputPath);
+    await sharp(buffer)
+      .resize({ width: 500, fit: "inside" })
+      .toFile(outputPath);
   }
 
   private async unlinkBestEffort(path: string): Promise<void> {

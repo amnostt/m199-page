@@ -6,7 +6,12 @@
  */
 import { FileCategory } from "@prisma/client";
 
-const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+const IMAGE_MIMES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+] as const;
 
 const DOC_MIMES = [...IMAGE_MIMES, "application/pdf"] as const;
 

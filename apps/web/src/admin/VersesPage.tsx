@@ -89,9 +89,14 @@ export function VersesPage() {
     setDeletePending((current) => new Set(current).add(row.id));
     try {
       await deleteVerse(row.id);
-      setRows((current) => current?.filter((item) => item.id !== row.id) ?? current);
+      setRows(
+        (current) => current?.filter((item) => item.id !== row.id) ?? current,
+      );
     } catch (error) {
-      setDeleteErrors((current) => ({ ...current, [row.id]: errorMessage(error) }));
+      setDeleteErrors((current) => ({
+        ...current,
+        [row.id]: errorMessage(error),
+      }));
     } finally {
       setDeletePending((current) => {
         const next = new Set(current);

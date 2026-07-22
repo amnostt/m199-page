@@ -15,7 +15,8 @@ describe("sanitizePostContent (1.3)", () => {
   // ---- Allowed tags pass through -------------------------------------------
 
   it("preserves allowed block tags (p, h2, h3, blockquote)", () => {
-    const input = "<p>Paragraph</p><h2>Heading 2</h2><h3>Heading 3</h3><blockquote>Quote</blockquote>";
+    const input =
+      "<p>Paragraph</p><h2>Heading 2</h2><h3>Heading 3</h3><blockquote>Quote</blockquote>";
     const result = sanitizePostContent(input);
     expect(result).toContain("<p>Paragraph</p>");
     expect(result).toContain("<h2>Heading 2</h2>");
@@ -31,7 +32,8 @@ describe("sanitizePostContent (1.3)", () => {
   });
 
   it("preserves list elements (ul, ol, li)", () => {
-    const input = "<ul><li>One</li><li>Two</li></ul><ol><li>First</li><li>Second</li></ol>";
+    const input =
+      "<ul><li>One</li><li>Two</li></ul><ol><li>First</li><li>Second</li></ol>";
     const result = sanitizePostContent(input);
     expect(result).toContain("<ul>");
     expect(result).toContain("<li>One</li>");
@@ -71,7 +73,8 @@ describe("sanitizePostContent (1.3)", () => {
   });
 
   it("strips iframe tags", () => {
-    const input = '<p>Safe</p><iframe src="https://evil.com"></iframe><p>More</p>';
+    const input =
+      '<p>Safe</p><iframe src="https://evil.com"></iframe><p>More</p>';
     const result = sanitizePostContent(input);
     expect(result).not.toContain("iframe");
     expect(result).toContain("<p>Safe</p>");
@@ -94,7 +97,7 @@ describe("sanitizePostContent (1.3)", () => {
   });
 
   it("strips table, tr, td, th tags", () => {
-    const input = '<table><tr><td>Data</td></tr></table><p>Safe</p>';
+    const input = "<table><tr><td>Data</td></tr></table><p>Safe</p>";
     const result = sanitizePostContent(input);
     expect(result).not.toContain("<table");
     expect(result).not.toContain("<tr");
@@ -179,14 +182,17 @@ describe("sanitizePostContent (1.3)", () => {
   });
 
   it("preserves mailto: href", () => {
-    const result = sanitizePostContent('<a href="mailto:test@example.com">Email</a>');
+    const result = sanitizePostContent(
+      '<a href="mailto:test@example.com">Email</a>',
+    );
     expect(result).toContain('href="mailto:test@example.com"');
   });
 
   // ---- Combined / defense-in-depth scenarios --------------------------------
 
   it("handles deeply nested disallowed content", () => {
-    const input = '<div><p>Outer</p><div><script>bad()</script><p>Inner</p></div></div>';
+    const input =
+      "<div><p>Outer</p><div><script>bad()</script><p>Inner</p></div></div>";
     const result = sanitizePostContent(input);
     // div is not allowed, but children p elements should survive
     expect(result).not.toContain("script");

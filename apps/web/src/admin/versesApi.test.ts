@@ -26,8 +26,11 @@ describe("versesApi", () => {
   it("URL-encodes the ID for a bodyless delete", async () => {
     vi.mocked(adminFetch).mockResolvedValue(undefined);
     await deleteVerse("id/with spaces");
-    expect(adminFetch).toHaveBeenCalledWith("/verses/admin/id%2Fwith%20spaces", {
-      method: "DELETE",
-    });
+    expect(adminFetch).toHaveBeenCalledWith(
+      "/verses/admin/id%2Fwith%20spaces",
+      {
+        method: "DELETE",
+      },
+    );
   });
 });

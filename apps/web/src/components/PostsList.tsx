@@ -69,7 +69,10 @@ export function PostsList() {
 
   if (error) {
     return (
-      <section data-testid="posts-error">
+      <section
+        data-testid="posts-error"
+        className="public-state public-state--error"
+      >
         <p>No se pudo cargar la lista de posts.</p>
       </section>
     );
@@ -77,7 +80,7 @@ export function PostsList() {
 
   if (!posts) {
     return (
-      <section data-testid="posts-loading">
+      <section data-testid="posts-loading" className="public-state">
         <p>Cargando posts…</p>
       </section>
     );
@@ -85,47 +88,61 @@ export function PostsList() {
 
   if (posts.length === 0) {
     return (
-      <section data-testid="posts-list-section">
-        <p data-testid="posts-empty">No hay posts publicados.</p>
+      <section data-testid="posts-list-section" className="public-section">
+        <p data-testid="posts-empty" className="public-state">
+          No hay posts publicados.
+        </p>
       </section>
     );
   }
 
   return (
-    <section data-testid="posts-list-section">
-      {posts.map((post) => (
-        <article key={post.id} data-testid={`post-${post.id}`}>
-          {post.coverImageUrl && (
-            <img
-              data-testid={`post-cover-${post.id}`}
-              src={post.coverImageUrl}
-              alt={post.title}
-            />
-          )}
-          <h2>
-            <a href={`/posts/${post.slug}`}>{post.title}</a>
-          </h2>
-          <p>{post.description}</p>
-          {post.publishedAt && (
-            <time data-testid={`post-date-${post.id}`}>
-              {formatDate(post.publishedAt)}
-            </time>
-          )}
-          {post.tags.length > 0 && (
-            <ul data-testid={`post-tags-${post.id}`}>
-              {post.tags.map((tag) => (
-                <li key={tag}>{tag}</li>
-              ))}
-            </ul>
-          )}
-          <div
-            data-testid={`post-content-${post.id}`}
-            dangerouslySetInnerHTML={{
-              __html: sanitizeAndMakeSafe(post.content),
-            }}
-          />
-        </article>
-      ))}
+    <section data-testid="posts-list-section" className="public-section">
+      <ul className="public-card-list">
+        {posts.map((post) => (
+          <li key={post.id}>
+            <article data-testid={`post-${post.id}`} className="public-card">
+              {post.coverImageUrl && (
+                <figure className="public-media public-media--cover">
+                  <img
+                    data-testid={`post-cover-${post.id}`}
+                    src={post.coverImageUrl}
+                    alt={post.title}
+                  />
+                </figure>
+              )}
+              <h2>
+                <a href={`/posts/${post.slug}`} className="public-action">
+                  {post.title}
+                </a>
+              </h2>
+              <p>{post.description}</p>
+              {post.publishedAt && (
+                <time data-testid={`post-date-${post.id}`}>
+                  {formatDate(post.publishedAt)}
+                </time>
+              )}
+              {post.tags.length > 0 && (
+                <ul
+                  data-testid={`post-tags-${post.id}`}
+                  className="public-tags"
+                >
+                  {post.tags.map((tag) => (
+                    <li key={tag}>{tag}</li>
+                  ))}
+                </ul>
+              )}
+              <div
+                data-testid={`post-content-${post.id}`}
+                className="public-prose"
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeAndMakeSafe(post.content),
+                }}
+              />
+            </article>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

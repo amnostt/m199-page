@@ -25,9 +25,7 @@ import { OutingFormPage } from "./OutingFormPage.js";
 // ---------------------------------------------------------------------------
 
 type OutingsView =
-  | { mode: "list" }
-  | { mode: "create" }
-  | { mode: "edit"; slug: string };
+  { mode: "list" } | { mode: "create" } | { mode: "edit"; slug: string };
 
 // ---------------------------------------------------------------------------
 // Component

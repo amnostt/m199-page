@@ -82,15 +82,14 @@ interface MockDbOverrides {
 }
 
 function makeDbValue(overrides: MockDbOverrides = {}) {
-  const findMany = vi
-    .fn()
-    .mockResolvedValue(overrides.findAll ?? [ALICE, BOB]);
+  const findMany = vi.fn().mockResolvedValue(overrides.findAll ?? [ALICE, BOB]);
 
   // findUnique is called with different where clauses — we map "id:<val>" or
   // "email:<val>" to a result from the overrides or default to null for
   // missing users and the first user in the list otherwise.
-  const findUnique = vi.fn().mockImplementation(
-    async (args: { where: Record<string, unknown> }) => {
+  const findUnique = vi
+    .fn()
+    .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       if (overrides.findUniqueResults) {
         const key = args.where["id"] ?? args.where["email"];
         if (key && overrides.findUniqueResults.has(key as string)) {
@@ -107,16 +106,11 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
       }
       // General fallback — return first active user.
       return ALICE;
-    },
-  );
+    });
 
-  const create = vi
-    .fn()
-    .mockResolvedValue(overrides.createReturn ?? ALICE);
+  const create = vi.fn().mockResolvedValue(overrides.createReturn ?? ALICE);
 
-  const update = vi
-    .fn()
-    .mockResolvedValue(overrides.updateReturn ?? ALICE);
+  const update = vi.fn().mockResolvedValue(overrides.updateReturn ?? ALICE);
 
   const client = {
     responsibleUser: {
@@ -347,9 +341,7 @@ describe("ResponsiblesService", () => {
 
       await service.update(ALICE.id, { status: "INACTIVE" });
 
-      expect(authService.revokeAllUserSessions).toHaveBeenCalledWith(
-        ALICE.id,
-      );
+      expect(authService.revokeAllUserSessions).toHaveBeenCalledWith(ALICE.id);
     });
 
     it("does NOT revoke sessions when status stays ACTIVE", async () => {
@@ -394,9 +386,7 @@ describe("ResponsiblesService", () => {
         where: { id: ALICE.id },
         data: { passwordHash: "$2b$mocked-hash" },
       });
-      expect(authService.revokeAllUserSessions).toHaveBeenCalledWith(
-        ALICE.id,
-      );
+      expect(authService.revokeAllUserSessions).toHaveBeenCalledWith(ALICE.id);
       expect(result).not.toHaveProperty("passwordHash");
     });
 

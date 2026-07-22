@@ -42,9 +42,11 @@ const VERSE_B = makeVerse({
 
 // ---- helpers --------------------------------------------------------------
 
-function mockVersesService(overrides: {
-  historyReturn?: VerseRow[];
-} = {}) {
+function mockVersesService(
+  overrides: {
+    historyReturn?: VerseRow[];
+  } = {},
+) {
   return {
     create: vi.fn(),
     delete: vi.fn(),

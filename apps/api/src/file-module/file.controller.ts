@@ -36,9 +36,7 @@ import { isFileCategory } from "./file-category.js";
 @Controller("files")
 @UseGuards(AuthGuard)
 export class FilesController {
-  constructor(
-    @Inject(FileService) private readonly fileService: FileService,
-  ) {}
+  constructor(@Inject(FileService) private readonly fileService: FileService) {}
 
   /**
    * Upload a file (FU-01, FU-05, FU-06, FU-07).
@@ -52,7 +50,11 @@ export class FilesController {
    */
   @Post(":category")
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: Number(process.env["MAX_FILE_SIZE"]) || 10485760 } }))
+  @UseInterceptors(
+    FileInterceptor("file", {
+      limits: { fileSize: Number(process.env["MAX_FILE_SIZE"]) || 10485760 },
+    }),
+  )
   async upload(
     @Param("category") category: string,
     @UploadedFile() file: Express.Multer.File | undefined,
@@ -86,9 +88,7 @@ export class FilesController {
    */
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(
-    @Param("id") id: string,
-  ): Promise<{ statusCode: number }> {
+  async remove(@Param("id") id: string): Promise<{ statusCode: number }> {
     await this.fileService.remove(id);
     return { statusCode: HttpStatus.NO_CONTENT };
   }

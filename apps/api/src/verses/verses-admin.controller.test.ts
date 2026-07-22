@@ -71,9 +71,7 @@ async function createAppWithAuth(
     .compile();
 
   const app = module.createNestApplication();
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, transform: true }),
-  );
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   await app.init();
 
   return { app, service };
@@ -117,8 +115,9 @@ describe("VersesAdminController", () => {
     it("returns 204 when authenticated", async () => {
       const { app, service } = await createAppWithAuth(true);
 
-      const res = await request(app.getHttpServer())
-        .delete("/verses/admin/v-001");
+      const res = await request(app.getHttpServer()).delete(
+        "/verses/admin/v-001",
+      );
 
       expect(res.status).toBe(204);
       expect(service.delete).toHaveBeenCalledWith("v-001");
@@ -127,8 +126,9 @@ describe("VersesAdminController", () => {
     it("returns 403 when guard rejects", async () => {
       const { app } = await createAppWithAuth(false);
 
-      const res = await request(app.getHttpServer())
-        .delete("/verses/admin/v-001");
+      const res = await request(app.getHttpServer()).delete(
+        "/verses/admin/v-001",
+      );
 
       expect(res.status).toBe(403);
     });
@@ -207,13 +207,11 @@ describe("VersesAdminController", () => {
     it("whitelist: strips publishedAt property if sent by client", async () => {
       const { app, service } = await createAppWithAuth(true);
 
-      await request(app.getHttpServer())
-        .post("/verses/admin")
-        .send({
-          text: "Safe",
-          reference: "Ref",
-          publishedAt: new Date().toISOString(),
-        });
+      await request(app.getHttpServer()).post("/verses/admin").send({
+        text: "Safe",
+        reference: "Ref",
+        publishedAt: new Date().toISOString(),
+      });
 
       const callArg = (service.create as ReturnType<typeof vi.fn>).mock
         .calls[0]?.[0] as Record<string, unknown>;

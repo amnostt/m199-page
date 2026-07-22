@@ -318,6 +318,38 @@ describe("App (landing rendering)", () => {
     expect(shellTexts.length).toBeGreaterThan(0);
     expectNoSection("hero-section");
   });
+
+  // TRIANGULATE — landing loading and error fallback must carry the same
+  // public-ui root as every other public state. The spec requires
+  // tokenized, accessible coverage for every existing public state,
+  // including loading and error. Admin isolation is preserved separately.
+  it("landing fallback (loading + error) carries the .public-ui.public-page root", async () => {
+    // Loading path: never-resolving fetch keeps the LandingPage in the
+    // initial `!data` branch, which falls back to <Shell />.
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
+    const { unmount } = render(<App />);
+    const loadingShell = screen.getByTestId("shell-fallback");
+    expect(loadingShell.classList.contains("public-ui")).toBe(true);
+    expect(loadingShell.classList.contains("public-page")).toBe(true);
+    unmount();
+
+    // Error path: rejected fetch takes the LandingPage through the
+    // catch handler and also renders <Shell />.
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Network error")) as unknown as typeof fetch;
+    render(<App />);
+    await waitFor(() => {
+      expectSection("shell-fallback");
+    });
+    const errorShell = screen.getByTestId("shell-fallback");
+    expect(errorShell.classList.contains("public-ui")).toBe(true);
+    expect(errorShell.classList.contains("public-page")).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -851,5 +883,226 @@ describe("Admin route (1.4)", () => {
     });
 
     expect(screen.getByText("Misión 1-99")).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 2: Public visual system — class hooks and admin isolation
+// ---------------------------------------------------------------------------
+
+/** Walk up the DOM looking for an ancestor that has the given class token. */
+function ancestorHasClass(element: Element, className: string): boolean {
+  let current: Element | null = element;
+  while (current) {
+    if (current.classList.contains(className)) return true;
+    current = current.parentElement;
+  }
+  return false;
+}
+
+describe("Public visual system — class hooks (Phase 2)", () => {
+  it("wraps the landing page in a .public-ui root", async () => {
+    globalThis.fetch = mockFetchOk(FULL_PAYLOAD) as unknown as typeof fetch;
+
+    const { container } = render(<App />);
+
+    await waitFor(() => {
+      expectSection("hero-section");
+    });
+
+    const root = container.querySelector(".public-ui");
+    expect(root, "expected landing page to carry .public-ui").toBeTruthy();
+    expect(root!.classList.contains("public-page")).toBe(true);
+  });
+
+  it("applies public-section and shared card classes across landing sections", async () => {
+    globalThis.fetch = mockFetchOk(FULL_PAYLOAD) as unknown as typeof fetch;
+
+    render(<App />);
+
+    await waitFor(() => {
+      expectSection("hero-section");
+    });
+
+    const hero = getOne("hero-section");
+    expect(hero.classList.contains("public-hero")).toBe(true);
+
+    const featured = getOne("featured-outing-section");
+    expect(featured.classList.contains("public-section")).toBe(true);
+    const featuredCard = featured.querySelector(".public-card");
+    expect(featuredCard).toBeTruthy();
+    const featuredLink = featured.querySelector(".public-action");
+    expect(featuredLink).toBeTruthy();
+
+    const mission = getOne("mission-section");
+    expect(mission.classList.contains("public-section")).toBe(true);
+
+    const videoFrame = getOne("featured-video");
+    expect(ancestorHasClass(videoFrame, "public-media")).toBe(true);
+
+    const verse = getOne("verse-block");
+    expect(verse.classList.contains("public-verse")).toBe(true);
+  });
+
+  it("applies public-state classes to outings loading, empty, and error states", async () => {
+    // Loading
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
+    const { unmount } = render(<App pathname="/outings" />);
+    const loading = screen.getByTestId("outings-loading");
+    expect(loading.classList.contains("public-state")).toBe(true);
+    unmount();
+
+    // Empty
+    globalThis.fetch = mockFetchOk([]) as unknown as typeof fetch;
+    const { unmount: unmount2 } = render(<App pathname="/outings" />);
+    await waitFor(() => {
+      expectSection("outings-list-section");
+    });
+    const empty = screen.getByTestId("outings-empty");
+    expect(empty.classList.contains("public-state")).toBe(true);
+    unmount2();
+
+    // Error
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Network error")) as unknown as typeof fetch;
+    render(<App pathname="/outings" />);
+    await waitFor(() => {
+      expectSection("outings-error");
+    });
+    const errorEl = screen.getByTestId("outings-error");
+    expect(errorEl.classList.contains("public-state")).toBe(true);
+    expect(errorEl.classList.contains("public-state--error")).toBe(true);
+  });
+
+  it("wraps the outings list in a .public-ui root and uses a card list", async () => {
+    globalThis.fetch = mockFetchOk(OUTING_LIST) as unknown as typeof fetch;
+
+    const { container } = render(<App pathname="/outings" />);
+
+    await waitFor(() => {
+      expectSection("outings-list-section");
+    });
+
+    const root = container.querySelector(".public-ui");
+    expect(root).toBeTruthy();
+    const list = root!.querySelector(".public-card-list");
+    expect(list).toBeTruthy();
+    const cards = list!.querySelectorAll(".public-card");
+    expect(cards.length).toBe(2);
+  });
+
+  it("applies public-ui and public classes to outing detail and its media", async () => {
+    globalThis.fetch = mockFetchOk(SINGLE_OUTING) as unknown as typeof fetch;
+
+    const { container } = render(<App pathname="/outings/camp-day" />);
+
+    await waitFor(() => {
+      expectSection("outing-detail-section");
+    });
+
+    const root = container.querySelector(".public-ui");
+    expect(root).toBeTruthy();
+    const detail = getOne("outing-detail-section");
+    expect(detail.classList.contains("public-section")).toBe(true);
+    const mainImage = getOne("outing-main-image");
+    expect(ancestorHasClass(mainImage, "public-media")).toBe(true);
+    const likeButton = getOne("like-button");
+    expect(likeButton.classList.contains("public-action")).toBe(true);
+    expect(likeButton.classList.contains("public-action--primary")).toBe(true);
+  });
+
+  it("applies public-state classes to outing detail loading, error, and not-found", async () => {
+    // Loading
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
+    const { unmount } = render(<App pathname="/outings/camp-day" />);
+    const loading = screen.getByTestId("outing-detail-loading");
+    expect(loading.classList.contains("public-state")).toBe(true);
+    unmount();
+
+    // Not found
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () => Promise.resolve({ message: "Not Found" }),
+    }) as unknown as typeof fetch;
+    const { unmount: unmount2 } = render(<App pathname="/outings/missing" />);
+    await waitFor(() => {
+      expectSection("outing-not-found");
+    });
+    const notFound = screen.getByTestId("outing-not-found");
+    expect(notFound.classList.contains("public-state--error")).toBe(true);
+    unmount2();
+
+    // Error
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Network error")) as unknown as typeof fetch;
+    render(<App pathname="/outings/camp-day" />);
+    await waitFor(() => {
+      expectSection("outing-error");
+    });
+    const errorEl = screen.getByTestId("outing-error");
+    expect(errorEl.classList.contains("public-state--error")).toBe(true);
+  });
+
+  it("keeps public links and like behavior unchanged after styling", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((_url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ likesCount: 6 }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(SINGLE_OUTING),
+        });
+      }) as unknown as typeof fetch;
+
+    render(<App pathname="/outings/camp-day" />);
+
+    await waitFor(() => {
+      expectSection("outing-detail-section");
+    });
+
+    // Like count starts at the API value
+    expect(screen.getByTestId("like-count").textContent).toBe("5");
+
+    // Like still works and disables idempotently
+    const likeButton = screen.getByTestId("like-button") as HTMLButtonElement;
+    likeButton.click();
+    await waitFor(() => {
+      expect(screen.getByTestId("like-count").textContent).toBe("6");
+    });
+    expect(likeButton.disabled).toBe(true);
+  });
+
+  it("does NOT carry .public-ui on /admin", () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
+
+    const { container } = render(<App pathname="/admin" />);
+
+    // Admin should render, not a public root
+    expect(screen.getByTestId("admin-loading")).toBeTruthy();
+    const publicRoot = container.querySelector(".public-ui");
+    expect(
+      publicRoot,
+      "admin markup must not contain a .public-ui ancestor",
+    ).toBeNull();
   });
 });

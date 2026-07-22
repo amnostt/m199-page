@@ -208,9 +208,9 @@ describe("FileUploadWidget — upload flow", () => {
 
   it("disables input while uploading", async () => {
     // Hung fetch keeps uploading state visible
-    globalThis.fetch = vi.fn().mockImplementation(
-      () => new Promise<Response>(() => {}),
-    );
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() => new Promise<Response>(() => {}));
 
     render(
       <FileUploadWidget
@@ -335,9 +335,7 @@ describe("FileUploadWidget — 401 retry with FormData", () => {
 
     // Call 1: initial upload → 401
     expect(fetchMock.mock.calls[0]![0]).toBe("/files/POST_COVER_IMAGE");
-    expect(
-      (fetchMock.mock.calls[0]![1] as RequestInit).method,
-    ).toBe("POST");
+    expect((fetchMock.mock.calls[0]![1] as RequestInit).method).toBe("POST");
     const initialBody = (fetchMock.mock.calls[0]![1] as RequestInit)
       .body as FormData;
     expect(initialBody instanceof FormData).toBe(true);
@@ -345,15 +343,11 @@ describe("FileUploadWidget — 401 retry with FormData", () => {
 
     // Call 2: refresh
     expect(fetchMock.mock.calls[1]![0]).toBe("/auth/refresh");
-    expect(
-      (fetchMock.mock.calls[1]![1] as RequestInit).method,
-    ).toBe("POST");
+    expect((fetchMock.mock.calls[1]![1] as RequestInit).method).toBe("POST");
 
     // Call 3: retry — must preserve the same file in FormData body
     expect(fetchMock.mock.calls[2]![0]).toBe("/files/POST_COVER_IMAGE");
-    expect(
-      (fetchMock.mock.calls[2]![1] as RequestInit).method,
-    ).toBe("POST");
+    expect((fetchMock.mock.calls[2]![1] as RequestInit).method).toBe("POST");
     const retryBody = (fetchMock.mock.calls[2]![1] as RequestInit)
       .body as FormData;
     expect(retryBody instanceof FormData).toBe(true);

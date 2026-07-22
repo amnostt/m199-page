@@ -114,6 +114,9 @@ that is the web app, not the API. Vite proxies API routes to
   thumbnail, metadata, rollback, and deletion behavior.
 - Do not edit or commit dependency-generated Prisma clients, build output,
   coverage, logs, or local tooling metadata. Regenerate them through scripts.
+  Editor/IDE metadata (`.vscode/`, `.idea/`, `.windsurf/`) and generated
+  registries (`.atl/skill-registry.md`) count as local tooling metadata and
+  must stay out of the repository.
 
 ## Scope And Verification
 

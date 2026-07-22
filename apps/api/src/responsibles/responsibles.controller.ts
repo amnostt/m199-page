@@ -51,9 +51,7 @@ export class ResponsiblesController {
    * Returns 404 when the user does not exist.
    */
   @Get(":id")
-  async findById(
-    @Param("id") id: string,
-  ): Promise<ResponsibleUserResponse> {
+  async findById(@Param("id") id: string): Promise<ResponsibleUserResponse> {
     return this.responsiblesService.findById(id);
   }
 

@@ -166,7 +166,9 @@ describe("OutingsPage list → create", () => {
     // title/slug fields. Create mode does NOT issue a GET — the form
     // opens empty.
     expect(screen.getByText(/new outing/i)).toBeTruthy();
-    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+      "",
+    );
     expect((screen.getByLabelText(/slug/i) as HTMLInputElement).value).toBe("");
   });
 });

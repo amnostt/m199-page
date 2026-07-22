@@ -15,9 +15,7 @@ import { PostFormPage } from "./PostFormPage.js";
 // ---------------------------------------------------------------------------
 
 type PostsView =
-  | { mode: "list" }
-  | { mode: "create" }
-  | { mode: "edit"; slug: string };
+  { mode: "list" } | { mode: "create" } | { mode: "edit"; slug: string };
 
 // ---------------------------------------------------------------------------
 // Component

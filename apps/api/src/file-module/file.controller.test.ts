@@ -77,7 +77,9 @@ describe("FilesController", () => {
 
       // When guard.canActivate returns false, NestJS throws UnauthorizedException
       // The guard is evaluated before the handler is reached
-      const canActivate = await guard.canActivate({ switchToHttp: () => ({ getRequest: () => ({}) }) } as never);
+      const canActivate = await guard.canActivate({
+        switchToHttp: () => ({ getRequest: () => ({}) }),
+      } as never);
       expect(canActivate).toBe(false);
     });
 
@@ -92,7 +94,9 @@ describe("FilesController", () => {
         .useValue(guard)
         .compile();
 
-      const canActivate = await guard.canActivate({ switchToHttp: () => ({ getRequest: () => ({}) }) } as never);
+      const canActivate = await guard.canActivate({
+        switchToHttp: () => ({ getRequest: () => ({}) }),
+      } as never);
       expect(canActivate).toBe(false);
     });
   });
@@ -144,7 +148,10 @@ describe("FilesController", () => {
         ),
       );
 
-      const badFile = { ...mockUploadedFile, mimetype: "text/plain" } as Express.Multer.File;
+      const badFile = {
+        ...mockUploadedFile,
+        mimetype: "text/plain",
+      } as Express.Multer.File;
 
       await expect(
         controller.upload(
@@ -157,7 +164,11 @@ describe("FilesController", () => {
 
     it("returns BadRequest for invalid category and does not call upload", async () => {
       await expect(
-        controller.upload("../../etc/passwd", mockUploadedFile, makeMockRequest()),
+        controller.upload(
+          "../../etc/passwd",
+          mockUploadedFile,
+          makeMockRequest(),
+        ),
       ).rejects.toThrow(BadRequestException);
 
       expect(fileService.upload).not.toHaveBeenCalled();
@@ -234,7 +245,9 @@ describe("FilesController", () => {
         .useValue(guard)
         .compile();
 
-      const canActivate = await guard.canActivate({ switchToHttp: () => ({ getRequest: () => ({}) }) } as never);
+      const canActivate = await guard.canActivate({
+        switchToHttp: () => ({ getRequest: () => ({}) }),
+      } as never);
       expect(canActivate).toBe(false);
     });
   });

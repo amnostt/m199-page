@@ -43,15 +43,11 @@ function createApp(): express.Express {
     limits: { fileSize: MAX_FILE_SIZE },
   });
 
-  app.post(
-    "/files/:category",
-    upload.single("file"),
-    (_req, res) => {
-      // If we get here, Multer accepted the file.
-      // In the real app, this would be the FilesController.upload handler.
-      res.status(201).json({ ok: true });
-    },
-  );
+  app.post("/files/:category", upload.single("file"), (_req, res) => {
+    // If we get here, Multer accepted the file.
+    // In the real app, this would be the FilesController.upload handler.
+    res.status(201).json({ ok: true });
+  });
 
   // Error-handling middleware — simulates what AllExceptionsFilter does:
   // maps MulterError → 413 and returns a JSON envelope.
@@ -149,9 +145,7 @@ describe("FilesController route-level file-size limit (FU-06)", () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [FilesController],
-      providers: [
-        { provide: FileService, useValue: fileService },
-      ],
+      providers: [{ provide: FileService, useValue: fileService }],
     })
       .overrideGuard(AuthGuard)
       .useValue({
@@ -173,9 +167,7 @@ describe("FilesController route-level file-size limit (FU-06)", () => {
     // Vitest's esbuild transpilation does not emit constructor metadata for
     // ad-hoc test modules, so register the same production filter instance
     // explicitly while still exercising the real Nest route/interceptor path.
-    app.useGlobalFilters(
-      new AllExceptionsFilter(app.get(HttpAdapterHost)),
-    );
+    app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost)));
     await app.init();
   });
 

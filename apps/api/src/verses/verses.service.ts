@@ -36,7 +36,9 @@ export interface VerseRow {
 interface VersePrismaClient {
   verse: {
     create(args: { data: Record<string, unknown> }): Promise<VerseRow>;
-    findUnique(args: { where: Record<string, unknown> }): Promise<VerseRow | null>;
+    findUnique(args: {
+      where: Record<string, unknown>;
+    }): Promise<VerseRow | null>;
     findFirst(args?: {
       where?: Record<string, unknown>;
       orderBy?: Record<string, unknown> | Record<string, string>[];
@@ -49,7 +51,9 @@ interface VersePrismaClient {
     delete(args: { where: Record<string, unknown> }): Promise<VerseRow>;
   };
   verseRevision: {
-    deleteMany(args: { where: Record<string, unknown> }): Promise<{ count: number }>;
+    deleteMany(args: {
+      where: Record<string, unknown>;
+    }): Promise<{ count: number }>;
   };
 }
 
@@ -96,9 +100,7 @@ function peruDateOnly(now: Date): Date {
 
 @Injectable()
 export class VersesService {
-  constructor(
-    @Inject(DbService) private readonly dbService: DbService,
-  ) {}
+  constructor(@Inject(DbService) private readonly dbService: DbService) {}
 
   // -----------------------------------------------------------------------
   // Internal helpers

@@ -66,12 +66,17 @@ interface LikeResponsePayload {
 }
 
 // ---------------------------------------------------------------------------
-// Vite shell — shown while loading or on fetch failure
+// Public landing shell — shown while the landing fetch is in flight or on
+// fetch failure. The fallback is a public state, so it carries the same
+// `.public-ui.public-page` root every other public route uses, ensuring the
+// shared tokenized visual system and AA-grade base styling cover the loading
+// and error fallbacks. Admin markup (rendered for `/admin*`) is unaffected
+// because that branch returns `<AdminApp />` and never adds `.public-ui`.
 // ---------------------------------------------------------------------------
 
 function Shell() {
   return (
-    <main data-testid="shell-fallback">
+    <main data-testid="shell-fallback" className="public-ui public-page">
       <p>Misión 1-99 workspace shell is running.</p>
       <p>
         Product UI ships in future changes. No admin screens, public routes,
@@ -88,8 +93,13 @@ function Shell() {
 function HeroSection({ data }: { data: LandingPublicPayload }) {
   if (!data.heroImageUrl) return null;
   return (
-    <section data-testid="hero-section">
-      <img src={data.heroImageUrl} alt="Hero" data-testid="hero-image" />
+    <section data-testid="hero-section" className="public-hero">
+      <img
+        src={data.heroImageUrl}
+        alt="Hero"
+        data-testid="hero-image"
+        className="public-media public-media--cover"
+      />
       {data.heroTitle && <h1 data-testid="hero-title">{data.heroTitle}</h1>}
       {data.heroSubtitle && (
         <p data-testid="hero-subtitle">{data.heroSubtitle}</p>
@@ -101,7 +111,7 @@ function HeroSection({ data }: { data: LandingPublicPayload }) {
 function MissionSection({ data }: { data: LandingPublicPayload }) {
   if (!data.mission) return null;
   return (
-    <section data-testid="mission-section">
+    <section data-testid="mission-section" className="public-section">
       <p data-testid="mission-text">{data.mission}</p>
     </section>
   );
@@ -110,7 +120,7 @@ function MissionSection({ data }: { data: LandingPublicPayload }) {
 function VisionSection({ data }: { data: LandingPublicPayload }) {
   if (!data.vision) return null;
   return (
-    <section data-testid="vision-section">
+    <section data-testid="vision-section" className="public-section">
       <p data-testid="vision-text">{data.vision}</p>
     </section>
   );
@@ -119,7 +129,7 @@ function VisionSection({ data }: { data: LandingPublicPayload }) {
 function DescriptionSection({ data }: { data: LandingPublicPayload }) {
   if (!data.description) return null;
   return (
-    <section data-testid="description-section">
+    <section data-testid="description-section" className="public-section">
       <p data-testid="description-text">{data.description}</p>
     </section>
   );
@@ -128,12 +138,14 @@ function DescriptionSection({ data }: { data: LandingPublicPayload }) {
 function VideoSection({ data }: { data: LandingPublicPayload }) {
   if (!data.featuredVideoUrl) return null;
   return (
-    <section data-testid="video-section">
-      <iframe
-        src={data.featuredVideoUrl}
-        data-testid="featured-video"
-        title="Featured Video"
-      />
+    <section data-testid="video-section" className="public-section">
+      <div className="public-media public-media--cover">
+        <iframe
+          src={data.featuredVideoUrl}
+          data-testid="featured-video"
+          title="Featured Video"
+        />
+      </div>
     </section>
   );
 }
@@ -141,7 +153,7 @@ function VideoSection({ data }: { data: LandingPublicPayload }) {
 function ContactSection({ data }: { data: LandingPublicPayload }) {
   if (!data.contactEmail && !data.contactPhone) return null;
   return (
-    <section data-testid="contact-section">
+    <section data-testid="contact-section" className="public-section">
       {data.contactEmail && (
         <p data-testid="contact-email">{data.contactEmail}</p>
       )}
@@ -156,12 +168,18 @@ function FeaturedOutingSection({ data }: { data: LandingPublicPayload }) {
   if (!data.featuredOuting) return null;
   const outing = data.featuredOuting;
   return (
-    <section data-testid="featured-outing-section">
-      <p data-testid="featured-outing-title">{outing.title}</p>
-      <p data-testid="outing-location">{outing.location}</p>
-      <a data-testid="featured-outing-link" href={`/outings/${outing.slug}`}>
-        Ver salida
-      </a>
+    <section data-testid="featured-outing-section" className="public-section">
+      <article data-testid={`outing-${outing.id}`} className="public-card">
+        <h3 data-testid="featured-outing-title">{outing.title}</h3>
+        <p data-testid="outing-location">{outing.location}</p>
+        <a
+          data-testid="featured-outing-link"
+          href={`/outings/${outing.slug}`}
+          className="public-action public-action--primary"
+        >
+          Ver salida
+        </a>
+      </article>
     </section>
   );
 }
@@ -169,12 +187,16 @@ function FeaturedOutingSection({ data }: { data: LandingPublicPayload }) {
 function FeaturedPostsSection({ data }: { data: LandingPublicPayload }) {
   if (data.featuredPosts.length === 0) return null;
   return (
-    <section data-testid="featured-posts-section">
-      {data.featuredPosts.map((post) => (
-        <article key={post.id} data-testid={`post-${post.id}`}>
-          <h3>{post.title}</h3>
-        </article>
-      ))}
+    <section data-testid="featured-posts-section" className="public-section">
+      <ul className="public-card-list">
+        {data.featuredPosts.map((post) => (
+          <li key={post.id} data-testid={`post-${post.id}`}>
+            <article className="public-card">
+              <h3>{post.title}</h3>
+            </article>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -183,9 +205,11 @@ function VerseSection({ data }: { data: LandingPublicPayload }) {
   if (!data.currentVerse) return null;
   const verse = data.currentVerse;
   return (
-    <section data-testid="verse-section">
-      <blockquote data-testid="verse-text">{verse.text}</blockquote>
-      <cite data-testid="verse-reference">{verse.reference}</cite>
+    <section data-testid="verse-section" className="public-section">
+      <blockquote data-testid="verse-block" className="public-verse">
+        <span data-testid="verse-text">{verse.text}</span>
+        <cite data-testid="verse-reference">{verse.reference}</cite>
+      </blockquote>
     </section>
   );
 }
@@ -218,7 +242,10 @@ function OutingsList() {
 
   if (error) {
     return (
-      <section data-testid="outings-error">
+      <section
+        data-testid="outings-error"
+        className="public-state public-state--error"
+      >
         <p>No se pudo cargar la lista de salidas.</p>
       </section>
     );
@@ -226,7 +253,7 @@ function OutingsList() {
 
   if (!outings) {
     return (
-      <section data-testid="outings-loading">
+      <section data-testid="outings-loading" className="public-state">
         <p>Cargando salidas…</p>
       </section>
     );
@@ -234,19 +261,27 @@ function OutingsList() {
 
   if (outings.length === 0) {
     return (
-      <section data-testid="outings-list-section">
-        <p data-testid="outings-empty">No hay salidas publicadas.</p>
+      <section data-testid="outings-list-section" className="public-section">
+        <p data-testid="outings-empty" className="public-state">
+          No hay salidas publicadas.
+        </p>
       </section>
     );
   }
 
   return (
-    <section data-testid="outings-list-section">
-      {outings.map((outing) => (
-        <article key={outing.id} data-testid={`outing-${outing.id}`}>
-          <a href={`/outings/${outing.slug}`}>{outing.title}</a>
-        </article>
-      ))}
+    <section data-testid="outings-list-section" className="public-section">
+      <ul className="public-card-list">
+        {outings.map((outing) => (
+          <li key={outing.id} data-testid={`outing-${outing.id}`}>
+            <article className="public-card">
+              <a href={`/outings/${outing.slug}`} className="public-action">
+                {outing.title}
+              </a>
+            </article>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -280,11 +315,20 @@ function LikeButton({
   }, [slug, liked]);
 
   return (
-    <div>
-      <button data-testid="like-button" onClick={handleLike} disabled={liked}>
+    <div className="public-action-row">
+      <button
+        data-testid="like-button"
+        onClick={handleLike}
+        disabled={liked}
+        className="public-action public-action--primary"
+      >
         ❤️ <span data-testid="like-count">{count}</span>
       </button>
-      {error && <span data-testid="like-error">Error al registrar like.</span>}
+      {error && (
+        <span data-testid="like-error" className="public-state--error">
+          Error al registrar like.
+        </span>
+      )}
     </div>
   );
 }
@@ -318,7 +362,10 @@ function OutingDetail({ slug }: { slug: string }) {
 
   if (notFound) {
     return (
-      <section data-testid="outing-not-found">
+      <section
+        data-testid="outing-not-found"
+        className="public-state public-state--error"
+      >
         <p>Salida no encontrada.</p>
       </section>
     );
@@ -326,7 +373,10 @@ function OutingDetail({ slug }: { slug: string }) {
 
   if (error) {
     return (
-      <section data-testid="outing-error">
+      <section
+        data-testid="outing-error"
+        className="public-state public-state--error"
+      >
         <p>No se pudo cargar la salida.</p>
       </section>
     );
@@ -334,37 +384,45 @@ function OutingDetail({ slug }: { slug: string }) {
 
   if (!outing) {
     return (
-      <section data-testid="outing-detail-loading">
+      <section data-testid="outing-detail-loading" className="public-state">
         <p>Cargando salida…</p>
       </section>
     );
   }
 
   return (
-    <section data-testid="outing-detail-section">
+    <article data-testid="outing-detail-section" className="public-section">
       <h1 data-testid="outing-title">{outing.title}</h1>
       <p data-testid="outing-location">{outing.location}</p>
-      <p data-testid="outing-description">{outing.description}</p>
       <time data-testid="outing-datetime">{outing.dateTime}</time>
+      <p data-testid="outing-description" className="public-prose">
+        {outing.description}
+      </p>
       {outing.mainImageUrl && (
-        <img
-          data-testid="outing-main-image"
-          src={outing.mainImageUrl}
-          alt={outing.title}
-        />
+        <figure className="public-media public-media--cover">
+          <img
+            data-testid="outing-main-image"
+            src={outing.mainImageUrl}
+            alt={outing.title}
+          />
+        </figure>
       )}
       {outing.croquisUrl && (
-        <img
-          data-testid="outing-croquis"
-          src={outing.croquisUrl}
-          alt="Croquis"
-        />
+        <figure className="public-media">
+          <img
+            data-testid="outing-croquis"
+            src={outing.croquisUrl}
+            alt="Croquis"
+          />
+        </figure>
       )}
       {outing.planUrl && (
-        <img data-testid="outing-plan" src={outing.planUrl} alt="Plan" />
+        <figure className="public-media">
+          <img data-testid="outing-plan" src={outing.planUrl} alt="Plan" />
+        </figure>
       )}
       <LikeButton initialCount={outing.likesCount} slug={slug} />
-    </section>
+    </article>
   );
 }
 
@@ -430,7 +488,7 @@ function LandingPage() {
   }
 
   return (
-    <main>
+    <main className="public-ui public-page">
       <HeroSection data={data} />
       <FeaturedOutingSection data={data} />
       <MissionSection data={data} />
@@ -460,7 +518,7 @@ export function App({ pathname }: { pathname?: string }) {
   const postSlug = matchPostSlug(rawPath);
   if (postSlug !== null) {
     return (
-      <main>
+      <main className="public-ui public-page">
         <PostDetail slug={postSlug} />
       </main>
     );
@@ -469,7 +527,7 @@ export function App({ pathname }: { pathname?: string }) {
   // Posts list: /posts
   if (isPostsList(rawPath)) {
     return (
-      <main>
+      <main className="public-ui public-page">
         <PostsList />
       </main>
     );
@@ -479,7 +537,7 @@ export function App({ pathname }: { pathname?: string }) {
   const outingSlug = matchOutingSlug(rawPath);
   if (outingSlug !== null) {
     return (
-      <main>
+      <main className="public-ui public-page">
         <OutingDetail slug={outingSlug} />
       </main>
     );
@@ -488,7 +546,7 @@ export function App({ pathname }: { pathname?: string }) {
   // Outings list: /outings
   if (isOutingsList(rawPath)) {
     return (
-      <main>
+      <main className="public-ui public-page">
         <OutingsList />
       </main>
     );

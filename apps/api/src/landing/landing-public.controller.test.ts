@@ -136,10 +136,7 @@ describe("LandingPublicController", () => {
 
   describe("No auth guard (LP-02)", () => {
     it("does NOT have @UseGuards decorator on the controller", () => {
-      const guards = Reflect.getMetadata(
-        "__guards__",
-        LandingPublicController,
-      );
+      const guards = Reflect.getMetadata("__guards__", LandingPublicController);
       expect(guards).toBeUndefined();
     });
   });

@@ -53,11 +53,12 @@ function mockOutingsService(): OutingsService {
     create: vi.fn(),
     update: vi.fn(),
     archive: vi.fn(),
-    findBySlug: vi.fn().mockResolvedValue({ id: "out-001", status: "PUBLISHED" } as OutingRow),
-    findAllPublic: vi.fn().mockResolvedValue([
-      PUBLISHED_OUTING,
-      PUBLISHED_OUTING_2,
-    ]),
+    findBySlug: vi
+      .fn()
+      .mockResolvedValue({ id: "out-001", status: "PUBLISHED" } as OutingRow),
+    findAllPublic: vi
+      .fn()
+      .mockResolvedValue([PUBLISHED_OUTING, PUBLISHED_OUTING_2]),
     addLike: vi.fn().mockResolvedValue({ likesCount: 6 }),
     featureOuting: vi.fn(),
   } as unknown as OutingsService;
@@ -66,10 +67,7 @@ function mockOutingsService(): OutingsService {
 /**
  * Creates a minimal Express-like request object with IP and User-Agent headers.
  */
-function mockLikeRequest(
-  ip: string,
-  userAgent: string,
-): Request {
+function mockLikeRequest(ip: string, userAgent: string): Request {
   return {
     ip,
     headers: { "user-agent": userAgent },
@@ -274,9 +272,7 @@ describe("OutingsPublicController", () => {
       vi.mocked(service.findBySlug).mockResolvedValue(null);
       const req = mockLikeRequest("1.2.3.4", "test-agent");
 
-      await expect(
-        controller.like("nonexistent", req),
-      ).rejects.toThrow();
+      await expect(controller.like("nonexistent", req)).rejects.toThrow();
     });
 
     it("throws NotFoundException for DRAFT outing (public boundary)", async () => {
@@ -287,9 +283,7 @@ describe("OutingsPublicController", () => {
       } as OutingRow);
       const req = mockLikeRequest("1.2.3.4", "test-agent");
 
-      await expect(
-        controller.like("draft-outing", req),
-      ).rejects.toThrow();
+      await expect(controller.like("draft-outing", req)).rejects.toThrow();
     });
 
     it("throws NotFoundException for ARCHIVED outing (public boundary)", async () => {
@@ -300,9 +294,7 @@ describe("OutingsPublicController", () => {
       } as OutingRow);
       const req = mockLikeRequest("1.2.3.4", "test-agent");
 
-      await expect(
-        controller.like("old-outing", req),
-      ).rejects.toThrow();
+      await expect(controller.like("old-outing", req)).rejects.toThrow();
     });
 
     it("passes IPv6 addresses to service.addLike", async () => {
@@ -311,10 +303,7 @@ describe("OutingsPublicController", () => {
         slug: "camp-day",
         status: "PUBLISHED",
       } as OutingRow);
-      const req = mockLikeRequest(
-        "::ffff:192.168.1.1",
-        "Mozilla/5.0",
-      );
+      const req = mockLikeRequest("::ffff:192.168.1.1", "Mozilla/5.0");
 
       await controller.like("camp-day", req);
 
@@ -330,10 +319,7 @@ describe("OutingsPublicController", () => {
 
   describe("No auth guard (OUT-06)", () => {
     it("does NOT have @UseGuards decorator on the controller", () => {
-      const guards = Reflect.getMetadata(
-        "__guards__",
-        OutingsPublicController,
-      );
+      const guards = Reflect.getMetadata("__guards__", OutingsPublicController);
       expect(guards).toBeUndefined();
     });
   });

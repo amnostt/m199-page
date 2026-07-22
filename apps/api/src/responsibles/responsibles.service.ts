@@ -50,9 +50,7 @@ interface UserUpdateInput {
 
 interface ResponsiblesPrismaClient {
   responsibleUser: {
-    findMany(args?: {
-      orderBy?: Record<string, string>;
-    }): Promise<UserRow[]>;
+    findMany(args?: { orderBy?: Record<string, string> }): Promise<UserRow[]>;
     findUnique(args: {
       where: { id?: string; email?: string };
     }): Promise<UserRow | null>;

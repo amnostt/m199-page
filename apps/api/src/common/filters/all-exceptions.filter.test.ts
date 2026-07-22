@@ -12,7 +12,10 @@ import { AllExceptionsFilter } from "./all-exceptions.filter.js";
 // Minimal MulterError-like object — avoids importing multer directly
 // (pnpm strict mode does not allow importing transitive dependencies).
 // The real MulterError has: { code: string, message: string, field?: string, name: "MulterError" }.
-function makeMulterError(code: string, field?: string): Error & { code: string; field?: string } {
+function makeMulterError(
+  code: string,
+  field?: string,
+): Error & { code: string; field?: string } {
   const err = new Error(code) as Error & { code: string; field?: string };
   err.code = code;
   err.name = "MulterError";

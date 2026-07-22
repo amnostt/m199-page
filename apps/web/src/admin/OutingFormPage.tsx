@@ -150,9 +150,7 @@ export function OutingFormPage(props: OutingFormPageProps) {
       <select
         id="of-status"
         value={form.status}
-        onChange={(e) =>
-          handleChange("status", e.target.value as OutingStatus)
-        }
+        onChange={(e) => handleChange("status", e.target.value as OutingStatus)}
         disabled={saving}
       >
         <option value="DRAFT">DRAFT</option>
@@ -256,14 +254,10 @@ export function OutingFormPage(props: OutingFormPageProps) {
       </div>
 
       {validationError && (
-        <div data-testid="outing-form-validation-error">
-          Title is required.
-        </div>
+        <div data-testid="outing-form-validation-error">Title is required.</div>
       )}
 
-      {saveError && (
-        <div data-testid="outing-form-save-error">{saveError}</div>
-      )}
+      {saveError && <div data-testid="outing-form-save-error">{saveError}</div>}
     </div>
   );
 }

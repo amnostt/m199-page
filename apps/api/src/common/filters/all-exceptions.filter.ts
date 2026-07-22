@@ -78,9 +78,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exception.message;
     } else if (isMulterError(exception)) {
       httpStatus = multerErrorToHttpStatus(exception.code);
-      message = exception.code === "LIMIT_FILE_SIZE"
-        ? "File too large"
-        : exception.message;
+      message =
+        exception.code === "LIMIT_FILE_SIZE"
+          ? "File too large"
+          : exception.message;
     } else {
       httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
       message = "Internal server error";

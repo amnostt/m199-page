@@ -101,11 +101,7 @@ afterEach(() => {
 describe("OutingFormPage create mode", () => {
   it("renders empty form fields: title, slug, dateTime, location, description, status", () => {
     render(
-      <OutingFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
+      <OutingFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />,
     );
 
     expect(screen.getByLabelText(/title/i)).toBeTruthy();
@@ -124,19 +120,23 @@ describe("OutingFormPage create mode", () => {
     globalThis.fetch = vi.fn();
 
     render(
-      <OutingFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
+      <OutingFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />,
     );
 
     expect(globalThis.fetch).not.toHaveBeenCalled();
-    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+      "",
+    );
     expect((screen.getByLabelText(/slug/i) as HTMLInputElement).value).toBe("");
-    expect((screen.getByLabelText(/date.*time/i) as HTMLInputElement).value).toBe("");
-    expect((screen.getByLabelText(/location/i) as HTMLInputElement).value).toBe("");
-    expect((screen.getByLabelText(/description/i) as HTMLInputElement).value).toBe("");
+    expect(
+      (screen.getByLabelText(/date.*time/i) as HTMLInputElement).value,
+    ).toBe("");
+    expect((screen.getByLabelText(/location/i) as HTMLInputElement).value).toBe(
+      "",
+    );
+    expect(
+      (screen.getByLabelText(/description/i) as HTMLInputElement).value,
+    ).toBe("");
 
     // Status defaults to DRAFT
     expect((screen.getByLabelText(/status/i) as HTMLSelectElement).value).toBe(
@@ -146,11 +146,7 @@ describe("OutingFormPage create mode", () => {
 
   it("renders three FileUploadWidget slots: main image, croquis, plan", () => {
     render(
-      <OutingFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
+      <OutingFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />,
     );
 
     // Each slot has a file input (no fileId set in create mode).
@@ -159,9 +155,7 @@ describe("OutingFormPage create mode", () => {
   });
 
   it("fills all fields and submits POST /outings/admin with correct body (dateTime → ISO UTC)", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -171,11 +165,7 @@ describe("OutingFormPage create mode", () => {
     const onSaved = vi.fn();
 
     render(
-      <OutingFormPage
-        mode="create"
-        onSaved={onSaved}
-        onCancel={vi.fn()}
-      />,
+      <OutingFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />,
     );
 
     fireEvent.change(screen.getByLabelText(/title/i), {
@@ -204,10 +194,11 @@ describe("OutingFormPage create mode", () => {
       expect(globalThis.fetch).toHaveBeenCalled();
     });
 
-    const postCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-      .find(
-        ([, init]) => (init as RequestInit | undefined)?.method === "POST",
-      );
+    const postCall = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === "POST",
+    );
 
     expect(postCall).toBeTruthy();
     expect(postCall![0]).toBe("/outings/admin");
@@ -236,9 +227,7 @@ describe("OutingFormPage create mode", () => {
   });
 
   it("submits status=PUBLISHED when Save Publish is clicked", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -246,11 +235,7 @@ describe("OutingFormPage create mode", () => {
     });
 
     render(
-      <OutingFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
+      <OutingFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />,
     );
 
     fireEvent.change(screen.getByLabelText(/title/i), {
@@ -278,10 +263,11 @@ describe("OutingFormPage create mode", () => {
       expect(globalThis.fetch).toHaveBeenCalled();
     });
 
-    const postCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-      .find(
-        ([, init]) => (init as RequestInit | undefined)?.method === "POST",
-      );
+    const postCall = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === "POST",
+    );
 
     const body = JSON.parse(
       (postCall![1] as RequestInit).body as string,
@@ -293,19 +279,13 @@ describe("OutingFormPage create mode", () => {
   });
 
   it("declining the save confirm does NOT submit a request", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(false);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     globalThis.fetch = vi.fn();
     const onSaved = vi.fn();
 
     render(
-      <OutingFormPage
-        mode="create"
-        onSaved={onSaved}
-        onCancel={vi.fn()}
-      />,
+      <OutingFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />,
     );
 
     fireEvent.change(screen.getByLabelText(/title/i), {
@@ -335,11 +315,7 @@ describe("OutingFormPage create mode", () => {
     const onSaved = vi.fn();
 
     render(
-      <OutingFormPage
-        mode="create"
-        onSaved={onSaved}
-        onCancel={vi.fn()}
-      />,
+      <OutingFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />,
     );
 
     fireEvent.change(screen.getByLabelText(/date.*time/i), {
@@ -360,9 +336,7 @@ describe("OutingFormPage create mode", () => {
   });
 
   it("shows the server's parsed validation error and does NOT claim success", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -383,11 +357,7 @@ describe("OutingFormPage create mode", () => {
     const onSaved = vi.fn();
 
     render(
-      <OutingFormPage
-        mode="create"
-        onSaved={onSaved}
-        onCancel={vi.fn()}
-      />,
+      <OutingFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />,
     );
 
     fireEvent.change(screen.getByLabelText(/title/i), {
@@ -445,12 +415,8 @@ describe("OutingFormPage edit mode", () => {
       expect(screen.getByTestId("outing-form")).toBeTruthy();
     });
 
-    expect(
-      screen.queryByRole("button", { name: /save draft/i }),
-    ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: /save publish/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /save draft/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /save publish/i })).toBeNull();
   });
 
   it("GETs /outings/admin on mount, finds the row by slug, and populates the form (dateTime → datetime-local)", async () => {
@@ -476,8 +442,7 @@ describe("OutingFormPage edit mode", () => {
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () =>
-        Promise.resolve([MOCK_EXISTING_OUTING, OTHER_OUTING]),
+      json: () => Promise.resolve([MOCK_EXISTING_OUTING, OTHER_OUTING]),
     });
 
     render(
@@ -503,24 +468,25 @@ describe("OutingFormPage edit mode", () => {
     expect(
       (screen.getByLabelText(/date.*time/i) as HTMLInputElement).value,
     ).toBe("2026-07-15T10:00");
-    expect(
-      (screen.getByLabelText(/location/i) as HTMLInputElement).value,
-    ).toBe("Barrio Norte");
+    expect((screen.getByLabelText(/location/i) as HTMLInputElement).value).toBe(
+      "Barrio Norte",
+    );
     expect(
       (screen.getByLabelText(/description/i) as HTMLInputElement).value,
     ).toBe("An existing outing description");
-    expect(
-      (screen.getByLabelText(/status/i) as HTMLSelectElement).value,
-    ).toBe("DRAFT");
+    expect((screen.getByLabelText(/status/i) as HTMLSelectElement).value).toBe(
+      "DRAFT",
+    );
 
     // The fetch was the list endpoint — not a get-by-id (which does not
     // exist for /outings/admin in the current API contract).
-    const getCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-      .find(
-        ([url, init]) =>
-          (init as RequestInit | undefined)?.method === undefined &&
-          (url as string) === "/outings/admin",
-      );
+    const getCall = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.find(
+      ([url, init]) =>
+        (init as RequestInit | undefined)?.method === undefined &&
+        (url as string) === "/outings/admin",
+    );
     expect(getCall).toBeTruthy();
   });
 
@@ -597,9 +563,7 @@ describe("OutingFormPage edit mode", () => {
   });
 
   it("submits PATCH /outings/admin/:id with omitNullAssets — preserves existing asset references", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     globalThis.fetch = vi
       .fn()
@@ -642,10 +606,11 @@ describe("OutingFormPage edit mode", () => {
       expect(calls.length).toBeGreaterThanOrEqual(2);
     });
 
-    const patchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-      .find(
-        ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
-      );
+    const patchCall = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
+    );
 
     expect(patchCall).toBeTruthy();
     expect(patchCall![0]).toBe("/outings/admin/o-existing");
@@ -711,9 +676,7 @@ describe("OutingFormPage edit mode", () => {
 
 describe("OutingFormPage file uploads", () => {
   it("updates the corresponding form asset field after a successful upload", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     // Plan: First call = POST /files/OUTING_MAIN_IMAGE → asset
     //       Second call = POST /outings/admin → saved row
@@ -729,11 +692,7 @@ describe("OutingFormPage file uploads", () => {
       });
 
     render(
-      <OutingFormPage
-        mode="create"
-        onSaved={vi.fn()}
-        onCancel={vi.fn()}
-      />,
+      <OutingFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />,
     );
 
     fireEvent.change(screen.getByLabelText(/title/i), {
@@ -753,7 +712,9 @@ describe("OutingFormPage file uploads", () => {
     });
 
     // Upload an asset to the FIRST slot (main image)
-    const fileInputs = screen.getAllByTestId("file-upload-input") as HTMLInputElement[];
+    const fileInputs = screen.getAllByTestId(
+      "file-upload-input",
+    ) as HTMLInputElement[];
     const file = new File(["img"], "cover.png", { type: "image/png" });
     fireEvent.change(fileInputs[0]!, { target: { files: [file] } });
 
@@ -773,22 +734,24 @@ describe("OutingFormPage file uploads", () => {
     });
 
     // The file upload call hit the right category.
-    const uploadCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-      .find(
-        ([url]) => (url as string) === "/files/OUTING_MAIN_IMAGE",
-      );
+    const uploadCall = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.find(
+      ([url]) => (url as string) === "/files/OUTING_MAIN_IMAGE",
+    );
     expect(uploadCall).toBeTruthy();
 
     // The PATCH/POST body includes the uploaded mainImageId.
     // Filter for the save call specifically (POST to /outings/admin) — the
     // upload call is also a POST but to /files/OUTING_MAIN_IMAGE with a
     // FormData body, which would not parse as JSON.
-    const saveCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-      .find(
-        ([url, init]) =>
-          (init as RequestInit | undefined)?.method === "POST" &&
-          (url as string) === "/outings/admin",
-      );
+    const saveCall = (
+      globalThis.fetch as ReturnType<typeof vi.fn>
+    ).mock.calls.find(
+      ([url, init]) =>
+        (init as RequestInit | undefined)?.method === "POST" &&
+        (url as string) === "/outings/admin",
+    );
     expect(saveCall).toBeTruthy();
     const body = JSON.parse(
       (saveCall![1] as RequestInit).body as string,

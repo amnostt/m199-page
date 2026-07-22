@@ -24,9 +24,7 @@ import { FileService } from "./file.service.js";
 export class FilesPublicController {
   private readonly logger = new Logger(FilesPublicController.name);
 
-  constructor(
-    @Inject(FileService) private readonly fileService: FileService,
-  ) {}
+  constructor(@Inject(FileService) private readonly fileService: FileService) {}
 
   /**
    * Serves the original file as binary data (FU-02).
@@ -36,10 +34,7 @@ export class FilesPublicController {
    * Returns 404 JSON envelope when file/record does not exist.
    */
   @Get(":id")
-  async serve(
-    @Param("id") id: string,
-    @Res() res: Response,
-  ): Promise<void> {
+  async serve(@Param("id") id: string, @Res() res: Response): Promise<void> {
     const file = await this.fileService.serve(id);
     const filePath = this.resolveInsideUploadRoot(file.path);
 
@@ -116,9 +111,9 @@ export class FilesPublicController {
   private isNotFoundError(err: unknown): boolean {
     return Boolean(
       err &&
-        typeof err === "object" &&
-        "code" in err &&
-        (err as { code?: string }).code === "ENOENT",
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code?: string }).code === "ENOENT",
     );
   }
 }

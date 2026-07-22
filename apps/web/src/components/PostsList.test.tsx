@@ -367,4 +367,90 @@ describe("PostsList", () => {
       expect(link.getAttribute("rel")).toBe("noopener noreferrer");
     }
   });
+
+  // -----------------------------------------------------------------------
+  // Task 3.1: Public visual system hooks
+  // -----------------------------------------------------------------------
+
+  it("applies public-state class to loading branch", () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise<Response>(() => {}),
+      ) as unknown as typeof fetch;
+
+    render(<PostsList />);
+
+    const loading = screen.getByTestId("posts-loading");
+    expect(loading.classList.contains("public-state")).toBe(true);
+  });
+
+  it("applies public-state class to empty branch", async () => {
+    globalThis.fetch = mockFetchOk([]) as unknown as typeof fetch;
+
+    render(<PostsList />);
+
+    await waitFor(() => {
+      expectSection("posts-list-section");
+    });
+
+    const empty = screen.getByTestId("posts-empty");
+    expect(empty.classList.contains("public-state")).toBe(true);
+  });
+
+  it("applies public-state--error class to error branch", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Network error")) as unknown as typeof fetch;
+
+    render(<PostsList />);
+
+    await waitFor(() => {
+      expectSection("posts-error");
+    });
+
+    const errorEl = screen.getByTestId("posts-error");
+    expect(errorEl.classList.contains("public-state")).toBe(true);
+    expect(errorEl.classList.contains("public-state--error")).toBe(true);
+  });
+
+  it("applies public-card, public-card-list, and public-action to the list", async () => {
+    globalThis.fetch = mockFetchOk(PUBLISHED_POSTS) as unknown as typeof fetch;
+
+    const { container } = render(<PostsList />);
+
+    await waitFor(() => {
+      expectSection("posts-list-section");
+    });
+
+    const list = container.querySelector(".public-card-list");
+    expect(list).toBeTruthy();
+    const cards = list!.querySelectorAll(".public-card");
+    expect(cards.length).toBe(2);
+
+    const titleLinks = list!.querySelectorAll("a.public-action");
+    expect(titleLinks.length).toBe(2);
+    expect(titleLinks[0]!.getAttribute("href")).toBe("/posts/primer-post");
+    expect(titleLinks[1]!.getAttribute("href")).toBe("/posts/segundo-post");
+  });
+
+  it("applies public-prose and public-tags hooks without changing sanitization", async () => {
+    globalThis.fetch = mockFetchOk(PUBLISHED_POSTS) as unknown as typeof fetch;
+
+    render(<PostsList />);
+
+    await waitFor(() => {
+      expectSection("posts-list-section");
+    });
+
+    const contentEl = screen.getByTestId("post-content-post-1");
+    expect(contentEl.classList.contains("public-prose")).toBe(true);
+    // Sanitization still in effect: safe text is preserved.
+    expect(contentEl.innerHTML).toContain("Contenido seguro");
+
+    const tags = screen.getByTestId("post-tags-post-1");
+    expect(tags.classList.contains("public-tags")).toBe(true);
+    // Tags are still rendered as list items.
+    expect(tags.querySelectorAll("li").length).toBe(2);
+  });
 });

@@ -53,7 +53,10 @@ export function PostDetail({ slug }: { slug: string }) {
 
   if (notFound) {
     return (
-      <section data-testid="post-detail-not-found">
+      <section
+        data-testid="post-detail-not-found"
+        className="public-state public-state--error"
+      >
         <p>Post no encontrado.</p>
       </section>
     );
@@ -61,7 +64,10 @@ export function PostDetail({ slug }: { slug: string }) {
 
   if (error) {
     return (
-      <section data-testid="post-detail-error">
+      <section
+        data-testid="post-detail-error"
+        className="public-state public-state--error"
+      >
         <p>No se pudo cargar el post.</p>
       </section>
     );
@@ -69,20 +75,22 @@ export function PostDetail({ slug }: { slug: string }) {
 
   if (!post) {
     return (
-      <section data-testid="post-detail-loading">
+      <section data-testid="post-detail-loading" className="public-state">
         <p>Cargando post…</p>
       </section>
     );
   }
 
   return (
-    <section data-testid="post-detail-section">
+    <article data-testid="post-detail-section" className="public-section">
       {post.coverImageUrl && (
-        <img
-          data-testid="post-detail-cover"
-          src={post.coverImageUrl}
-          alt={post.title}
-        />
+        <figure className="public-media public-media--cover">
+          <img
+            data-testid="post-detail-cover"
+            src={post.coverImageUrl}
+            alt={post.title}
+          />
+        </figure>
       )}
       <h1>{post.title}</h1>
       <p>{post.description}</p>
@@ -92,7 +100,7 @@ export function PostDetail({ slug }: { slug: string }) {
         </time>
       )}
       {post.tags.length > 0 && (
-        <ul data-testid="post-detail-tags">
+        <ul data-testid="post-detail-tags" className="public-tags">
           {post.tags.map((tag) => (
             <li key={tag}>{tag}</li>
           ))}
@@ -100,17 +108,23 @@ export function PostDetail({ slug }: { slug: string }) {
       )}
       <div
         data-testid="post-detail-content"
+        className="public-prose"
         dangerouslySetInnerHTML={{
           __html: sanitizeAndMakeSafe(post.content),
         }}
       />
       {post.downloads?.length > 0 && (
-        <section data-testid="post-detail-downloads">
+        <section data-testid="post-detail-downloads" className="public-section">
           <h2>Descargas</h2>
-          <ul>
+          <ul className="public-action-row">
             {post.downloads.map((dl, idx) => (
               <li key={idx}>
-                <a href={dl.fileUrl} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={dl.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="public-action"
+                >
                   {dl.label ?? dl.fileUrl}
                 </a>
               </li>
@@ -118,6 +132,6 @@ export function PostDetail({ slug }: { slug: string }) {
           </ul>
         </section>
       )}
-    </section>
+    </article>
   );
 }

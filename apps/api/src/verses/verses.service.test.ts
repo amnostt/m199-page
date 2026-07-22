@@ -35,7 +35,11 @@ function peruDate(d: Date): Date {
   const localMs = d.getTime() + limaOffset * 60 * 1000;
   const localDate = new Date(localMs);
   return new Date(
-    Date.UTC(localDate.getUTCFullYear(), localDate.getUTCMonth(), localDate.getUTCDate()),
+    Date.UTC(
+      localDate.getUTCFullYear(),
+      localDate.getUTCMonth(),
+      localDate.getUTCDate(),
+    ),
   );
 }
 
@@ -129,10 +133,16 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     });
 
   const findUnique = vi
-    .fn<(args: { where: Record<string, unknown> }) => Promise<VerseRow | null>>()
+    .fn<
+      (args: { where: Record<string, unknown> }) => Promise<VerseRow | null>
+    >()
     .mockImplementation(async (args: { where: Record<string, unknown> }) => {
       const id = args.where?.id as string | undefined;
-      if (id && overrides.findUniqueReturn && overrides.findUniqueReturn.id === id) {
+      if (
+        id &&
+        overrides.findUniqueReturn &&
+        overrides.findUniqueReturn.id === id
+      ) {
         return overrides.findUniqueReturn;
       }
       return existingVerses.find((v) => v.id === id) ?? null;
@@ -154,18 +164,21 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
           let cmp = 0;
           if (field === "id") {
             // Lexicographic comparison for UUID strings
-            cmp = dir === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+            cmp =
+              dir === "asc"
+                ? a.id.localeCompare(b.id)
+                : b.id.localeCompare(a.id);
           } else {
             const aRow = a as unknown as Record<string, unknown>;
             const bRow = b as unknown as Record<string, unknown>;
             const aVal =
               aRow[field] instanceof Date
                 ? (aRow[field] as Date).getTime()
-                : (aRow[field] as number) ?? 0;
+                : ((aRow[field] as number) ?? 0);
             const bVal =
               bRow[field] instanceof Date
                 ? (bRow[field] as Date).getTime()
-                : (bRow[field] as number) ?? 0;
+                : ((bRow[field] as number) ?? 0);
             cmp = dir === "asc" ? aVal - bVal : bVal - aVal;
           }
           if (cmp !== 0) return cmp;
@@ -176,12 +189,22 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
   }
 
   const findFirst = vi
-    .fn<(args?: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Record<string, string>[] }) => Promise<VerseRow | null>>()
+    .fn<
+      (args?: {
+        where?: Record<string, unknown>;
+        orderBy?: Record<string, unknown> | Record<string, string>[];
+      }) => Promise<VerseRow | null>
+    >()
     .mockImplementation(
-      async (args?: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Record<string, string>[] }) => {
+      async (args?: {
+        where?: Record<string, unknown>;
+        orderBy?: Record<string, unknown> | Record<string, string>[];
+      }) => {
         let candidates = [...existingVerses];
         if (args?.where?.status) {
-          candidates = candidates.filter((v) => v.status === args.where!.status);
+          candidates = candidates.filter(
+            (v) => v.status === args.where!.status,
+          );
         }
         candidates = sortBySpecs(candidates, args?.orderBy);
         return candidates[0] ?? null;
@@ -189,9 +212,19 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     );
 
   const findMany = vi
-    .fn<(args?: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Record<string, string>[]; take?: number }) => Promise<VerseRow[]>>()
+    .fn<
+      (args?: {
+        where?: Record<string, unknown>;
+        orderBy?: Record<string, unknown> | Record<string, string>[];
+        take?: number;
+      }) => Promise<VerseRow[]>
+    >()
     .mockImplementation(
-      async (args?: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Record<string, string>[]; take?: number }) => {
+      async (args?: {
+        where?: Record<string, unknown>;
+        orderBy?: Record<string, unknown> | Record<string, string>[];
+        take?: number;
+      }) => {
         let results = [...existingVerses];
         if (args?.where?.status) {
           results = results.filter((v) => v.status === args.where!.status);
@@ -208,19 +241,15 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     .fn<
       (args: { where: Record<string, unknown> }) => Promise<{ count: number }>
     >()
-    .mockImplementation(
-      async (args: { where: Record<string, unknown> }) => {
-        const verseId = args.where.verseId as string;
-        const before = existingRevisions.length;
-        const remaining = existingRevisions.filter(
-          (r) => r.verseId !== verseId,
-        );
-        const removed = before - remaining.length;
-        existingRevisions.length = 0;
-        existingRevisions.push(...remaining);
-        return { count: removed };
-      },
-    );
+    .mockImplementation(async (args: { where: Record<string, unknown> }) => {
+      const verseId = args.where.verseId as string;
+      const before = existingRevisions.length;
+      const remaining = existingRevisions.filter((r) => r.verseId !== verseId);
+      const removed = before - remaining.length;
+      existingRevisions.length = 0;
+      existingRevisions.push(...remaining);
+      return { count: removed };
+    });
 
   const verseDelete = vi
     .fn<(args: { where: Record<string, unknown> }) => Promise<VerseRow>>()
@@ -280,10 +309,7 @@ async function buildService(
   const dbValue = makeDbValue(dbOverrides);
 
   const module = await Test.createTestingModule({
-    providers: [
-      VersesService,
-      { provide: DbService, useValue: dbValue },
-    ],
+    providers: [VersesService, { provide: DbService, useValue: dbValue }],
   }).compile();
 
   return {
@@ -338,7 +364,10 @@ describe("VersesService", () => {
       // We use a known UTC time and verify the date derivation
       const { service, mocks } = await buildService();
 
-      const result = await service.create({ text: "Timezone test", reference: "Psalm 1:1" });
+      const result = await service.create({
+        text: "Timezone test",
+        reference: "Psalm 1:1",
+      });
 
       const createArgs = mocks.create.mock.calls[0]![0] as {
         data: Record<string, unknown>;
@@ -496,7 +525,9 @@ describe("VersesService", () => {
         text: `Verse ${i}`,
         reference: `Ref ${i}`,
         date: peruDate(toUTC("2026-07-01T10:00:00")),
-        publishedAt: toUTC(`2026-07-01T${String(10 + Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:00`),
+        publishedAt: toUTC(
+          `2026-07-01T${String(10 + Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:00`,
+        ),
         status: "PUBLISHED" as const,
         createdById: null,
         createdAt: new Date(),
@@ -516,17 +547,22 @@ describe("VersesService", () => {
 
     it("returns exactly 100 history items at the boundary (101 published verses)", async () => {
       // 101 PUBLISHED verses — take:101 returns all, filter latest → 100 history.
-      const boundaryVerses: VerseRow[] = Array.from({ length: 101 }, (_, i) => ({
-        id: `v-bound-${i}`,
-        text: `Verse ${i}`,
-        reference: `Ref ${i}`,
-        date: peruDate(toUTC("2026-07-01T10:00:00")),
-        publishedAt: toUTC(`2026-07-01T${String(10 + Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:00`),
-        status: "PUBLISHED" as const,
-        createdById: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
+      const boundaryVerses: VerseRow[] = Array.from(
+        { length: 101 },
+        (_, i) => ({
+          id: `v-bound-${i}`,
+          text: `Verse ${i}`,
+          reference: `Ref ${i}`,
+          date: peruDate(toUTC("2026-07-01T10:00:00")),
+          publishedAt: toUTC(
+            `2026-07-01T${String(10 + Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:00`,
+          ),
+          status: "PUBLISHED" as const,
+          createdById: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+      );
       const { service } = await buildService({
         existingVerses: boundaryVerses,
       });
@@ -591,7 +627,9 @@ describe("VersesService", () => {
         text: `Verse ${i}`,
         reference: `Ref ${i}`,
         date: peruDate(toUTC("2026-07-01T10:00:00")),
-        publishedAt: toUTC(`2026-07-01T${String(10 + Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:00`),
+        publishedAt: toUTC(
+          `2026-07-01T${String(10 + Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:00`,
+        ),
         status: "PUBLISHED" as const,
         createdById: null,
         createdAt: new Date(),

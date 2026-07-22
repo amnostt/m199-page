@@ -14,12 +14,14 @@
  * which builds a full Nest app and exercises the pipe through HTTP.
  */
 
-const { listenMock, useGlobalPipesMock, useMock, mkdirMock } = vi.hoisted(() => ({
-  listenMock: vi.fn(),
-  useGlobalPipesMock: vi.fn(),
-  useMock: vi.fn(),
-  mkdirMock: vi.fn(),
-}));
+const { listenMock, useGlobalPipesMock, useMock, mkdirMock } = vi.hoisted(
+  () => ({
+    listenMock: vi.fn(),
+    useGlobalPipesMock: vi.fn(),
+    useMock: vi.fn(),
+    mkdirMock: vi.fn(),
+  }),
+);
 
 // Mock env.validation so the @Module decorator in AppModule evaluates
 // ConfigModule.forRoot({ validate }) cleanly at import time without

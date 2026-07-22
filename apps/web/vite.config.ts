@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 // ---------------------------------------------------------------------------
 // Vite server proxy: routes API-bound requests (starting with /landing) to
@@ -11,7 +12,7 @@ import react from "@vitejs/plugin-react";
 const API_TARGET = process.env.API_TARGET ?? "http://localhost:3000";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: {
     proxy: {
       "/posts": {

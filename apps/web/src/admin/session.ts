@@ -63,7 +63,9 @@ async function parseErrorBody(res: Response): Promise<string> {
         const msg = data["message"];
         if (typeof msg === "string" && msg.length > 0) return msg;
         if (Array.isArray(msg) && msg.length > 0) {
-          return msg.filter((m): m is string => typeof m === "string").join("; ");
+          return msg
+            .filter((m): m is string => typeof m === "string")
+            .join("; ");
         }
         const err = data["error"];
         if (typeof err === "string" && err.length > 0) return err;
@@ -169,11 +171,7 @@ export async function adminFetch<T = unknown>(
     // without logging out or redirecting.
     if (!retryRes.ok) {
       const body = await parseErrorBody(retryRes);
-      throw new AdminRequestError(
-        retryRes.status,
-        retryRes.statusText,
-        body,
-      );
+      throw new AdminRequestError(retryRes.status, retryRes.statusText, body);
     }
     if (retryRes.status === 204) return undefined as T;
     return retryRes.json() as Promise<T>;

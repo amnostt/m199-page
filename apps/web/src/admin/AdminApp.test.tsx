@@ -112,9 +112,7 @@ describe("AdminApp bootstrap", () => {
   });
 
   it("shows login form on network error during refresh", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockRejectedValue(new Error("Network error"));
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
     render(<AdminApp />);
 
@@ -201,16 +199,18 @@ describe("AdminApp login", () => {
     // Then: login succeeds → shows shell
     const loginUser = { id: "u2", email: "a@b.com", displayName: "Editor" };
 
-    globalThis.fetch = vi.fn().mockImplementation(
-      (url: string, init?: RequestInit) => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
         if (url === "/auth/refresh") {
           return Promise.resolve({ ok: false, status: 401 });
         }
         if (url === "/auth/login") {
           // Verify the login body was sent
-          const body = JSON.parse(
-            (init?.body as string) ?? "{}",
-          ) as { email: string; password: string };
+          const body = JSON.parse((init?.body as string) ?? "{}") as {
+            email: string;
+            password: string;
+          };
           expect(body.email).toBe("editor@m199.org");
           expect(body.password).toBe("pass123");
           return Promise.resolve({
@@ -219,8 +219,7 @@ describe("AdminApp login", () => {
           });
         }
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      },
-    );
+      });
 
     render(<AdminApp />);
 
@@ -650,9 +649,9 @@ describe("AdminApp shell navigation", () => {
       expect(screen.getByTestId("responsibles-page")).toBeTruthy();
     });
     expect(screen.getByText(/manage the responsible users/i)).toBeTruthy();
-    expect((screen.getByTestId("nav-responsibles") as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect(
+      (screen.getByTestId("nav-responsibles") as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it("renders Verses as an enabled section and initiates its list", async () => {
@@ -660,7 +659,9 @@ describe("AdminApp shell navigation", () => {
     fireEvent.click(screen.getByTestId("nav-verses"));
     await waitFor(() => expect(screen.getByTestId("verses-page")).toBeTruthy());
     expect(screen.getByText(/all verses/i)).toBeTruthy();
-    expect((screen.getByTestId("nav-verses") as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByTestId("nav-verses") as HTMLButtonElement).disabled,
+    ).toBe(true);
     expect(screen.queryByTestId("nav-placeholder-verses")).toBeNull();
   });
 
@@ -782,17 +783,15 @@ describe("AdminApp triangulation", () => {
   it("login submit button is disabled while submitting", async () => {
     // Refresh fails → login shown
     // Login will be pending (never resolves)
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation((url: string) => {
-        if (url === "/auth/refresh") {
-          return Promise.resolve({ ok: false, status: 401 });
-        }
-        if (url === "/auth/login") {
-          return new Promise<Response>(() => {}); // never resolves
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      });
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") {
+        return Promise.resolve({ ok: false, status: 401 });
+      }
+      if (url === "/auth/login") {
+        return new Promise<Response>(() => {}); // never resolves
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
 
     render(<AdminApp />);
 
@@ -817,9 +816,9 @@ describe("AdminApp triangulation", () => {
       expect((btn as HTMLButtonElement).disabled).toBe(true);
     });
 
-    expect(
-      (screen.getByLabelText(/email/i) as HTMLInputElement).disabled,
-    ).toBe(true);
+    expect((screen.getByLabelText(/email/i) as HTMLInputElement).disabled).toBe(
+      true,
+    );
   });
 
   // -----------------------------------------------------------------------
@@ -831,17 +830,15 @@ describe("AdminApp triangulation", () => {
     TIMEOUTS.login = 0;
 
     // Refresh fails → login form shown; login fetch never resolves (hung endpoint)
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation((url: string) => {
-        if (url === "/auth/refresh") {
-          return Promise.resolve({ ok: false, status: 401 });
-        }
-        if (url === "/auth/login") {
-          return new Promise<Response>(() => {}); // hung
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      });
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") {
+        return Promise.resolve({ ok: false, status: 401 });
+      }
+      if (url === "/auth/login") {
+        return new Promise<Response>(() => {}); // hung
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
 
     render(<AdminApp />);
 
