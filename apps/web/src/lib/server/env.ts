@@ -92,13 +92,14 @@ export function resolveLandingPublicEndpoint(apiBaseUrl: ApiBaseUrl): URL {
 }
 
 /**
- * Resolve the API base URL from the current process env.
- *
- * Convenience wrapper for production callers; tests use `requireHttpUrl`
- * directly to inject a specific value.
+ * Resolve the API base URL, prioritizing runtime environment values.
  */
 export function resolveApiBaseUrl(
-  env: NodeJS.ProcessEnv = process.env,
+  runtimeEnv: Partial<Pick<ImportMetaEnv, "ASTRO_API_BASE_URL">> = process.env,
+  astroEnv: Partial<Pick<ImportMetaEnv, "ASTRO_API_BASE_URL">> = import.meta
+    .env,
 ): ApiBaseUrl {
-  return requireHttpUrl(env.ASTRO_API_BASE_URL);
+  return requireHttpUrl(
+    runtimeEnv.ASTRO_API_BASE_URL ?? astroEnv.ASTRO_API_BASE_URL,
+  );
 }

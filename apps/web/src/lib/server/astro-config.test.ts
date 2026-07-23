@@ -87,7 +87,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("astro.config.mjs — server.port contract", () => {
-  it("loads root .env port values while explicit environment values win", async () => {
+  it("uses ASTRO_PORT from root .env without consuming the API PORT", async () => {
     const directory = await mkdtemp(join(tmpdir(), "m199-astro-env-"));
 
     try {
@@ -96,26 +96,30 @@ describe("astro.config.mjs — server.port contract", () => {
 
       expect(
         resolveAstroDevPort({
+          env: {
+            NODE_ENV: "development",
+            PORT: "4300",
+            ASTRO_PORT: "4400",
+          },
+          envDir: directory,
+        }),
+      ).toBe("4400");
+      expect(
+        resolveAstroDevPort({
           env: { NODE_ENV: "development" },
           envDir: directory,
         }),
-      ).toBe("4100");
-      expect(
-        resolveAstroDevPort({
-          env: { NODE_ENV: "development", PORT: "4300" },
-          envDir: directory,
-        }),
-      ).toBe("4300");
+      ).toBe("4200");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
   });
 
-  it("uses PORT before ASTRO_PORT when both are set", async () => {
+  it("uses ASTRO_PORT when API PORT and ASTRO_PORT are both set", async () => {
     process.env.PORT = "5051";
     process.env.ASTRO_PORT = "5050";
     const config = await loadAstroConfig();
-    expect(config.server?.port).toBe(5051);
+    expect(config.server?.port).toBe(5050);
   });
 
   it("uses ASTRO_PORT when PORT is unset", async () => {
@@ -127,9 +131,9 @@ describe("astro.config.mjs — server.port contract", () => {
     ).resolves.toBe("5050");
   });
 
-  it("falls back to 4321 when both port variables are unset", async () => {
+  it("falls back to 4321 when ASTRO_PORT is unset, even if API PORT is set", async () => {
     await expect(
-      resolvePortWithEmptyRootEnv({ NODE_ENV: "development" }),
+      resolvePortWithEmptyRootEnv({ NODE_ENV: "development", PORT: "3000" }),
     ).resolves.toBe("4321");
   });
 
@@ -145,10 +149,12 @@ describe("astro.config.mjs — server.port contract", () => {
     },
   );
 
-  it("rejects an invalid PORT even when ASTRO_PORT is valid", async () => {
+  it("ignores an invalid API PORT when ASTRO_PORT is valid", async () => {
     process.env.PORT = "0";
     process.env.ASTRO_PORT = "4321";
-    await expect(loadAstroConfig()).rejects.toThrow(/Invalid Astro port/);
+    await expect(loadAstroConfig()).resolves.toMatchObject({
+      server: { port: 4321 },
+    });
   });
 });
 
@@ -157,6 +163,10 @@ describe("astro.config.mjs — server.port contract", () => {
 // ---------------------------------------------------------------------------
 
 describe("astro.config.mjs — adapter and output", () => {
+  it("loads the workspace root env directory for server-only Astro values", async () => {
+    expect((await loadAstroConfig()).vite?.envDir).toMatch(/m199-page\/$/);
+  });
+
   it("declares SSR output and the @astrojs/node adapter in standalone mode", async () => {
     process.env.ASTRO_PORT = "4321";
     const config = await loadAstroConfig();

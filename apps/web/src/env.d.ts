@@ -1,6 +1,26 @@
 /// <reference types="astro/client" />
 
 // ---------------------------------------------------------------------------
+// Astro module typing (PR3 root rendering).
+//
+// The `astro/client` types do not declare a module shape for `.astro`
+// imports; the project imports `Landing.astro` from a vitest test, and
+// the page wrapper imports its own `index.astro` components. Declare
+// the module so `tsc --noEmit` accepts the import statement. The
+// runtime shape is provided by Astro's Vite plugin at build time;
+// this declaration is only for typecheck ergonomics.
+// ---------------------------------------------------------------------------
+declare module "*.astro" {
+  // The default export is an Astro component factory. The
+  // Container API and the page wrapper consume the same shape at
+  // runtime, so we declare it as `AstroComponentFactory` for
+  // typecheck.
+  import type { AstroComponentFactory } from "astro";
+  const component: AstroComponentFactory;
+  export default component;
+}
+
+// ---------------------------------------------------------------------------
 // Astro server-side env typing (PR1 Foundation).
 //
 // The landing payload fetch (PR2) and the SSR render (PR3) read these

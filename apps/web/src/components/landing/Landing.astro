@@ -1,0 +1,166 @@
+---
+/**
+ * Landing.astro — pure presentational landing surface for the Astro
+ * SSR (PR3 root rendering).
+ *
+ * Renders the validated `LandingPublicPayload` produced by
+ * `fetchLandingPublicPayload` (PR2) as semantic HTML using the
+ * existing `.public-ui` scope and class hooks defined in
+ * `apps/web/src/public.css`. The failure branch is intentionally
+ * generic and NEVER includes the failure reason, the API host, the
+ * stack, or any driver detail. The HTTP status (503) is set in the
+ * page wrapper, not here.
+ *
+ * The iframe is only emitted when the payload has a non-null
+ * `featuredVideoUrl`. The URL has already been sanitized by
+ * `validateFeaturedVideoUrl` inside `validateLandingPublicPayload`
+ * (PR2 / A-006), so the renderer does not duplicate the allowlist
+ * policy. This component does NOT import `public.css`; the page
+ * wrapper owns the CSS boundary so the test pipeline can render
+ * the component in isolation through the Container API.
+ */
+import type {
+  LandingFailure,
+  LandingPayloadShape,
+} from "./landing-shape.js";
+
+interface Props {
+  payload: LandingPayloadShape | null;
+  failure: LandingFailure | null;
+}
+
+const { payload, failure } = Astro.props;
+---
+
+{failure ? (
+  <main
+    class="public-ui public-page"
+    data-testid="landing-error"
+    aria-live="polite"
+  >
+    <section
+      class="public-state public-state--error"
+      data-testid="landing-error-section"
+    >
+      <p>La página no se puede cargar en este momento. Intentá nuevamente en unos minutos.</p>
+    </section>
+  </main>
+) : payload ? (
+  <main class="public-ui public-page" data-testid="landing-page">
+    {payload.heroImageUrl && (
+      <section class="public-hero" data-testid="hero-section">
+        <img
+          src={payload.heroImageUrl}
+          alt="Hero"
+          class="public-media public-media--cover"
+          data-testid="hero-image"
+        />
+        {payload.heroTitle && (
+          <h1 data-testid="hero-title">{payload.heroTitle}</h1>
+        )}
+        {payload.heroSubtitle && (
+          <p data-testid="hero-subtitle">{payload.heroSubtitle}</p>
+        )}
+      </section>
+    )}
+
+    {payload.featuredOuting && (
+      <section
+        class="public-section"
+        data-testid="featured-outing-section"
+      >
+        <article
+          class="public-card"
+          data-testid={`outing-${payload.featuredOuting.id}`}
+        >
+          <h3 data-testid="featured-outing-title">
+            {payload.featuredOuting.title}
+          </h3>
+          <p data-testid="outing-location">
+            {payload.featuredOuting.location}
+          </p>
+          <a
+            data-testid="featured-outing-link"
+            href={`/outings/${payload.featuredOuting.slug}`}
+            class="public-action public-action--primary"
+          >
+            Ver salida
+          </a>
+        </article>
+      </section>
+    )}
+
+    {payload.mission && (
+      <section class="public-section" data-testid="mission-section">
+        <p data-testid="mission-text">{payload.mission}</p>
+      </section>
+    )}
+
+    {payload.vision && (
+      <section class="public-section" data-testid="vision-section">
+        <p data-testid="vision-text">{payload.vision}</p>
+      </section>
+    )}
+
+    {payload.description && (
+      <section class="public-section" data-testid="description-section">
+        <p data-testid="description-text">{payload.description}</p>
+      </section>
+    )}
+
+    {payload.featuredVideoUrl && (
+      <section class="public-section" data-testid="video-section">
+        <div class="public-media public-media--cover">
+          <iframe
+            src={payload.featuredVideoUrl}
+            title="Featured Video"
+            data-testid="featured-video"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </section>
+    )}
+
+    {(payload.contactEmail || payload.contactPhone) && (
+      <section class="public-section" data-testid="contact-section">
+        {payload.contactEmail && (
+          <p data-testid="contact-email">{payload.contactEmail}</p>
+        )}
+        {payload.contactPhone && (
+          <p data-testid="contact-phone">{payload.contactPhone}</p>
+        )}
+      </section>
+    )}
+
+    {payload.featuredPosts.length > 0 && (
+      <section
+        class="public-section"
+        data-testid="featured-posts-section"
+      >
+        <ul class="public-card-list">
+          {payload.featuredPosts.map((post) => (
+            <li data-testid={`post-${post.id}`}>
+              <article class="public-card">
+                <h3>{post.title}</h3>
+              </article>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {payload.currentVerse && (
+      <section class="public-section" data-testid="verse-section">
+        <blockquote
+          class="public-verse"
+          data-testid="verse-block"
+        >
+          <span data-testid="verse-text">{payload.currentVerse.text}</span>
+          <cite data-testid="verse-reference">
+            {payload.currentVerse.reference}
+          </cite>
+        </blockquote>
+      </section>
+    )}
+  </main>
+) : null}

@@ -7,15 +7,15 @@
 // bundle behind the Caddy reverse proxy. See docs/astro-landing-deployment.md
 // (PR5) for the full dispatch contract.
 //
-// Runtime contract — closes review blocker A-004:
-//   - The standalone Node server reads `PORT` (Astro adapter contract).
-//   - `PORT` takes precedence over the documented `ASTRO_PORT` fallback.
+// Runtime contract:
+//   - The standalone Node server reads `PORT` (Astro adapter contract), with
+//     `ASTRO_PORT` as its documented fallback.
 //   - The bridge in `apps/web/server-entry.mjs` calls
 //     `bridgeAstroPortToRuntime()` before importing the built server entry,
 //     so the documented `ASTRO_PORT` actually takes effect.
-//   - `server.port` here configures `astro dev` through the same resolver as
-//     the standalone entry, with a 4321 fallback. Dev/prod behavior is
-//     consistent.
+//   - `server.port` configures `astro dev` from `ASTRO_PORT` only, with a 4321
+//     fallback. This keeps the root API `PORT=3000` from claiming Astro's dev
+//     port while preserving the standalone adapter's `PORT` contract.
 //
 // Server-only env contract (PR2+ consumers — declaration only here):
 //   - `ASTRO_API_BASE_URL` is intentionally NOT prefixed with `PUBLIC_`,
@@ -49,7 +49,9 @@ export function resolveAstroDevPort({
   load = loadEnv,
 } = {}) {
   const fileEnv = load(env.NODE_ENV ?? "development", envDir, "");
-  return resolveAstroPort({ ...fileEnv, ...env });
+  return resolveAstroPort({
+    ASTRO_PORT: env.ASTRO_PORT ?? fileEnv.ASTRO_PORT,
+  });
 }
 
 export default defineConfig({
@@ -69,6 +71,7 @@ export default defineConfig({
   // `dist/client/_astro` would collide.
   outDir: "dist",
   vite: {
+    envDir: ROOT_ENV_DIRECTORY,
     // Reuse the existing Tailwind v4 Vite plugin so public.css's
     // @import "tailwindcss/theme.css" and @import "tailwindcss/utilities.css"
     // resolve through the same pipeline the legacy Vite build uses.

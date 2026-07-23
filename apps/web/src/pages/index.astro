@@ -1,0 +1,62 @@
+---
+/**
+ * index.astro — server-rendered root page for the public landing
+ * (PR3 root rendering).
+ *
+ * This is the ONLY Astro page in the project. It owns `GET /` and
+ * delegates presentation to `<Landing />`. Every other route
+ * (`/admin*`, `/posts*`, `/outings*`, `/files/*`, the API endpoints)
+ * remains owned by the legacy React/Vite bundle behind the Caddy
+ * reverse proxy. See `docs/astro-landing-deployment.md` (PR5) for
+ * the full dispatch.
+ *
+ * Imports the existing `apps/web/src/public.css` so the `.public-ui`
+ * scope is reused without duplication. Calls the PR2 helper
+ * `fetchLandingPublicPayload` against the server-only
+ * `ASTRO_API_BASE_URL` validated in `apps/web/src/lib/server/env.ts`.
+ *
+ * On `LandingFetchError` (or any other thrown error) sets
+ * `Astro.response.status = 503` and renders a non-sensitive failure
+ * state. The failure copy is generic and never includes the failure
+ * reason, the API host, the stack, or any driver detail. The
+ * wrapper never echoes `cause.*` into the rendered output.
+ */
+import "../public.css";
+import Landing from "../components/landing/Landing.astro";
+import {
+  fetchLandingPublicPayload,
+  LandingFetchError,
+} from "../lib/server/landing.js";
+import { resolveApiBaseUrl } from "../lib/server/env.js";
+
+let payload: import("../lib/server/landing.js").LandingPublicPayload | null =
+  null;
+let failure: { reason: string } | null = null;
+
+try {
+  const apiBaseUrl = resolveApiBaseUrl();
+  payload = await fetchLandingPublicPayload({ apiBaseUrl });
+} catch (cause) {
+  // `LandingFetchError` is the only classified failure the helper
+  // throws; anything else is collapsed to a single generic reason
+  // so the failure markup never reflects internal classification.
+  const reason = cause instanceof LandingFetchError ? cause.reason : "fetch_error";
+  failure = { reason };
+}
+
+if (failure) {
+  Astro.response.status = 503;
+  Astro.response.statusText = "Service Unavailable";
+}
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Misión 1-99</title>
+  </head>
+  <body>
+    <Landing payload={payload} failure={failure} />
+  </body>
+</html>

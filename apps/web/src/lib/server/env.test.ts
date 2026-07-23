@@ -115,14 +115,19 @@ describe("requireHttpUrl — failure cases", () => {
 // ---------------------------------------------------------------------------
 
 describe("resolveApiBaseUrl — process.env bridge", () => {
-  it("reads ASTRO_API_BASE_URL from the provided env", () => {
-    expect(resolveApiBaseUrl({ ASTRO_API_BASE_URL: "http://api:3000" })).toBe(
-      "http://api:3000",
-    );
+  it("uses Astro's development value only when runtime is absent", () => {
+    const astroEnv = { ASTRO_API_BASE_URL: "http://dev-api:3000" };
+    expect(
+      resolveApiBaseUrl(
+        { ASTRO_API_BASE_URL: "http://runtime-api:3000" },
+        astroEnv,
+      ),
+    ).toBe("http://runtime-api:3000");
+    expect(resolveApiBaseUrl({}, astroEnv)).toBe("http://dev-api:3000");
   });
 
   it("fails when the env is missing the variable", () => {
-    expect(() => resolveApiBaseUrl({})).toThrow(InvalidApiBaseUrlError);
+    expect(() => resolveApiBaseUrl({}, {})).toThrow(InvalidApiBaseUrlError);
   });
 
   it("fails when the env value is invalid", () => {
