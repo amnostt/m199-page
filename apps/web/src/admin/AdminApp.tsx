@@ -13,11 +13,8 @@
 import { useEffect, useState } from "react";
 import type { AuthUser } from "./adminTypes.js";
 import { login, logout, refreshSession } from "./session.js";
-import { LandingSettingsPage } from "./LandingSettingsPage.js";
-import { PostsPage } from "./PostsPage.js";
-import { OutingsPage } from "./OutingsPage.js";
-import { ResponsiblesPage } from "./ResponsiblesPage.js";
-import { VersesPage } from "./VersesPage.js";
+import { AdminProviders } from "./AdminProviders.js";
+import { AdminShell, type AdminSection } from "./AdminShell.js";
 
 // ---------------------------------------------------------------------------
 // Timeout constants — prevent permanent loading/submitting when auth
@@ -109,121 +106,6 @@ function AdminLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
 // AdminShell — sidebar navigation with active section switching.
 // ---------------------------------------------------------------------------
 
-export type AdminSection =
-  "landing" | "posts" | "outings" | "responsibles" | "verses";
-
-const PLACEHOLDER_SECTIONS = ["Files"];
-
-function AdminShell({
-  user,
-  activeSection,
-  onNavigate,
-  onLogout,
-  logoutError,
-}: {
-  user: AuthUser;
-  activeSection: AdminSection;
-  onNavigate: (section: AdminSection) => void;
-  onLogout: () => void;
-  logoutError: boolean;
-}) {
-  return (
-    <div data-testid="admin-shell">
-      <header>
-        <span data-testid="admin-user-name">{user.displayName}</span>
-      </header>
-      <nav data-testid="admin-sidebar">
-        <ul>
-          <li>
-            <button
-              type="button"
-              data-testid="nav-landing-settings"
-              onClick={() => onNavigate("landing")}
-              disabled={activeSection === "landing"}
-            >
-              Landing Settings
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              data-testid="nav-verses"
-              onClick={() => onNavigate("verses")}
-              disabled={activeSection === "verses"}
-            >
-              Verses
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              data-testid="nav-responsibles"
-              onClick={() => onNavigate("responsibles")}
-              disabled={activeSection === "responsibles"}
-            >
-              Responsibles
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              data-testid="nav-posts"
-              onClick={() => onNavigate("posts")}
-              disabled={activeSection === "posts"}
-            >
-              Posts
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              data-testid="nav-outings"
-              onClick={() => onNavigate("outings")}
-              disabled={activeSection === "outings"}
-            >
-              Outings
-            </button>
-          </li>
-          {PLACEHOLDER_SECTIONS.map((label) => (
-            <li key={label}>
-              <button
-                type="button"
-                disabled
-                data-testid={`nav-placeholder-${label.toLowerCase()}`}
-              >
-                {label} (coming soon)
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <main data-testid="admin-content">
-        {activeSection === "landing" ? (
-          <LandingSettingsPage />
-        ) : activeSection === "posts" ? (
-          <PostsPage />
-        ) : activeSection === "outings" ? (
-          <OutingsPage />
-        ) : activeSection === "verses" ? (
-          <VersesPage />
-        ) : (
-          <ResponsiblesPage currentUserId={user.id} />
-        )}
-      </main>
-      <footer>
-        <button type="button" data-testid="admin-logout" onClick={onLogout}>
-          Logout
-        </button>
-        {logoutError && (
-          <span data-testid="admin-logout-error">
-            Logout failed. Please try again.
-          </span>
-        )}
-      </footer>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // AdminApp — top-level admin component
 // ---------------------------------------------------------------------------
@@ -290,12 +172,14 @@ export function AdminApp() {
 
   // Authenticated — show shell
   return (
-    <AdminShell
-      user={user}
-      activeSection={activeSection}
-      onNavigate={setActiveSection}
-      onLogout={handleLogout}
-      logoutError={logoutError}
-    />
+    <AdminProviders>
+      <AdminShell
+        user={user}
+        activeSection={activeSection}
+        onNavigate={setActiveSection}
+        onLogout={handleLogout}
+        logoutError={logoutError}
+      />
+    </AdminProviders>
   );
 }
