@@ -9,7 +9,7 @@ historical implementation notes.
 
 | Path          | Responsibility                                                                                            |
 | ------------- | --------------------------------------------------------------------------------------------------------- |
-| `apps/web`    | React 19/Vite public site and admin UI; Vitest uses jsdom and Testing Library.                            |
+| `apps/web`    | Astro web runtime with React 19 public/admin islands; Vitest uses jsdom and Testing Library.              |
 | `apps/api`    | NestJS API organized by feature modules: auth, responsibles, files, landing, outings, posts, and verses.  |
 | `packages/db` | Prisma schema, config, migrations, seed, and the shared Prisma client factory.                            |
 | `docs`        | Documentation index, product context, technical state, roadmap, process, glossary, and learning material. |
@@ -37,7 +37,7 @@ pnpm --filter @m199/web dev
 ```
 
 `pnpm dev` recursively runs only packages that define a `dev` script; currently
-that is the web app, not the API. Vite proxies API routes to
+that is the web app, not the API. Astro proxies API routes to
 `http://localhost:3000` by default. `API_TARGET` can override that target.
 
 | Command                        | Purpose                                                                   |

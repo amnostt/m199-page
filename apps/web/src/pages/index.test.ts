@@ -124,12 +124,12 @@ describe("pages/index.astro — 503 failure mapping", () => {
 });
 
 describe("pages/index.astro — narrow scope", () => {
-  it("contains exactly one Astro page file under src/pages", () => {
+  it("keeps the SSR landing and React catch-all pages under src/pages", () => {
     const entries = readdirSync(PAGES_DIR).filter((entry) =>
       statSync(resolve(PAGES_DIR, entry)).isFile(),
     );
     const astroPages = entries.filter((entry) => entry.endsWith(".astro"));
-    expect(astroPages).toEqual(["index.astro"]);
+    expect(astroPages).toEqual(["[...path].astro", "index.astro"]);
   });
 
   it("does not import any admin, API, or DB modules", () => {

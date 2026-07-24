@@ -16,7 +16,7 @@
 // Usage:
 //   node ./apps/web/server-entry.mjs
 //   # or
-//   pnpm --filter @m199/web start:astro
+//   pnpm --filter @m199/web start
 // ---------------------------------------------------------------------------
 import { loadRootEnv } from "./server-env.mjs";
 import { bridgeAstroPortToRuntime } from "./server-port.mjs";

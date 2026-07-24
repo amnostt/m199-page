@@ -1,11 +1,10 @@
 // ---------------------------------------------------------------------------
 // astro.config.mjs — Node standalone SSR for the public landing route.
 //
-// Scope: only GET / is rendered by Astro. Every other route
-// (/admin*, /posts*, /outings*, /files/*, /auth/*, /responsibles/*, /verses/*,
-// /landing/public for direct API calls, ...) is owned by the legacy React/Vite
-// bundle behind the Caddy reverse proxy. See docs/astro-landing-deployment.md
-// (PR5) for the full dispatch contract.
+// Scope: Astro owns every web route. GET / is server-rendered directly and
+// the catch-all page mounts the existing React application for admin and
+// interactive public routes. API-bound requests are proxied to Nest locally
+// and dispatched to the API upstream by Caddy in production.
 //
 // Runtime contract:
 //   - The standalone Node server reads `PORT` (Astro adapter contract), with
@@ -26,8 +25,10 @@
 // ---------------------------------------------------------------------------
 import { defineConfig } from "astro/config";
 import node from "@astrojs/node";
+import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
-import { loadEnv } from "vite";
+import { loadEnvFile } from "node:process";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveAstroPort } from "./server-port.mjs";
 
@@ -35,28 +36,64 @@ export const ROOT_ENV_DIRECTORY = fileURLToPath(
   new URL("../../", import.meta.url),
 );
 
+const API_TARGET = process.env.API_TARGET ?? "http://localhost:3000";
+
+function bypassHtmlDocument(req) {
+  if (req.method === "GET" && req.headers?.accept?.includes("text/html")) {
+    // Returning the original URL makes Vite call next() instead of proxying.
+    // Astro's route middleware then renders the React document shell. Fetches
+    // with */* continue through this proxy to the Nest API.
+    return req.url;
+  }
+}
+
 /**
  * Astro evaluates its config before it loads `.env`, so load the documented
  * workspace-root values explicitly. Process values intentionally win over
  * file values, matching the standalone entry's `loadRootEnv()` contract.
  *
- * @param {{ env?: NodeJS.ProcessEnv; envDir?: string; load?: typeof loadEnv }} [options]
+ * @param {{ env?: NodeJS.ProcessEnv; envDir?: string }} [options]
  * @returns {string}
  */
 export function resolveAstroDevPort({
   env = process.env,
   envDir = ROOT_ENV_DIRECTORY,
-  load = loadEnv,
 } = {}) {
-  const fileEnv = load(env.NODE_ENV ?? "development", envDir, "");
+  if (env.ASTRO_PORT !== undefined) {
+    return resolveAstroPort({ ASTRO_PORT: env.ASTRO_PORT });
+  }
+
+  // Astro's config is evaluated before its automatic env loading. Read only
+  // the private port from the workspace-root file without importing a
+  // separate build-tool API or allowing a temporary file value to overwrite
+  // a process value. Explicit process values were handled above.
+  const originalAstroPort = process.env.ASTRO_PORT;
+  delete process.env.ASTRO_PORT;
+  let fileAstroPort;
+  try {
+    loadEnvFile(join(envDir, ".env"));
+    fileAstroPort = process.env.ASTRO_PORT;
+  } catch (error) {
+    if (!(error && typeof error === "object" && error.code === "ENOENT")) {
+      throw error;
+    }
+  } finally {
+    if (originalAstroPort === undefined) {
+      delete process.env.ASTRO_PORT;
+    } else {
+      process.env.ASTRO_PORT = originalAstroPort;
+    }
+  }
+
   return resolveAstroPort({
-    ASTRO_PORT: env.ASTRO_PORT ?? fileEnv.ASTRO_PORT,
+    ASTRO_PORT: fileAstroPort,
   });
 }
 
 export default defineConfig({
   output: "server",
   adapter: node({ mode: "standalone" }),
+  integrations: [react()],
   // Astro config evaluates before automatic .env loading. Resolve the
   // documented workspace root explicitly, then validate PORT before
   // ASTRO_PORT exactly as server-entry.mjs does for standalone runtime.
@@ -64,18 +101,31 @@ export default defineConfig({
     host: true,
     port: Number(resolveAstroDevPort()),
   },
-  // Keep Astro output separate from the legacy Vite/React build. The Astro
-  // Node server emits dist/server + dist/client (which contains /_astro/*),
-  // and the legacy Vite build emits dist-legacy/ via vite.legacy.config.ts.
-  // Without this separation, the legacy `dist/assets` and the Astro
-  // `dist/client/_astro` would collide.
   outDir: "dist",
   vite: {
     envDir: ROOT_ENV_DIRECTORY,
-    // Reuse the existing Tailwind v4 Vite plugin so public.css's
-    // @import "tailwindcss/theme.css" and @import "tailwindcss/utilities.css"
-    // resolve through the same pipeline the legacy Vite build uses.
+    // Astro's Tailwind v4 integration uses this plugin to process the
+    // @import "tailwindcss/*" directives in public.css.
     plugins: [tailwindcss()],
+    server: {
+      proxy: {
+        "/posts": {
+          target: API_TARGET,
+          changeOrigin: true,
+          bypass: bypassHtmlDocument,
+        },
+        "/outings": {
+          target: API_TARGET,
+          changeOrigin: true,
+          bypass: bypassHtmlDocument,
+        },
+        "/responsibles": { target: API_TARGET, changeOrigin: true },
+        "/verses": { target: API_TARGET, changeOrigin: true },
+        "/landing": { target: API_TARGET, changeOrigin: true },
+        "/auth": { target: API_TARGET, changeOrigin: true },
+        "/files": { target: API_TARGET, changeOrigin: true },
+      },
+    },
   },
   // The landing page is rendered on every request. The Node adapter caches
   // the SSR HTML only when explicitly enabled; for the landing page we want

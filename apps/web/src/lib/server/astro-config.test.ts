@@ -180,3 +180,41 @@ describe("astro.config.mjs — adapter and output", () => {
     expect(adapter?.name).toBe("@astrojs/node");
   });
 });
+
+describe("astro.config.mjs — interactive document proxy", () => {
+  type ProxyRule = {
+    bypass?: (req: {
+      method?: string;
+      headers?: { accept?: string };
+      url?: string;
+    }) => string | undefined;
+  };
+
+  it.each(["/posts", "/outings"])(
+    "passes HTML navigation for %s to Astro while proxying API fetches",
+    async (path) => {
+      const config = await loadAstroConfig();
+      const proxyRules = (config.vite?.server?.proxy ?? {}) as Record<
+        string,
+        ProxyRule
+      >;
+      const bypass = proxyRules[path]?.bypass;
+
+      expect(bypass).toBeTypeOf("function");
+      expect(
+        bypass?.({
+          method: "GET",
+          headers: { accept: "text/html,application/xhtml+xml" },
+          url: path,
+        }),
+      ).toBe(path);
+      expect(
+        bypass?.({
+          method: "GET",
+          headers: { accept: "*/*" },
+          url: path,
+        }),
+      ).toBeUndefined();
+    },
+  );
+});

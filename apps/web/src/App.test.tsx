@@ -300,10 +300,10 @@ describe("App (landing rendering)", () => {
   });
 
   // -----------------------------------------------------------------------
-  // TRIANGULATE — fetch failure shows Vite shell fallback
+  // TRIANGULATE — fetch failure shows the shell fallback
   // -----------------------------------------------------------------------
 
-  it("shows the Vite shell fallback when the fetch fails", async () => {
+  it("shows the shell fallback when the fetch fails", async () => {
     globalThis.fetch = vi
       .fn()
       .mockRejectedValue(new Error("Network error")) as unknown as typeof fetch;
@@ -597,12 +597,11 @@ describe("Landing featured outing link (4.6)", () => {
 // ---------------------------------------------------------------------------
 //
 // The OutingsList and FeaturedOutingSection components render plain <a href>
-// links to /outings/:slug. In the Vite dev server, browser page loads with
-// Accept: text/html are now bypassed past the /outings proxy (see
-// vite.config.ts bypass function), so direct navigation or page reloads at
-// /outings/:slug serve the SPA correctly instead of hitting the API.
+// links to /outings/:slug. In Astro dev, browser page loads with
+// Accept: text/html are bypassed past the /outings API proxy, so direct
+// navigation or page reloads serve the React route instead of JSON.
 //
-// Manual verification steps (Vite dev server running):
+// Manual verification steps (Astro dev server running):
 //   1. Start dev:  pnpm -F @m199/web dev
 //   2. Start API:  pnpm -F @m199/api dev
 //   3. Load http://localhost:5173/ — landing page renders

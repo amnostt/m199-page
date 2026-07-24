@@ -4,7 +4,7 @@
 //
 // Plain ESM JavaScript (no TypeScript) because:
 //   1. `server-entry.mjs` must import this file at production startup,
-//      before any Vite/astro build step has had a chance to emit
+//      before any Astro build step has had a chance to emit
 //      TypeScript output. The project tsconfig has `noEmit: true`, so
 //      there is no compiled `port.js` to import.
 //   2. JSDoc carries the public type surface so callers (and tests) can

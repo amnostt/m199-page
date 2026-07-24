@@ -498,6 +498,18 @@ describe("PR4 SSR proof — built Astro standalone server", () => {
     ]);
   });
 
+  it("serves the React admin route through Astro's catch-all page", async () => {
+    if (setupError) throw setupError;
+    const response = await fetch(new URL("/admin", harness.baseUrl), {
+      headers: { accept: "text/html" },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type") ?? "").toMatch(/text\/html/);
+    const body = await response.text();
+    expect(body).toContain('data-testid="admin-loading"');
+    expect(body).toMatch(/component-url=["']?\/_astro\/[^"']+\.js["']?/);
+  });
+
   it("returns the same generic 503 when the stub API returns an invalid payload", async () => {
     if (setupError) throw setupError;
     const baseUrl = harness.baseUrl;

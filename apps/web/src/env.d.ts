@@ -4,10 +4,10 @@
 // Astro module typing (PR3 root rendering).
 //
 // The `astro/client` types do not declare a module shape for `.astro`
-// imports; the project imports `Landing.astro` from a vitest test, and
+// imports; the project imports `Landing.astro` from a Vitest test, and
 // the page wrapper imports its own `index.astro` components. Declare
 // the module so `tsc --noEmit` accepts the import statement. The
-// runtime shape is provided by Astro's Vite plugin at build time;
+// runtime shape is provided by Astro at build time;
 // this declaration is only for typecheck ergonomics.
 // ---------------------------------------------------------------------------
 declare module "*.astro" {

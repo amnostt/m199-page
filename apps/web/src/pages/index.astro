@@ -3,12 +3,9 @@
  * index.astro — server-rendered root page for the public landing
  * (PR3 root rendering).
  *
- * This is the ONLY Astro page in the project. It owns `GET /` and
- * delegates presentation to `<Landing />`. Every other route
- * (`/admin*`, `/posts*`, `/outings*`, `/files/*`, the API endpoints)
- * remains owned by the legacy React/Vite bundle behind the Caddy
- * reverse proxy. See `docs/astro-landing-deployment.md` (PR5) for
- * the full dispatch.
+   * This page owns `GET /` and delegates presentation to `<Landing />`.
+   * The sibling catch-all page mounts the existing React application for
+   * admin and interactive public routes.
  *
  * Imports the existing `apps/web/src/public.css` so the `.public-ui`
  * scope is reused without duplication. Calls the PR2 helper

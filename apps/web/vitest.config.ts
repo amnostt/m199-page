@@ -1,10 +1,8 @@
 import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
 import { getViteConfig } from "astro/config";
 
 export default defineConfig(
   getViteConfig({
-    plugins: [react()],
     test: {
       environment: "jsdom",
       forbidOnly: true,
@@ -15,12 +13,11 @@ export default defineConfig(
       // The .mjs bridge test (server-port.test.mjs) lives at the project
       // root, so the second glob covers it.
       //
-      // `getViteConfig()` is required so the Astro Vite plugin (and
-      // the Tailwind v4 plugin wired in `astro.config.mjs`) is loaded
-      // into the vitest transform pipeline. Without it, vitest cannot
-      // import `.astro` files — needed by the PR3 Container API tests
-      // for `Landing.astro`. The legacy React tests keep working
-      // because the explicit `react()` plugin is still passed through.
+      // `getViteConfig()` is required so Astro's integration plugins (and
+      // the Tailwind v4 plugin wired in `astro.config.mjs`) are loaded into
+      // the Vitest transform pipeline. Without it, Vitest cannot import
+      // `.astro` files or transform the React island used by the catch-all
+      // route.
       environmentMatchGlobs: [
         ["src/lib/server/**", "node"],
         ["**/server-port.test.*", "node"],

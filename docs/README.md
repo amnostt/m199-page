@@ -9,6 +9,10 @@ Este índice organiza las fuentes que gobiernan el trabajo. Ante una contradicci
 3. [Hoja de ruta](./development-roadmap.md): prioridad, estado y dependencias de los slices.
 4. [Glosario](./glossary.md): definiciones canónicas para interpretar los documentos anteriores.
 
+## Guías operativas
+
+- [Guía operativa del landing Astro](./astro-landing-deployment.md): contrato de runtime, dispatch ordenado de Caddy, monitoreo de 503 y rollback sin ejecutar cambios de producción.
+
 ## Fuentes normativas
 
 | Fuente                                            | Gobierna                                                                          |
@@ -17,4 +21,5 @@ Este índice organiza las fuentes que gobiernan el trabajo. Ante una contradicci
 | [Fundamento técnico](./technical-foundation.md)   | Arquitectura vigente, invariantes técnicas, estado comprobado y brechas objetivo. |
 | [Hoja de ruta](./development-roadmap.md)          | Prioridad, estado y dependencias de capacidades y slices.                         |
 | [Glosario](./glossary.md)                         | Significado canónico de términos compartidos.                                     |
+| [Guía operativa del landing Astro](./astro-landing-deployment.md) | Runtime Node, dispatch Caddy, monitoreo y rollback del landing migrado. |
 | [`AGENTS.md`](../AGENTS.md)                       | Reglas de contribución, comandos y límites del repositorio.                       |

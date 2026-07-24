@@ -3,22 +3,18 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "React and Vite application for the Mision 1-99 public site and admin UI, plus the Astro SSR server for the public landing route (GET /).",
+  "description": "Astro application for the Mision 1-99 public site and React admin UI.",
   "scripts": {
-    "dev": "vite --config vite.legacy.config.ts",
-    "dev:astro": "astro dev",
-    "build": "pnpm run build:astro && pnpm run build:legacy",
-    "build:astro": "astro check && astro build",
-    "build:legacy": "tsc && vite build --config vite.legacy.config.ts",
+    "dev": "astro dev",
+    "build": "astro check && astro build",
     "preview": "astro preview",
-    "start": "vite --host 0.0.0.0 --config vite.legacy.config.ts",
-    "start:astro": "node ./server-entry.mjs",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "astro:check": "astro check"
+    "start": "node ./server-entry.mjs",
+    "typecheck": "astro check && tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@astrojs/node": "^9.0.0",
+    "@astrojs/react": "^4.4.2",
     "astro": "^5.0.0",
     "dompurify": "^3.4.11",
     "react": "^19.2.0",
@@ -31,11 +27,9 @@
     "@types/dompurify": "^3.2.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^5.0.0",
     "jsdom": "^26.1.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
     "vitest": "^3.2.4"
   }
 }

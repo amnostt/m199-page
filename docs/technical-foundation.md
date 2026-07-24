@@ -29,7 +29,7 @@ apps/web ──HTTP──> apps/api ──DbService──> packages/db ──Pri
 
 | Área          | Tecnología              | Responsabilidad actual                                                                      |
 | ------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
-| `apps/web`    | React 19 y Vite         | Sitio público, routing del cliente, sesión administrativa y panel de gestión.               |
+| `apps/web`    | Astro y React 19        | Runtime web, sitio público, routing interactivo, sesión administrativa y panel de gestión.  |
 | `apps/api`    | NestJS                  | Contratos HTTP, autenticación, validación, reglas de aplicación, archivos y acceso a datos. |
 | `packages/db` | Prisma                  | Esquema, configuración, migraciones, seed y creación compartida del cliente.                |
 | PostgreSQL 16 | Docker Compose en local | Persistencia relacional y restricciones durables.                                           |
@@ -53,7 +53,7 @@ apps/web ──HTTP──> apps/api ──DbService──> packages/db ──Pri
 | Posts        | CRUD administrativo, publicación, archivo, sanitización, descargas con etiquetas opcionales, destacados y lectura pública. El formulario permite cargar, reemplazar y desasociar portada y descargas. | [`posts.service.ts`](../apps/api/src/posts/posts.service.ts), [`PostFormPage.tsx`](../apps/web/src/admin/PostFormPage.tsx)                                                                   |
 | Outings      | Gestión administrativa, publicación, archivo, lectura pública, likes anónimos y carga o reemplazo de imagen principal, croquis y plan. La interfaz no permite quitar asociaciones existentes. | [`outings.service.ts`](../apps/api/src/outings/outings.service.ts), [`OutingFormPage.tsx`](../apps/web/src/admin/OutingFormPage.tsx), [`outingsApi.ts`](../apps/web/src/admin/outingsApi.ts) |
 | Responsibles | API para crear, listar, editar `displayName`, cambiar estado y restablecer contraseña. La interfaz solo crea, lista y cambia estado.                                                          | [`apps/api/src/responsibles`](../apps/api/src/responsibles), [`ResponsiblesPage.tsx`](../apps/web/src/admin/ResponsiblesPage.tsx)                                                            |
-| Verses       | API pública y administrativa, historial y panel para crear, listar y eliminar. Vite reenvía `/verses/...` sin reescritura al `API_TARGET` durante el desarrollo local.                        | [`apps/api/src/verses`](../apps/api/src/verses), [`versesApi.ts`](../apps/web/src/admin/versesApi.ts), [`vite.config.ts`](../apps/web/vite.config.ts)                                        |
+| Verses       | API pública y administrativa, historial y panel para crear, listar y eliminar. Astro reenvía `/verses/...` sin reescritura al `API_TARGET` durante el desarrollo local.                  | [`apps/api/src/verses`](../apps/api/src/verses), [`versesApi.ts`](../apps/web/src/admin/versesApi.ts), [`astro.config.mjs`](../apps/web/astro.config.mjs)                                  |
 | Files        | Carga autenticada, validación, miniaturas, entrega pública y eliminación. No existe endpoint para listar archivos ni pantalla independiente.                                                  | [`apps/api/src/file-module`](../apps/api/src/file-module), [`FileUploadWidget.tsx`](../apps/web/src/admin/FileUploadWidget.tsx)                                                              |
 
 ## Decisiones e invariantes

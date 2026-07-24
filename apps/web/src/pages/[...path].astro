@@ -1,0 +1,23 @@
+---
+/**
+ * Catch-all web route for the existing interactive React application.
+ *
+ * Astro remains the only web runtime and build tool while React continues to
+ * own the admin UI and client-side public routes. The pathname is passed
+ * explicitly so the component can render during SSR without depending on a
+ * browser global; `client:load` then hydrates the same route in the browser.
+ */
+import { App } from "../App.js";
+import "../public.css";
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Misión 1-99</title>
+  </head>
+  <body>
+    <App pathname={Astro.url.pathname} client:load />
+  </body>
+</html>
