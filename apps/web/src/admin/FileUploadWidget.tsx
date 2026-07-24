@@ -18,6 +18,7 @@
 import { useState, type ChangeEvent } from "react";
 import { adminFetch } from "./session.js";
 import type { FileAssetResponse } from "./adminTypes.js";
+import { useAdminToast } from "./AdminProviders.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,12 +44,12 @@ export function FileUploadWidget({
   "data-testid": dataTestId,
 }: FileUploadWidgetProps) {
   const [state, setState] = useState<"idle" | "uploading" | "error">("idle");
+  const [lastFile, setLastFile] = useState<File | null>(null);
+  const toast = useAdminToast();
 
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const upload = async (file: File) => {
     setState("uploading");
+    setLastFile(file);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -59,30 +60,50 @@ export function FileUploadWidget({
         body: formData,
       });
       setState("idle");
+      setLastFile(null);
+      toast.success("File uploaded.");
       onUploaded(asset);
-    } catch {
+    } catch (error) {
       setState("error");
+      // prettier-ignore
+      const description = error instanceof Error ? error.message : "Please try again.";
+      toast.error("Upload failed.", {
+        description,
+        retry: () => void upload(file),
+      });
     }
+  };
+
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await upload(file);
 
     // Reset the input value so the same file can be re-uploaded
     e.target.value = "";
   };
 
+  // prettier-ignore
   return (
     <div data-testid={dataTestId}>
       <input
         type="file"
         data-testid="file-upload-input"
+        aria-label={`Upload ${category.toLowerCase().replaceAll("_", " ")}`}
         onChange={handleFileChange}
         disabled={state === "uploading"}
       />
 
       {state === "uploading" && (
-        <span data-testid="file-upload-uploading">Uploading…</span>
+        <span data-testid="file-upload-uploading" role="status" aria-live="polite">Uploading…</span>
       )}
 
       {state === "error" && (
-        <span data-testid="file-upload-error">Upload failed</span>
+        <span data-testid="file-upload-error" role="alert">Upload failed</span>
+      )}
+
+      {state === "error" && lastFile && (
+        <button type="button" onClick={() => void upload(lastFile)}>Retry upload</button>
       )}
 
       {fileId && (

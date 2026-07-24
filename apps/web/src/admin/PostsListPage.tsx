@@ -4,14 +4,22 @@
 // - GET /posts/admin on mount via listPosts()
 // - Status filter dropdown (All / DRAFT / PUBLISHED / ARCHIVED)
 // - Loading, error, empty states
-// - Per-row publish/archive/delete with window.confirm gates
+// - Per-row publish/archive/delete with accessible confirmation dialogs
 //   and per-row state isolation (Record<postId, "idle"|"pending"|"error">)
 // - Feature/unfeature toggle for PUBLISHED posts, 3-slot cap,
 //   local featured-post tracking (Set<postId>)
 // ---------------------------------------------------------------------------
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PostListItem, PostStatus } from "./adminTypes.js";
+import { ConfirmDialog } from "./ConfirmDialog.js";
+import { useAdminToast } from "./AdminProviders.js";
+import { Badge } from "../components/ui/badge.js";
+import { Button } from "../components/ui/button.js";
+// prettier-ignore
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table.js";
+// prettier-ignore
+import { EmptyFeedback, ErrorFeedback, LoadingFeedback, mapAdminError } from "../components/ui/feedback.js";
 import {
   listPosts,
   publishPost,
@@ -34,6 +42,8 @@ const MAX_FEATURED_POSTS = 3;
 // ---------------------------------------------------------------------------
 
 type ActionState = "idle" | "pending" | "error";
+// prettier-ignore
+type Confirmation = { postId: string; action: "publish" | "archive" | "delete"; message: string };
 
 // ---------------------------------------------------------------------------
 // Props
@@ -68,6 +78,9 @@ export function PostsListPage({
   // Track whether the featured endpoint failed — when true, feature/unfeature
   // actions are disabled because we cannot know the current cap state.
   const [featuredLoadError, setFeaturedLoadError] = useState(false);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const tableFallbackRef = useRef<HTMLDivElement>(null);
+  const toast = useAdminToast();
 
   // Load on mount — posts and featured post IDs load independently.
   // Featured failure surfaces visibly without hiding the posts list.
@@ -101,15 +114,12 @@ export function PostsListPage({
   // Lifecycle action handler
   // ------------------------------------------------------------------
 
-  const handleAction = useCallback(
+  const runAction = useCallback(
     async (
       postId: string,
       action: "publish" | "archive" | "delete",
-      confirmMessage: string,
       apiCall: () => Promise<unknown>,
     ) => {
-      if (!window.confirm(confirmMessage)) return;
-
       setActionStates((prev) => ({ ...prev, [postId]: "pending" }));
 
       try {
@@ -138,42 +148,32 @@ export function PostsListPage({
           }
         }
         setActionStates((prev) => ({ ...prev, [postId]: "idle" }));
-      } catch {
+        // prettier-ignore
+        toast.success(`${action[0]!.toUpperCase()}${action.slice(1)} completed.`);
+      } catch (error) {
         setActionStates((prev) => ({ ...prev, [postId]: "error" }));
+        const mapped = mapAdminError(error);
+        toast.error(`${action[0]!.toUpperCase()}${action.slice(1)} failed.`, {
+          description: mapped.root,
+        });
       }
     },
-    [],
+    [toast],
   );
+
+  // prettier-ignore
+  // prettier-ignore
+  const requestAction = (post: PostListItem, action: Confirmation["action"]) => setConfirmation({ postId: post.id, action, message: action === "delete" ? `Delete "${post.title}"? This cannot be undone.` : `${action[0]!.toUpperCase()}${action.slice(1)} "${post.title}"?` });
 
   // ------------------------------------------------------------------
   // Feature / unfeature handlers
   // ------------------------------------------------------------------
 
-  const handleFeature = useCallback(async (postId: string) => {
-    setActionStates((prev) => ({ ...prev, [postId]: "pending" }));
-    try {
-      await featurePost(postId);
-      setFeaturedPostIds((prev) => new Set(prev).add(postId));
-      setActionStates((prev) => ({ ...prev, [postId]: "idle" }));
-    } catch {
-      setActionStates((prev) => ({ ...prev, [postId]: "error" }));
-    }
-  }, []);
+  // prettier-ignore
+  const handleFeature = useCallback(async (postId: string) => { setActionStates((prev) => ({ ...prev, [postId]: "pending" })); try { await featurePost(postId); setFeaturedPostIds((prev) => new Set(prev).add(postId)); setActionStates((prev) => ({ ...prev, [postId]: "idle" })); toast.success("Post featured."); } catch (error) { setActionStates((prev) => ({ ...prev, [postId]: "error" })); toast.error("Feature failed.", { description: mapAdminError(error).root }); } }, [toast]);
 
-  const handleUnfeature = useCallback(async (postId: string) => {
-    setActionStates((prev) => ({ ...prev, [postId]: "pending" }));
-    try {
-      await unfeaturePost(postId);
-      setFeaturedPostIds((prev) => {
-        const next = new Set(prev);
-        next.delete(postId);
-        return next;
-      });
-      setActionStates((prev) => ({ ...prev, [postId]: "idle" }));
-    } catch {
-      setActionStates((prev) => ({ ...prev, [postId]: "error" }));
-    }
-  }, []);
+  // prettier-ignore
+  const handleUnfeature = useCallback(async (postId: string) => { setActionStates((prev) => ({ ...prev, [postId]: "pending" })); try { await unfeaturePost(postId); setFeaturedPostIds((prev) => { const next = new Set(prev); next.delete(postId); return next; }); setActionStates((prev) => ({ ...prev, [postId]: "idle" })); toast.success("Post unfeatured."); } catch (error) { setActionStates((prev) => ({ ...prev, [postId]: "error" })); toast.error("Unfeature failed.", { description: mapAdminError(error).root }); } }, [toast]);
 
   const featuredCount = featuredPostIds.size;
 
@@ -196,7 +196,7 @@ export function PostsListPage({
   if (loadError) {
     return (
       <div data-testid="posts-list-load-error">
-        <p>Failed to load posts. Please try again.</p>
+        <ErrorFeedback message="Failed to load posts. Please try again." />
       </div>
     );
   }
@@ -205,7 +205,7 @@ export function PostsListPage({
   if (filteredPosts === null) {
     return (
       <div data-testid="posts-list-loading">
-        <p>Loading…</p>
+        <LoadingFeedback />
       </div>
     );
   }
@@ -214,11 +214,11 @@ export function PostsListPage({
   if (filteredPosts.length === 0) {
     return (
       <div data-testid="posts-list-empty">
-        <p>No posts found.</p>
+        <EmptyFeedback>No posts found.</EmptyFeedback>
         {onCreatePost && (
-          <button type="button" onClick={onCreatePost}>
+          <Button type="button" onClick={onCreatePost}>
             New Post
-          </button>
+          </Button>
         )}
         <label htmlFor="posts-filter-status">Status</label>
         <select
@@ -236,21 +236,22 @@ export function PostsListPage({
   }
 
   // Loaded — render table with filter
+  // prettier-ignore
   return (
-    <div data-testid="posts-list-table">
+    <div data-testid="posts-list-table" ref={tableFallbackRef}>
       <h2>Posts</h2>
 
       {/* Featured cap display */}
-      <span data-testid="featured-cap">
+      <span data-testid="featured-cap" role={featuredLoadError ? "alert" : "status"} aria-live="polite">
         {featuredLoadError
           ? "Featured: unavailable"
           : `Featured: ${featuredCount}/${MAX_FEATURED_POSTS}`}
       </span>
 
       {onCreatePost && (
-        <button type="button" onClick={onCreatePost}>
+        <Button type="button" onClick={onCreatePost}>
           New Post
-        </button>
+        </Button>
       )}
 
       <label htmlFor="posts-filter-status">Status</label>
@@ -265,35 +266,35 @@ export function PostsListPage({
         <option value="ARCHIVED">ARCHIVED</option>
       </select>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Slug</th>
-            <th>Status</th>
-            {onEditPost && <th />}
-            <th>Featured</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Title</TableHead>
+            <TableHead>Slug</TableHead>
+            <TableHead>Status</TableHead>
+            {onEditPost && <TableHead>Manage</TableHead>}
+            <TableHead>Featured</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {filteredPosts.map((post) => (
-            <tr key={post.id}>
-              <td>{post.title}</td>
-              <td>{post.slug}</td>
-              <td>{post.status}</td>
+            <TableRow key={post.id}>
+              <TableCell>{post.title}</TableCell>
+              <TableCell>{post.slug}</TableCell>
+              <TableCell><Badge>{post.status}</Badge></TableCell>
               {onEditPost && (
-                <td>
-                  <button type="button" onClick={() => onEditPost(post.slug)}>
+                <TableCell>
+                  <Button type="button" variant="outline" size="sm" onClick={() => onEditPost(post.slug)}>
                     Edit
-                  </button>
-                </td>
+                  </Button>
+                </TableCell>
               )}
               {/* Featured column */}
-              <td>
+              <TableCell>
                 {post.status === "PUBLISHED" &&
                   !featuredPostIds.has(post.id) && (
-                    <button
+                    <Button
                       type="button"
                       data-testid={`feature-${post.id}`}
                       disabled={
@@ -302,83 +303,82 @@ export function PostsListPage({
                         actionStates[post.id] === "pending"
                       }
                       onClick={() => handleFeature(post.id)}
+                      aria-label={`Feature ${post.title}`}
                     >
                       Feature
-                    </button>
+                    </Button>
                   )}
                 {featuredPostIds.has(post.id) && (
-                  <button
+                  <Button
                     type="button"
                     data-testid={`unfeature-${post.id}`}
                     disabled={
                       featuredLoadError || actionStates[post.id] === "pending"
                     }
                     onClick={() => handleUnfeature(post.id)}
+                    aria-label={`Unfeature ${post.title}`}
                   >
                     Featured ★
-                  </button>
+                  </Button>
                 )}
-              </td>
-              <td>
+              </TableCell>
+              <TableCell>
                 {post.status !== "PUBLISHED" && (
-                  <button
+                  <Button
                     type="button"
                     data-testid={`lifecycle-publish-${post.id}`}
                     disabled={actionStates[post.id] === "pending"}
-                    onClick={() =>
-                      handleAction(
-                        post.id,
-                        "publish",
-                        `Publish "${post.title}"?`,
-                        () => publishPost(post.id),
-                      )
-                    }
+                    onClick={() => requestAction(post, "publish")}
                   >
                     Publish
-                  </button>
+                  </Button>
                 )}
                 {post.status === "PUBLISHED" && (
-                  <button
+                  <Button
                     type="button"
                     data-testid={`lifecycle-archive-${post.id}`}
                     disabled={actionStates[post.id] === "pending"}
-                    onClick={() =>
-                      handleAction(
-                        post.id,
-                        "archive",
-                        `Archive "${post.title}"?`,
-                        () => archivePost(post.id),
-                      )
-                    }
+                    onClick={() => requestAction(post, "archive")}
                   >
                     Archive
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   type="button"
                   data-testid={`lifecycle-delete-${post.id}`}
                   disabled={actionStates[post.id] === "pending"}
-                  onClick={() =>
-                    handleAction(
-                      post.id,
-                      "delete",
-                      `Delete "${post.title}"? This cannot be undone.`,
-                      () => deletePost(post.id),
-                    )
-                  }
+                  onClick={() => requestAction(post, "delete")}
+                  variant="destructive"
                 >
                   Delete
-                </button>
+                </Button>
                 {actionStates[post.id] === "error" && (
-                  <span data-testid={`lifecycle-error-${post.id}`}>
+                  <span data-testid={`lifecycle-error-${post.id}`} role="alert">
                     Action failed
                   </span>
                 )}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
+      <ConfirmDialog
+        open={confirmation !== null}
+        title={`${confirmation?.action[0]?.toUpperCase()}${confirmation?.action.slice(1)} post`}
+        description={confirmation?.message ?? ""}
+        confirmLabel={confirmation?.action === "delete" ? "Delete" : "Continue"}
+        destructive={confirmation?.action === "delete"}
+        fallbackFocusRef={tableFallbackRef}
+        onCancel={() => setConfirmation(null)}
+        onConfirm={async () => {
+          if (!confirmation) return;
+          const { postId, action } = confirmation;
+          setConfirmation(null);
+          // prettier-ignore
+          const calls = { publish: () => publishPost(postId), archive: () => archivePost(postId), delete: () => deletePost(postId) };
+          await runAction(postId, action, calls[action]);
+        }}
+      />
     </div>
   );
 }

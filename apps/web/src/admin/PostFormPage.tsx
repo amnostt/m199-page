@@ -5,16 +5,19 @@
 // - Create mode: empty form → POST /posts/admin on save
 // - Edit mode: GET /posts/admin/slug/:slug → populate form → PATCH on save
 // - Tags input is comma-separated; split via parseTags before API call
-// - Loading, error, success, and validation states per LandingSettingsPage
-//   pattern
-// - Slug change on PUBLISHED post triggers two sequential
-//   window.confirm calls (URL-breakage then save) before PATCH
-// - Cover image preview + FileUploadWidget; downloads with links,
-//   labels, and per-slot FileUploadWidget instances
+// - Published slug changes trigger sequential accessible confirmations
+// - Cover image preview + FileUploadWidget; downloads with links, labels, and
+//   per-slot FileUploadWidget instances
+//
+// The route owns fetching, uploads, confirmation ordering, and API payload
+// construction while RHF/Zod owns the native form.
 // ---------------------------------------------------------------------------
-
 import { useEffect, useRef, useState } from "react";
-import type { Post, PostDownload, PostForm, PostStatus } from "./adminTypes.js";
+import { useFieldArray, useForm, type SubmitHandler } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { Post, PostForm, PostStatus } from "./adminTypes.js";
+// prettier-ignore
 import {
   createPost,
   getPost,
@@ -23,25 +26,25 @@ import {
   thumbUrl,
 } from "./postsApi.js";
 import { FileUploadWidget } from "./FileUploadWidget.js";
+import { ConfirmDialog } from "./ConfirmDialog.js";
+import { useAdminToast } from "./AdminProviders.js";
+import { Button } from "../components/ui/button.js";
+// prettier-ignore
+import { ErrorFeedback, LoadingFeedback, mapAdminError } from "../components/ui/feedback.js";
+import { Field } from "../components/ui/field.js";
+import { Form } from "../components/ui/form.js";
+// prettier-ignore
+const postSchema = z.object({ title: z.string().refine((value) => value.trim().length > 0, "Title is required."), slug: z.string(), content: z.string(), description: z.string(), tagsInput: z.string(), coverImageId: z.string().nullable(), downloadIds: z.array(z.string()), downloads: z.array(z.object({ entryId: z.string(), fileId: z.string(), label: z.string() })) });
+type EditorDownload = { entryId: string; fileId: string; label: string };
+type EditorValues = PostForm & { downloads: EditorDownload[] };
+type Confirmation = { kind: "slug" | "save"; values: EditorValues };
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const EMPTY_FORM: PostForm = {
-  title: "",
-  slug: "",
-  content: "",
-  description: "",
-  tagsInput: "",
-  coverImageId: null,
-  downloadIds: [],
-};
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
+// prettier-ignore
+const EMPTY_VALUES: EditorValues = { title: "", slug: "", content: "", description: "", tagsInput: "", coverImageId: null, downloadIds: [], downloads: [] };
 export interface PostFormPageProps {
   mode: "create" | "edit";
   slug?: string;
@@ -49,333 +52,140 @@ export interface PostFormPageProps {
   onCancel: () => void;
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+// prettier-ignore
+function editorValues(post: Post): EditorValues { const values = normalizePostToForm(post); return { ...values, downloads: post.downloads.map((download) => ({ entryId: download.id, fileId: download.fileId, label: download.label ?? "" })) }; }
+
+// prettier-ignore
 export function PostFormPage({
   mode,
   slug,
   onSaved,
   onCancel,
 }: PostFormPageProps) {
-  const [form, setForm] = useState<PostForm | null>(
-    mode === "create" ? { ...EMPTY_FORM } : null,
-  );
+  const [loading, setLoading] = useState(mode === "edit");
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [validationError, setValidationError] = useState(false);
   const [postId, setPostId] = useState<string | null>(null);
   const [loadedStatus, setLoadedStatus] = useState<PostStatus>("DRAFT");
-
-  // Download list with labels (managed separately from form.downloadIds)
-  const [downloadEntries, setDownloadEntries] = useState<PostDownload[]>([]);
-
-  // Track original slug for P-07 slug-change gate
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const originalSlugRef = useRef<string | null>(null);
-
+  const toast = useAdminToast();
+  // prettier-ignore
+  const { register, control, reset, setValue, setError, getValues, clearErrors, watch, handleSubmit, formState: { errors } } = useForm<EditorValues>({ defaultValues: mode === "create" ? EMPTY_VALUES : undefined, resolver: zodResolver(postSchema), shouldFocusError: true });
+  // prettier-ignore
+  const { fields, append, remove, update } = useFieldArray({ control, name: "downloads", keyName: "fieldKey" });
+  const coverImageId = watch("coverImageId");
+  const updateDownload = (entryId: string, fileId: string) => { const downloads = getValues("downloads"); const index = downloads.findIndex((download) => download.entryId === entryId); if (index >= 0) update(index, { ...downloads[index]!, fileId }); };
   // ------------------------------------------------------------------
   // Load post in edit mode
   // ------------------------------------------------------------------
 
   useEffect(() => {
     if (mode !== "edit" || !slug) return;
-
     let cancelled = false;
-
     getPost(slug)
-      .then((post: Post) => {
+      .then((post) => {
         if (cancelled) return;
         setPostId(post.id);
         setLoadedStatus(post.status);
-        setForm(normalizePostToForm(post));
-        setDownloadEntries(post.downloads);
         originalSlugRef.current = post.slug;
+        reset(editorValues(post));
+        setLoading(false);
       })
       .catch(() => {
-        if (!cancelled) setLoadError(true);
+        if (!cancelled) {
+          setLoadError(true);
+          setLoading(false);
+        }
       });
-
     return () => {
       cancelled = true;
     };
-  }, [mode, slug]);
-
+  }, [mode, reset, slug]);
   // ------------------------------------------------------------------
   // Handlers
   // ------------------------------------------------------------------
 
-  const handleChange = (field: keyof PostForm, value: string) => {
-    setForm((prev) => (prev ? { ...prev, [field]: value } : null));
-    setSaveError(false);
-    setSaveSuccess(false);
-    setValidationError(false);
-  };
-
-  // Cover handlers
-  const handleCoverUploaded = (assetId: string) => {
-    setForm((prev) => (prev ? { ...prev, coverImageId: assetId } : null));
-  };
-
-  const handleCoverRemove = () => {
-    setForm((prev) => (prev ? { ...prev, coverImageId: null } : null));
-  };
-
-  // Download handlers
-  const handleDownloadAdd = (assetId: string) => {
-    const entry: PostDownload = {
-      id: crypto.randomUUID(),
-      fileId: assetId,
-      label: null,
-      sortOrder: downloadEntries.length,
-    };
-    setDownloadEntries((prev) => [...prev, entry]);
-    // Sync downloadIds to form
-    setForm((prev) =>
-      prev
-        ? {
-            ...prev,
-            downloadIds: [...prev.downloadIds, assetId],
-          }
-        : null,
-    );
-  };
-
-  const handleDownloadRemove = (fileId: string) => {
-    setDownloadEntries((prev) => prev.filter((d) => d.fileId !== fileId));
-    setForm((prev) =>
-      prev
-        ? {
-            ...prev,
-            downloadIds: prev.downloadIds.filter((id) => id !== fileId),
-          }
-        : null,
-    );
-  };
-
-  const handleDownloadLabel = (fileId: string, label: string) => {
-    setDownloadEntries((prev) =>
-      prev.map((d) => (d.fileId === fileId ? { ...d, label } : d)),
-    );
-  };
-
-  const handleSave = async () => {
-    if (!form || saving) return;
-
-    // Required title validation
-    if (!form.title.trim()) {
-      setValidationError(true);
-      return;
-    }
-
-    // P-07: slug-change URL-breakage warning on PUBLISHED posts.
-    // This fires BEFORE the general save confirmation so the user
-    // sees the more critical URL-breakage warning first. Cancelling
-    // either confirm prevents the PATCH.
-    const slugChanged =
-      mode === "edit" &&
-      originalSlugRef.current !== null &&
-      form.slug !== originalSlugRef.current;
-
-    if (slugChanged && loadedStatus === "PUBLISHED") {
-      // URL-breakage warning
-      if (
-        !window.confirm(
-          "You are changing the URL of a published post. Existing links to this post will break. Continue?",
-        )
-      ) {
-        return;
-      }
-    }
-
-    // General save confirmation (create + edit, all statuses)
-    if (!window.confirm("Save changes to this post?")) {
-      return;
-    }
-
+  const saveValues = async (values: EditorValues) => {
+    if (saving) return;
     setSaving(true);
-    setSaveError(false);
     setSaveSuccess(false);
-
-    // Build download labels from local download state
+    const form: PostForm = {
+      title: values.title,
+      slug: values.slug,
+      content: values.content,
+      description: values.description,
+      tagsInput: values.tagsInput,
+      coverImageId: values.coverImageId,
+      downloadIds: values.downloads.map((download) => download.fileId),
+    };
     const downloadLabels: Record<string, string> = {};
-    for (const d of downloadEntries) {
-      if (d.label) {
-        downloadLabels[d.fileId] = d.label;
-      }
+    for (const download of values.downloads) {
+      const label = download.label.trim();
+      if (label) downloadLabels[download.fileId] = label;
     }
-
     try {
-      if (mode === "edit" && postId) {
-        await updatePost(postId, form, downloadLabels);
-      } else {
-        await createPost(form, downloadLabels);
-      }
+      // prettier-ignore
+      if (mode === "edit" && postId) await updatePost(postId, form, downloadLabels);
+      else await createPost(form, downloadLabels);
       setSaveSuccess(true);
+      toast.success("Post saved successfully.");
       onSaved();
-    } catch {
-      setSaveError(true);
+    } catch (error) {
+      const message = mapAdminError(error).root;
+      setError("root.server", { type: "server", message });
+      // prettier-ignore
+      toast.error("Failed to save post.", { description: message, retry: () => void saveValues(values) });
     } finally {
       setSaving(false);
     }
+  };
+  const onValid: SubmitHandler<EditorValues> = (values) => {
+    // prettier-ignore
+    const slugChanged = mode === "edit" && originalSlugRef.current !== null && values.slug !== originalSlugRef.current;
+    if (slugChanged && loadedStatus === "PUBLISHED") {
+      setConfirmation({ kind: "slug", values });
+      return;
+    }
+    setConfirmation({ kind: "save", values });
   };
 
   // ------------------------------------------------------------------
   // States
   // ------------------------------------------------------------------
 
-  // Load error (edit mode GET failure)
   if (loadError) {
     return (
       <div data-testid="post-form-load-error">
-        <p>Failed to load post. Please try again.</p>
-        <button type="button" onClick={onCancel}>
-          Back to Posts
-        </button>
+        <ErrorFeedback message="Failed to load post. Please try again." />
+        {/* prettier-ignore */}<Button type="button" onClick={onCancel}>Back to Posts</Button>
       </div>
     );
   }
-
-  // Loading (edit mode — waiting for GET)
-  if (form === null) {
-    return (
-      <div data-testid="post-form-loading">
-        <p>Loading…</p>
-      </div>
-    );
+  if (loading) {
+    // prettier-ignore
+    return <div data-testid="post-form-loading"><LoadingFeedback /></div>;
   }
 
-  // Form — loaded
-  return (
-    <div data-testid="post-form">
-      <h2>{mode === "create" ? "New Post" : "Edit Post"}</h2>
-
-      <label htmlFor="pf-title">Title</label>
-      <input
-        id="pf-title"
-        type="text"
-        value={form.title}
-        onChange={(e) => handleChange("title", e.target.value)}
-        disabled={saving}
-      />
-
-      <label htmlFor="pf-slug">Slug</label>
-      <input
-        id="pf-slug"
-        type="text"
-        value={form.slug}
-        onChange={(e) => handleChange("slug", e.target.value)}
-        disabled={saving}
-      />
-
-      <label htmlFor="pf-content">Content</label>
-      <textarea
-        id="pf-content"
-        value={form.content}
-        onChange={(e) => handleChange("content", e.target.value)}
-        disabled={saving}
-      />
-
-      <label htmlFor="pf-description">Description</label>
-      <input
-        id="pf-description"
-        type="text"
-        value={form.description}
-        onChange={(e) => handleChange("description", e.target.value)}
-        disabled={saving}
-      />
-
-      <label htmlFor="pf-tags">Tags (comma-separated)</label>
-      <input
-        id="pf-tags"
-        type="text"
-        value={form.tagsInput}
-        onChange={(e) => handleChange("tagsInput", e.target.value)}
-        disabled={saving}
-        placeholder="e.g. react, typescript"
-      />
-
-      {mode === "edit" && <p>Status: {loadedStatus}</p>}
-
-      {/* Cover image section */}
-      <fieldset>
-        <legend>Cover Image</legend>
-        {form.coverImageId && (
-          <img
-            src={thumbUrl(form.coverImageId)!}
-            alt="Cover preview"
-            data-testid="post-form-cover-preview"
-          />
-        )}
-        <FileUploadWidget
-          category="POST_COVER_IMAGE"
-          fileId={form.coverImageId}
-          onUploaded={(asset) => handleCoverUploaded(asset.id)}
-          onRemove={handleCoverRemove}
-          data-testid="post-form-cover-widget"
-        />
-      </fieldset>
-
-      {/* Downloads section */}
-      <fieldset>
-        <legend>Downloads</legend>
-        {downloadEntries.map((d) => (
-          <div key={d.id}>
-            <a
-              href={fileUrl(d.fileId)!}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid={`post-form-download-link-${d.fileId}`}
-            >
-              {d.fileId}
-            </a>
-            <input
-              type="text"
-              value={d.label ?? ""}
-              onChange={(e) => handleDownloadLabel(d.fileId, e.target.value)}
-              placeholder="File label"
-              data-testid={`post-form-download-label-${d.fileId}`}
-            />
-            <FileUploadWidget
-              category="POST_DOWNLOAD"
-              fileId={d.fileId}
-              onUploaded={() => {}}
-              onRemove={() => handleDownloadRemove(d.fileId)}
-              data-testid={`post-form-download-widget-${d.fileId}`}
-            />
-          </div>
-        ))}
-        <FileUploadWidget
-          category="POST_DOWNLOAD"
-          fileId={null}
-          onUploaded={(asset) => handleDownloadAdd(asset.id)}
-          onRemove={() => {}}
-          data-testid="post-form-download-add"
-        />
-      </fieldset>
-
-      <div>
-        <button type="button" onClick={handleSave} disabled={saving}>
-          Save Post
-        </button>
-        <button type="button" onClick={onCancel} disabled={saving}>
-          Cancel
-        </button>
-      </div>
-
-      {validationError && (
-        <div data-testid="post-form-validation-error">Title is required.</div>
-      )}
-
-      {saveSuccess && (
-        <div data-testid="post-form-save-success">Post saved successfully.</div>
-      )}
-
-      {saveError && (
-        <div data-testid="post-form-save-error">
-          Failed to save post. Please try again.
-        </div>
-      )}
-    </div>
-  );
+  const fieldError = (name: keyof EditorValues) => errors[name]?.message;
+  // prettier-ignore
+  return <div data-testid="post-form"><h2>{mode === "create" ? "New Post" : "Edit Post"}</h2><Form onSubmit={handleSubmit(onValid)} noValidate>
+    <Field name="title" label="Title" error={fieldError("title")}><input id="pf-title" type="text" disabled={saving} {...register("title", { onChange: () => clearErrors("root.server") })} /></Field>
+    <Field name="slug" label="Slug" error={fieldError("slug")}><input id="pf-slug" type="text" disabled={saving} {...register("slug", { onChange: () => clearErrors("root.server") })} /></Field>
+    <Field name="content" label="Content" error={fieldError("content")}><textarea id="pf-content" disabled={saving} {...register("content", { onChange: () => clearErrors("root.server") })} /></Field>
+    <Field name="description" label="Description" error={fieldError("description")}><input id="pf-description" type="text" disabled={saving} {...register("description", { onChange: () => clearErrors("root.server") })} /></Field>
+    <Field name="tagsInput" label="Tags (comma-separated)" error={fieldError("tagsInput")}><input id="pf-tags" type="text" placeholder="e.g. react, typescript" disabled={saving} {...register("tagsInput", { onChange: () => clearErrors("root.server") })} /></Field>
+    {mode === "edit" && <p>Status: {loadedStatus}</p>}
+    <fieldset><legend>Cover Image</legend>{coverImageId && <img src={thumbUrl(coverImageId)!} alt="Cover preview" data-testid="post-form-cover-preview" />}<FileUploadWidget category="POST_COVER_IMAGE" fileId={coverImageId} onUploaded={(asset) => setValue("coverImageId", asset.id, { shouldDirty: true })} onRemove={() => setValue("coverImageId", null, { shouldDirty: true })} data-testid="post-form-cover-widget" /></fieldset>
+    <fieldset><legend>Downloads</legend>{fields.map((download, index) => <div key={download.fieldKey}><a href={fileUrl(download.fileId)!} target="_blank" rel="noopener noreferrer" data-testid={`post-form-download-link-${download.fileId}`}>{download.fileId}</a><Field name={`downloads.${index}.label`} label="File label" error={errors.downloads?.[index]?.label?.message}><input type="text" placeholder="File label" data-testid={`post-form-download-label-${download.fileId}`} {...register(`downloads.${index}.label`, { onChange: () => clearErrors("root.server") })} /></Field><FileUploadWidget category="POST_DOWNLOAD" fileId={download.fileId} onUploaded={(asset) => updateDownload(download.entryId, asset.id)} onRemove={() => remove(index)} data-testid={`post-form-download-widget-${download.fileId}`} /></div>)}<FileUploadWidget category="POST_DOWNLOAD" fileId={null} onUploaded={(asset) => append({ entryId: crypto.randomUUID(), fileId: asset.id, label: "" })} onRemove={() => undefined} data-testid="post-form-download-add" /></fieldset>
+    <div><Button type="submit" disabled={saving}>Save Post</Button><Button type="button" variant="outline" onClick={onCancel} disabled={saving}>Cancel</Button></div>
+    {errors.title?.message && <div data-testid="post-form-validation-error" aria-hidden="true" />}{errors.root?.server?.message && <div data-testid="post-form-save-error" role="alert"><p>Failed to save post. Please try again.</p><p>{errors.root.server.message}</p></div>}{saveSuccess && <div data-testid="post-form-save-success" role="status">Post saved successfully.</div>}
+  </Form><ConfirmDialog open={confirmation !== null} title={confirmation?.kind === "slug" ? "Change published URL?" : "Save post?"} description={confirmation?.kind === "slug" ? "You are changing the URL of a published post. Existing links to this post will break. Continue?" : "Save changes to this post?"} confirmLabel={confirmation?.kind === "slug" ? "Continue" : "Confirm"} onCancel={() => setConfirmation(null)} onConfirm={async () => { if (!confirmation) return; if (confirmation.kind === "slug") setConfirmation({ kind: "save", values: confirmation.values }); else { setConfirmation(null); await saveValues(confirmation.values); } }} /></div>;
 }
 
 // ---------------------------------------------------------------------------

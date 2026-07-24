@@ -18,6 +18,7 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import { FileUploadWidget } from "./FileUploadWidget.js";
+import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -65,6 +66,7 @@ describe("FileUploadWidget — idle state (no file)", () => {
     expect(input).toBeTruthy();
     expect(input.tagName).toBe("INPUT");
     expect((input as HTMLInputElement).type).toBe("file");
+    expect(screen.getByLabelText(/upload post cover image/i)).toBe(input);
   });
 
   it("renders no remove button when fileId is null", () => {
@@ -128,6 +130,7 @@ describe("FileUploadWidget — upload flow", () => {
   });
 
   it("calls onUploaded with FileAssetResponse on success", async () => {
+    const successToast = vi.spyOn(toast, "success");
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(MOCK_ASSET),
@@ -152,12 +155,15 @@ describe("FileUploadWidget — upload flow", () => {
       expect(onUploaded).toHaveBeenCalledTimes(1);
       expect(onUploaded).toHaveBeenCalledWith(MOCK_ASSET);
     });
+    // prettier-ignore
+    expect(successToast).toHaveBeenCalledWith("File uploaded.", expect.anything());
 
     // Uploading state clears after success
     expect(screen.queryByTestId("file-upload-uploading")).toBeNull();
   });
 
   it("shows error state on upload failure", async () => {
+    const errorToast = vi.spyOn(toast, "error");
     globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
     render(
@@ -176,6 +182,8 @@ describe("FileUploadWidget — upload flow", () => {
     await waitFor(() => {
       expect(screen.getByTestId("file-upload-error")).toBeTruthy();
     });
+    // prettier-ignore
+    expect(errorToast).toHaveBeenCalledWith("Upload failed.", expect.objectContaining({ description: "Network error" }));
 
     // Uploading state clears after error
     expect(screen.queryByTestId("file-upload-uploading")).toBeNull();
@@ -358,4 +366,7 @@ describe("FileUploadWidget — 401 retry with FormData", () => {
       (fetchMock.mock.calls[2]![1] as RequestInit).headers,
     ).toBeUndefined();
   });
+
+  // prettier-ignore
+  it("invokes toast retry with the original File in a second FormData request", async () => { const errorToast = vi.spyOn(toast, "error"); globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error")).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_ASSET) }); render(<FileUploadWidget category="POST_COVER_IMAGE" fileId={null} onUploaded={vi.fn()} onRemove={vi.fn()} />); const file = new File(["image-data"], "cover.png", { type: "image/png" }); fireEvent.change(screen.getByTestId("file-upload-input"), { target: { files: [file] } }); await waitFor(() => expect(errorToast).toHaveBeenCalled()); const retry = (errorToast.mock.calls[0]![1] as unknown as { action: { onClick(): void } }).action.onClick; retry(); await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2)); const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>; expect(fetchMock).toHaveBeenNthCalledWith(2, "/files/POST_COVER_IMAGE", expect.objectContaining({ method: "POST", body: expect.any(FormData) })); const body = (fetchMock.mock.calls[1]![1] as RequestInit).body; expect(body).toBeInstanceOf(FormData); expect((body as FormData).get("file")).toBe(file); });
 });

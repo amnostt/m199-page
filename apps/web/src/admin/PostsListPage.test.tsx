@@ -18,8 +18,10 @@ import {
   waitFor,
   cleanup,
   fireEvent,
+  within,
 } from "@testing-library/react";
 import { PostsListPage } from "./PostsListPage.js";
+import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -63,6 +65,18 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
 });
+
+async function acceptDialog(label = /continue/i) {
+  await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+  // prettier-ignore
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: label }));
+}
+
+async function cancelDialog() {
+  await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+  // prettier-ignore
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /cancel/i }));
+}
 
 // ---------------------------------------------------------------------------
 // Loading state
@@ -346,8 +360,7 @@ describe("PostsListPage lifecycle actions", () => {
   });
 
   it("publishes a DRAFT post: confirm accepted → POST /publish request sent", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
+    const successToast = vi.spyOn(toast, "success");
     globalThis.fetch = vi
       .fn()
       // Initial list load
@@ -373,10 +386,7 @@ describe("PostsListPage lifecycle actions", () => {
     });
 
     fireEvent.click(screen.getByTestId("lifecycle-publish-p2"));
-
-    // Confirm was called
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/publish/i));
+    await acceptDialog();
 
     // POST /posts/admin/p2/publish request was sent (no body — parameterless lifecycle endpoint)
     await waitFor(() => {
@@ -391,8 +401,8 @@ describe("PostsListPage lifecycle actions", () => {
       expect(postCall![0]).toBe("/posts/admin/p2/publish");
       expect((postCall![1] as RequestInit).body).toBeUndefined();
     });
-
-    confirmSpy.mockRestore();
+    // prettier-ignore
+    expect(successToast).toHaveBeenCalledWith("Publish completed.", expect.anything());
   });
 
   // ------------------------------------------------------------------
@@ -409,8 +419,6 @@ describe("PostsListPage lifecycle actions", () => {
   });
 
   it("archives a PUBLISHED post: confirm accepted → POST /archive request sent", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -433,9 +441,7 @@ describe("PostsListPage lifecycle actions", () => {
     });
 
     fireEvent.click(screen.getByTestId("lifecycle-archive-p1"));
-
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/archive/i));
+    await acceptDialog();
 
     // POST /posts/admin/p1/archive request was sent (no body — parameterless lifecycle endpoint)
     await waitFor(() => {
@@ -450,8 +456,6 @@ describe("PostsListPage lifecycle actions", () => {
       expect(postCall![0]).toBe("/posts/admin/p1/archive");
       expect((postCall![1] as RequestInit).body).toBeUndefined();
     });
-
-    confirmSpy.mockRestore();
   });
 
   it("archives a featured post without requiring a complete API response", async () => {
@@ -473,8 +477,6 @@ describe("PostsListPage lifecycle actions", () => {
         json: () => Promise.resolve({}),
       });
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     render(<PostsListPage />);
 
     await waitFor(() => {
@@ -486,6 +488,7 @@ describe("PostsListPage lifecycle actions", () => {
 
     // Archive p1
     fireEvent.click(screen.getByTestId("lifecycle-archive-p1"));
+    await acceptDialog();
 
     // After archive succeeds, p1 should no longer be tracked as featured
     await waitFor(() => {
@@ -515,8 +518,6 @@ describe("PostsListPage lifecycle actions", () => {
   });
 
   it("deletes a post: confirm accepted → DELETE request sent, post removed, no error shown", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -540,9 +541,7 @@ describe("PostsListPage lifecycle actions", () => {
     });
 
     fireEvent.click(screen.getByTestId("lifecycle-delete-p3"));
-
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/delete/i));
+    await acceptDialog(/delete/i);
 
     await waitFor(() => {
       const deleteCall = (
@@ -558,8 +557,6 @@ describe("PostsListPage lifecycle actions", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("lifecycle-error-p3")).toBeNull();
     });
-
-    confirmSpy.mockRestore();
   });
 
   // ------------------------------------------------------------------
@@ -567,8 +564,6 @@ describe("PostsListPage lifecycle actions", () => {
   // ------------------------------------------------------------------
 
   it("declining confirm does NOT send a request", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -590,13 +585,10 @@ describe("PostsListPage lifecycle actions", () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockClear();
 
     fireEvent.click(screen.getByTestId("lifecycle-delete-p2"));
-
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    await cancelDialog();
 
     // No additional fetch call after the declined confirm
     expect(globalThis.fetch).not.toHaveBeenCalled();
-
-    confirmSpy.mockRestore();
   });
 
   // ------------------------------------------------------------------
@@ -617,8 +609,6 @@ describe("PostsListPage lifecycle actions", () => {
       })
       .mockImplementationOnce(() => new Promise<Response>(() => {}));
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     render(<PostsListPage />);
 
     await waitFor(() => {
@@ -627,6 +617,7 @@ describe("PostsListPage lifecycle actions", () => {
 
     // Click publish on p2 (DRAFT)
     fireEvent.click(screen.getByTestId("lifecycle-publish-p2"));
+    await acceptDialog();
 
     // p2's publish button should be disabled (pending)
     await waitFor(() => {
@@ -655,6 +646,7 @@ describe("PostsListPage lifecycle actions", () => {
   // ------------------------------------------------------------------
 
   it("shows an error indicator on a row whose action failed", async () => {
+    const errorToast = vi.spyOn(toast, "error");
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -667,8 +659,6 @@ describe("PostsListPage lifecycle actions", () => {
       })
       .mockRejectedValueOnce(new Error("Network error"));
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     render(<PostsListPage />);
 
     await waitFor(() => {
@@ -676,6 +666,7 @@ describe("PostsListPage lifecycle actions", () => {
     });
 
     fireEvent.click(screen.getByTestId("lifecycle-publish-p2"));
+    await acceptDialog();
 
     await waitFor(() => {
       expect(screen.getByTestId("lifecycle-error-p2")).toBeTruthy();
@@ -687,6 +678,8 @@ describe("PostsListPage lifecycle actions", () => {
     ) as HTMLButtonElement;
     expect(publishBtn.disabled).toBe(false);
 
+    // prettier-ignore
+    expect(errorToast).toHaveBeenCalledWith("Publish failed.", expect.objectContaining({ description: "Network error" }));
     vi.restoreAllMocks();
   });
 });

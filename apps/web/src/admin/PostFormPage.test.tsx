@@ -16,8 +16,10 @@ import {
   waitFor,
   cleanup,
   fireEvent,
+  within,
 } from "@testing-library/react";
 import { PostFormPage } from "./PostFormPage.js";
+import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -58,6 +60,18 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
 });
+
+async function acceptPostDialog(label = /confirm|continue/i) {
+  await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+  // prettier-ignore
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: label }));
+}
+
+async function cancelPostDialog() {
+  await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+  // prettier-ignore
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /cancel/i }));
+}
 
 // =========================================================================
 // Create mode
@@ -101,8 +115,7 @@ describe("PostFormPage create mode", () => {
   });
 
   it("fills all fields and submits POST /posts/admin with correct body", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
+    const title = "  New Post  ";
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(MOCK_CREATED_POST),
@@ -112,7 +125,7 @@ describe("PostFormPage create mode", () => {
 
     // Fill the form
     fireEvent.change(screen.getByLabelText(/^title/i), {
-      target: { value: "New Post" },
+      target: { value: title },
     });
     fireEvent.change(screen.getByLabelText(/^slug/i), {
       target: { value: "new-post" },
@@ -129,6 +142,7 @@ describe("PostFormPage create mode", () => {
 
     // Submit
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalled();
@@ -148,7 +162,7 @@ describe("PostFormPage create mode", () => {
       (postCall![1] as RequestInit).body as string,
     ) as Record<string, unknown>;
 
-    expect(body.title).toBe("New Post");
+    expect(body.title).toBe(title);
     expect(body.slug).toBe("new-post");
     expect(body.content).toBe("Some content here");
     expect(body.description).toBe("A short description");
@@ -160,8 +174,6 @@ describe("PostFormPage create mode", () => {
   });
 
   it("splits comma-separated tags: 'a, b, ,c' → tags ['a','b','c']", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(MOCK_CREATED_POST),
@@ -180,6 +192,7 @@ describe("PostFormPage create mode", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       const postCall = (
@@ -197,8 +210,6 @@ describe("PostFormPage create mode", () => {
   });
 
   it("calls onSaved callback after successful create", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(MOCK_CREATED_POST),
@@ -216,6 +227,7 @@ describe("PostFormPage create mode", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       expect(onSaved).toHaveBeenCalledTimes(1);
@@ -351,8 +363,6 @@ describe("PostFormPage edit mode", () => {
   });
 
   it("submits PATCH /posts/admin/:id with form data", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi
       .fn()
       // First call: GET for loading
@@ -386,6 +396,7 @@ describe("PostFormPage edit mode", () => {
 
     // Submit
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       const patchCall = (
@@ -435,6 +446,7 @@ describe("PostFormPage edit mode", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       const patchCall = (
@@ -477,8 +489,7 @@ describe("PostFormPage states", () => {
   });
 
   it("shows save success message after successful POST", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
+    const successToast = vi.spyOn(toast, "success");
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(MOCK_CREATED_POST),
@@ -494,17 +505,19 @@ describe("PostFormPage states", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       expect(screen.getByTestId("post-form-save-success")).toBeTruthy();
     });
 
     expect(screen.getByText(/saved successfully|post saved/i)).toBeTruthy();
+    // prettier-ignore
+    expect(successToast).toHaveBeenCalledWith("Post saved successfully.", expect.anything());
   });
 
   it("shows save error message on POST failure", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
+    const errorToast = vi.spyOn(toast, "error");
     globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
     render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
@@ -517,17 +530,21 @@ describe("PostFormPage states", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       expect(screen.getByTestId("post-form-save-error")).toBeTruthy();
     });
 
     expect(screen.getByText(/failed to save/i)).toBeTruthy();
+    // prettier-ignore
+    expect(errorToast).toHaveBeenCalledWith("Failed to save post.", expect.objectContaining({ description: "Network error" }));
   });
 
-  it("disables save button while submitting", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+  // prettier-ignore
+  it("invokes save toast retry with the original form payload", async () => { const errorToast = vi.spyOn(toast, "error"); globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error")).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_CREATED_POST) }); render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />); fireEvent.change(screen.getByLabelText(/^title/i), { target: { value: "Retry title" } }); fireEvent.change(screen.getByLabelText(/^slug/i), { target: { value: "retry-slug" } }); fireEvent.click(screen.getByRole("button", { name: /save/i })); await acceptPostDialog(); await waitFor(() => expect(errorToast).toHaveBeenCalled()); const retry = (errorToast.mock.calls[0]![1] as unknown as { action: { onClick(): void } }).action.onClick; retry(); await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2)); const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>; expect(fetchMock).toHaveBeenNthCalledWith(2, "/posts/admin", expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" } })); expect(JSON.parse((fetchMock.mock.calls[1]![1] as RequestInit).body as string)).toEqual({ title: "Retry title", slug: "retry-slug", content: "", description: "", tags: [], coverImageId: null, downloadIds: [] }); });
 
+  it("disables save button while submitting", async () => {
     // POST never resolves — save stays "submitting"
     globalThis.fetch = vi
       .fn()
@@ -543,9 +560,10 @@ describe("PostFormPage states", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
-      const saveButton = screen.getByRole("button", { name: /save/i });
+      const saveButton = screen.getByRole("button", { name: "Save Post" });
       expect((saveButton as HTMLButtonElement).disabled).toBe(true);
     });
   });
@@ -572,8 +590,6 @@ describe("PostFormPage states", () => {
   });
 
   it("clears save success/error messages when user edits a field", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -597,6 +613,7 @@ describe("PostFormPage states", () => {
 
     // First save attempt fails
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       expect(screen.getByTestId("post-form-save-error")).toBeTruthy();
@@ -699,9 +716,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
   // PUBLISHED + slug changed → two confirms
   // ------------------------------------------------------------------
 
-  it("shows two sequential window.confirm when slug is changed on a PUBLISHED post: URL-breakage then save", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
+  it("shows two sequential accessible confirmations when slug is changed on a PUBLISHED post", async () => {
     globalThis.fetch = vi
       .fn()
       // GET for loading
@@ -735,18 +750,9 @@ describe("PostFormPage P-07 slug-change gate", () => {
 
     // Submit
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    // Two confirms called
-    await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledTimes(2);
-    });
-
-    // First confirm: URL-breakage warning
-    expect(confirmSpy.mock.calls).toHaveLength(2);
-    expect(confirmSpy.mock.calls[0]![0]).toMatch(/url|break|link/i);
-
-    // Second confirm: generic save
-    expect(confirmSpy.mock.calls[1]![0]).toMatch(/save|update/i);
+    await acceptPostDialog(/continue/i);
+    expect(screen.getByRole("dialog").textContent).toMatch(/save changes/i);
+    await acceptPostDialog(/confirm/i);
 
     // PATCH was sent (both confirms accepted)
     await waitFor(() => {
@@ -757,8 +763,6 @@ describe("PostFormPage P-07 slug-change gate", () => {
       );
       expect(patchCall).toBeTruthy();
     });
-
-    confirmSpy.mockRestore();
   });
 
   // ------------------------------------------------------------------
@@ -766,8 +770,6 @@ describe("PostFormPage P-07 slug-change gate", () => {
   // ------------------------------------------------------------------
 
   it("cancelling the URL-breakage confirm does NOT send a PATCH request", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false); // first call returns false
-
     globalThis.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(PUBLISHED_POST),
@@ -791,10 +793,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
-    });
+    await cancelPostDialog();
 
     // No PATCH — only the initial GET was called
     const patchCalls = (
@@ -803,8 +802,6 @@ describe("PostFormPage P-07 slug-change gate", () => {
       ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
     );
     expect(patchCalls).toHaveLength(0);
-
-    confirmSpy.mockRestore();
   });
 
   // ------------------------------------------------------------------
@@ -812,11 +809,6 @@ describe("PostFormPage P-07 slug-change gate", () => {
   // ------------------------------------------------------------------
 
   it("accepting URL-breakage but cancelling save confirm does NOT send a PATCH request", async () => {
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockReturnValueOnce(true) // URL-breakage: accept
-      .mockReturnValueOnce(false); // save: decline
-
     globalThis.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(PUBLISHED_POST),
@@ -840,10 +832,8 @@ describe("PostFormPage P-07 slug-change gate", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledTimes(2);
-    });
+    await acceptPostDialog(/continue/i);
+    await cancelPostDialog();
 
     // No PATCH sent
     const patchCalls = (
@@ -852,8 +842,6 @@ describe("PostFormPage P-07 slug-change gate", () => {
       ([, init]) => (init as RequestInit | undefined)?.method === "PATCH",
     );
     expect(patchCalls).toHaveLength(0);
-
-    confirmSpy.mockRestore();
   });
 
   // ------------------------------------------------------------------
@@ -861,8 +849,6 @@ describe("PostFormPage P-07 slug-change gate", () => {
   // ------------------------------------------------------------------
 
   it("DRAFT post slug change does NOT trigger URL-breakage confirm but shows save confirm", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -892,6 +878,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     // Wait for PATCH to be sent (save still happens)
     await waitFor(() => {
@@ -902,17 +889,9 @@ describe("PostFormPage P-07 slug-change gate", () => {
       );
       expect(patchCall).toBeTruthy();
     });
-
-    // Only the general save confirm was called — no URL-breakage confirm
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/save/i));
-
-    confirmSpy.mockRestore();
   });
 
   it("ARCHIVED post slug change does NOT trigger URL-breakage confirm but shows save confirm", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -942,6 +921,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       const patchCall = (
@@ -951,17 +931,9 @@ describe("PostFormPage P-07 slug-change gate", () => {
       );
       expect(patchCall).toBeTruthy();
     });
-
-    // Only the general save confirm was called — no URL-breakage confirm
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/save/i));
-
-    confirmSpy.mockRestore();
   });
 
   it("slug unchanged on PUBLISHED post shows save confirm but no URL-breakage confirm", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -992,6 +964,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       const patchCall = (
@@ -1001,12 +974,6 @@ describe("PostFormPage P-07 slug-change gate", () => {
       );
       expect(patchCall).toBeTruthy();
     });
-
-    // Only the general save confirm was called (slug not changed)
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/save/i));
-
-    confirmSpy.mockRestore();
   });
 });
 
@@ -1177,6 +1144,38 @@ describe("PostFormPage downloads", () => {
     expect(screen.getByTestId("post-form-download-add")).toBeTruthy();
   });
 
+  // prettier-ignore
+  it("keeps existing download replacement and removal ordered in the payload", async () => {
+    const post = {
+      ...MOCK_POST,
+      downloads: [
+        MOCK_POST.downloads[0]!,
+        { id: "dl2", fileId: "file-2", label: "Second", sortOrder: 1 },
+      ],
+    };
+    let finishUpload!: (response: Response) => void;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(post) })
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { finishUpload = resolve; }))
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(post) });
+
+    render(<PostFormPage mode="edit" slug="hello-world" onSaved={vi.fn()} onCancel={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId("post-form")).toBeTruthy());
+    const first = screen.getByTestId("post-form-download-widget-file-1");
+    const second = screen.getByTestId("post-form-download-widget-file-2");
+    fireEvent.change(within(first).getByLabelText(/upload post download/i), { target: { files: [new File(["x"], "new.pdf")] } });
+    fireEvent.click(within(second).getByRole("button", { name: /remove/i }));
+    expect(screen.queryByTestId("post-form-download-link-file-2")).toBeNull();
+    finishUpload({ ok: true, json: () => Promise.resolve({ id: "file-new" }) } as Response);
+    await waitFor(() => expect(screen.getByTestId("post-form-download-link-file-new")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /save post/i }));
+    await acceptPostDialog();
+    await waitFor(() => expect(screen.getByTestId("post-form-save-success")).toBeTruthy());
+    const save = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(([, init]) => (init as RequestInit)?.method === "PATCH");
+    expect(JSON.parse((save![1] as RequestInit).body as string).downloadIds).toEqual(["file-new"]);
+  });
+
   it("does NOT render downloads section when post has no downloads", async () => {
     const postWithoutDownloads = {
       ...MOCK_POST,
@@ -1209,8 +1208,6 @@ describe("PostFormPage downloads", () => {
   });
 
   it("includes the edited download label in the PATCH payload (Phase 3, TDD 3.2)", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi
       .fn()
       // First call: GET for loading
@@ -1245,6 +1242,7 @@ describe("PostFormPage downloads", () => {
 
     // Submit
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       const patchCall = (
@@ -1263,8 +1261,6 @@ describe("PostFormPage downloads", () => {
   });
 
   it("omits the downloadLabels field from the PATCH payload when all labels are cleared (Phase 3, TDD 3.2)", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -1296,6 +1292,7 @@ describe("PostFormPage downloads", () => {
     fireEvent.change(labelInput, { target: { value: "" } });
 
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    await acceptPostDialog();
 
     await waitFor(() => {
       const patchCall = (
