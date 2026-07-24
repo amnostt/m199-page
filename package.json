@@ -10,17 +10,18 @@
   },
   "packageManager": "pnpm@11.1.2",
   "scripts": {
-    "dev": "pnpm -r run dev",
+    "dev": "pnpm --filter @m199/web --filter @m199/api --parallel run dev",
+    "dev:web": "pnpm --filter @m199/web run dev",
+    "dev:api": "pnpm --filter @m199/api run dev",
     "build": "pnpm -r run build",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
-    "test:run": "pnpm -r run test",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
-    "db:reset": "docker compose down -v && docker compose up -d db",
+    "db:reset": "tsx scripts/db-reset.ts",
     "db:status": "docker compose ps db",
     "db:seed": "pnpm --filter @m199/db run db:seed"
   },
@@ -30,6 +31,7 @@
     "eslint": "^9.39.4",
     "globals": "^17.7.0",
     "prettier": "^3.9.4",
+    "tsx": "^4.22.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.62.1"
   }

@@ -12,6 +12,7 @@ Este índice organiza las fuentes que gobiernan el trabajo. Ante una contradicci
 ## Guías operativas
 
 - [Guía operativa del landing Astro](./astro-landing-deployment.md): contrato de runtime, dispatch ordenado de Caddy, monitoreo de 503 y rollback sin ejecutar cambios de producción.
+- [Local development database seed](./local-development-seed.md): deterministic seed contents, known local administrator, and guarded reset workflow.
 
 ## Fuentes normativas
 
