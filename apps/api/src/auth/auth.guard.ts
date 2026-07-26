@@ -30,6 +30,7 @@ interface AccessTokenPayload {
   sub: string;
   type: "access";
   authVersion: number;
+  familyId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +68,13 @@ interface GuardPrismaClient {
     findUnique(args: {
       where: { id?: string; email?: string };
     }): Promise<UserRow | null>;
+  };
+  refreshFamily?: {
+    findUnique(args: { where: { id: string } }): Promise<{
+      id: string;
+      userId: string;
+      status: "ACTIVE" | "TERMINATED";
+    } | null>;
   };
 }
 
@@ -112,6 +120,13 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException("Invalid access token");
     }
 
+    if (
+      payload.familyId !== undefined &&
+      typeof payload.familyId !== "string"
+    ) {
+      throw new UnauthorizedException("Invalid access token");
+    }
+
     // Look up user by the JWT subject claim.
     const user = await this.client.responsibleUser.findUnique({
       where: { id: payload.sub },
@@ -128,6 +143,15 @@ export class AuthGuard implements CanActivate {
 
     if (payload.authVersion !== user.authVersion) {
       throw new UnauthorizedException("Access token has been revoked");
+    }
+
+    if (payload.familyId) {
+      const family = await this.client.refreshFamily?.findUnique({
+        where: { id: payload.familyId },
+      });
+      if (!family || family.userId !== user.id || family.status !== "ACTIVE") {
+        throw new UnauthorizedException("Refresh family has been terminated");
+      }
     }
 
     // Attach authenticated user to request for downstream handlers.

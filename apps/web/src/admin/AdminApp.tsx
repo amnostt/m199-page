@@ -12,7 +12,12 @@
 
 import { useEffect, useState } from "react";
 import type { AuthUser } from "./adminTypes.js";
-import { login, logout, refreshSession } from "./session.js";
+import {
+  login,
+  logout,
+  refreshSession,
+  REFRESH_DEADLINE_MS,
+} from "./session.js";
 import { AdminProviders } from "./AdminProviders.js";
 import { AdminShell, type AdminSection } from "./AdminShell.js";
 
@@ -26,7 +31,9 @@ import { AdminShell, type AdminSection } from "./AdminShell.js";
 // ---------------------------------------------------------------------------
 
 export const TIMEOUTS = {
-  bootstrap: 15_000,
+  // Presentation fallback is aligned with the coordinator's logical caller
+  // deadline; refresh-family authority remains server-side.
+  bootstrap: REFRESH_DEADLINE_MS,
   login: 15_000,
 };
 

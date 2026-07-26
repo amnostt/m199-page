@@ -11,13 +11,14 @@
 // - logout() throws on non-OK responses
 // ---------------------------------------------------------------------------
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   login,
   refreshSession,
   logout,
   adminFetch,
   AdminRequestError,
+  REFRESH_DEADLINE_MS,
 } from "./session.js";
 
 // ---------------------------------------------------------------------------
@@ -53,6 +54,10 @@ function mockLocationHref(): ReturnType<typeof vi.fn> {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 // ---------------------------------------------------------------------------
@@ -103,10 +108,14 @@ describe("refreshSession", () => {
 
     const result = await refreshSession();
 
-    expect(fetch).toHaveBeenCalledWith("/auth/refresh", {
-      method: "POST",
-      credentials: "include",
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/auth/refresh",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        signal: expect.any(AbortSignal),
+      }),
+    );
     expect(result).toEqual(MOCK_USER);
   });
 
@@ -144,6 +153,266 @@ describe("refreshSession", () => {
       MOCK_USER,
       MOCK_USER,
     ]);
+  });
+
+  it("settles a timed-out caller and sends operation lineage headers", async () => {
+    vi.useFakeTimers();
+
+    const refreshDeferred = new Promise<unknown>(() => {});
+    let refreshSignal: AbortSignal | undefined;
+
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
+        if (url === "/auth/refresh") {
+          refreshSignal = init?.signal ?? undefined;
+          return refreshDeferred;
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      });
+
+    const refreshA = refreshSession();
+    const refreshAFailure = expect(refreshA).rejects.toThrow(
+      "Session refresh timed out",
+    );
+    await vi.advanceTimersByTimeAsync(REFRESH_DEADLINE_MS);
+    await refreshAFailure;
+    expect(refreshSignal?.aborted).toBe(true);
+    const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(
+      (init.headers as Record<string, string>)["X-Refresh-Operation-Id"],
+    ).toMatch(/^[0-9a-f-]{36}$/i);
+  });
+
+  it("starts bounded recovery after a timed-out transport without destructive logout", async () => {
+    vi.useFakeTimers();
+
+    let refreshCalls = 0;
+    const operationIds: string[] = [];
+
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
+        if (url !== "/auth/refresh") {
+          throw new Error(`Unexpected request: ${url}`);
+        }
+        refreshCalls++;
+        operationIds.push(
+          (init?.headers as Record<string, string>)["X-Refresh-Operation-Id"] ??
+            "",
+        );
+        return refreshCalls === 1
+          ? new Promise<unknown>(() => {})
+          : Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(MOCK_USER),
+            });
+      });
+
+    const first = refreshSession();
+    const firstFailure = expect(first).rejects.toThrow(
+      "Session refresh timed out",
+    );
+    await vi.advanceTimersByTimeAsync(REFRESH_DEADLINE_MS);
+    await firstFailure;
+
+    await expect(refreshSession()).resolves.toEqual(MOCK_USER);
+    expect(refreshCalls).toBe(2);
+    expect(operationIds[1]).toBe(operationIds[0]);
+  });
+
+  it("does not let a late predecessor completion reject or redirect a newer caller", async () => {
+    vi.useFakeTimers();
+
+    let resolveRefreshA!: (response: unknown) => void;
+    let refreshCalls = 0;
+    const refreshA = new Promise<unknown>((resolve) => {
+      resolveRefreshA = resolve;
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url !== "/auth/refresh") {
+        throw new Error(`Unexpected request: ${url}`);
+      }
+      refreshCalls++;
+      return refreshCalls === 1
+        ? refreshA
+        : Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_USER) });
+    });
+
+    const first = refreshSession();
+    const firstFailure = expect(first).rejects.toThrow(
+      "Session refresh timed out",
+    );
+    await vi.advanceTimersByTimeAsync(REFRESH_DEADLINE_MS);
+    await firstFailure;
+    await expect(refreshSession()).resolves.toEqual(MOCK_USER);
+
+    resolveRefreshA({ ok: true, json: () => Promise.resolve(MOCK_USER) });
+    await Promise.resolve();
+    expect(refreshCalls).toBe(2);
+  });
+
+  it("ignores a late old-generation response after logout and a new family refresh", async () => {
+    vi.useFakeTimers();
+
+    let resolveOldRefresh!: (response: unknown) => void;
+    let refreshCalls = 0;
+    const oldRefresh = new Promise<unknown>((resolve) => {
+      resolveOldRefresh = resolve;
+    });
+    const refreshRequests: RequestInit[] = [];
+
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
+        if (url === "/auth/refresh") {
+          refreshCalls++;
+          refreshRequests.push(init ?? {});
+          if (refreshCalls === 1) return oldRefresh;
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            headers: new Headers({ "x-refresh-family-version": "1" }),
+            json: () => Promise.resolve(MOCK_USER),
+          });
+        }
+        if (url === "/auth/logout") return Promise.resolve({ ok: true });
+        throw new Error(`Unexpected request: ${url}`);
+      });
+
+    const oldResult = refreshSession();
+    const oldFailure = expect(oldResult).rejects.toThrow(
+      "Refresh completed after session logout",
+    );
+    await Promise.resolve();
+    await logout();
+    await expect(refreshSession()).resolves.toEqual(MOCK_USER);
+
+    resolveOldRefresh({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "x-refresh-family-version": "9" }),
+      json: () => Promise.resolve(MOCK_USER),
+    });
+    await oldFailure;
+
+    await expect(refreshSession()).resolves.toEqual(MOCK_USER);
+    const nextHeaders = refreshRequests[2]?.headers as Record<string, string>;
+    expect(nextHeaders["X-Auth-Min-Epoch"]).toBe("1");
+  });
+
+  it("clears a timed-out recovery operation after late success before the next refresh", async () => {
+    vi.useFakeTimers();
+
+    let resolveFirstRefresh!: (response: unknown) => void;
+    let refreshCalls = 0;
+    let logoutCalls = 0;
+    const operationIds: string[] = [];
+    const firstRefresh = new Promise<unknown>((resolve) => {
+      resolveFirstRefresh = resolve;
+    });
+
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
+        if (url === "/auth/refresh") {
+          refreshCalls++;
+          const operationId =
+            (init?.headers as Record<string, string>)?.[
+              "X-Refresh-Operation-Id"
+            ] ?? "";
+          operationIds.push(operationId);
+          if (refreshCalls === 1) return firstRefresh;
+          if (refreshCalls === 2) return new Promise<unknown>(() => {});
+          if (operationId === operationIds[0]) {
+            return Promise.resolve({ ok: false, status: 409 });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            headers: new Headers({ "x-refresh-family-version": "3" }),
+            json: () => Promise.resolve(MOCK_USER),
+          });
+        }
+        if (url === "/auth/logout") {
+          logoutCalls++;
+          return Promise.resolve({ ok: true });
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      });
+
+    const first = refreshSession();
+    const firstFailure = expect(first).rejects.toThrow(
+      "Session refresh timed out",
+    );
+    await vi.advanceTimersByTimeAsync(REFRESH_DEADLINE_MS);
+    await firstFailure;
+
+    const recovery = refreshSession();
+    const recoveryFailure = expect(recovery).rejects.toThrow(
+      "Session refresh timed out",
+    );
+    await vi.advanceTimersByTimeAsync(REFRESH_DEADLINE_MS);
+    await recoveryFailure;
+
+    resolveFirstRefresh({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "x-refresh-family-version": "2" }),
+      json: () => Promise.resolve(MOCK_USER),
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await vi.runAllTimersAsync();
+    await expect(refreshSession()).resolves.toEqual(MOCK_USER);
+
+    expect(operationIds[1]).toBe(operationIds[0]);
+    expect(operationIds[2]).not.toBe(operationIds[0]);
+    expect(logoutCalls).toBe(0);
+  });
+
+  it("does not send logout when a timed-out refresh later succeeds", async () => {
+    vi.useFakeTimers();
+
+    let resolveRefresh!: (response: unknown) => void;
+    let logoutCalls = 0;
+    let endpointCalls = 0;
+    const refreshDeferred = new Promise<unknown>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const hrefSetter = mockLocationHref();
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "/auth/refresh") return refreshDeferred;
+      if (url === "/auth/logout") {
+        logoutCalls++;
+        return Promise.resolve({ ok: true });
+      }
+      if (url === "/admin/endpoint") {
+        endpointCalls++;
+        return endpointCalls === 1
+          ? Promise.resolve({ ok: false, status: 401 })
+          : Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve({ ok: true }),
+            });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    const request = adminFetch("/admin/endpoint");
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(REFRESH_DEADLINE_MS);
+    resolveRefresh({
+      ok: true,
+      json: () => Promise.resolve(MOCK_USER),
+    });
+
+    await expect(request).resolves.toEqual({ ok: true });
+    expect(logoutCalls).toBe(0);
+    expect(hrefSetter).not.toHaveBeenCalled();
   });
 });
 

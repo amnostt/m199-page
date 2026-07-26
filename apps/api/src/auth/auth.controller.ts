@@ -6,7 +6,15 @@
  * No routes are behind AuthGuard (login is unauthenticated; refresh
  * and logout use the refresh_token cookie directly).
  */
-import { Body, Controller, Inject, Post, Req, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Header,
+  Inject,
+  Post,
+  Req,
+  Res,
+} from "@nestjs/common";
 import type { Request, Response } from "express";
 import { AuthService, type AuthUser } from "./auth.service.js";
 import { LoginDto } from "./dto/login.dto.js";
@@ -23,6 +31,7 @@ export class AuthController {
    * inactive users.
    */
   @Post("login")
+  @Header("Cache-Control", "no-store")
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -38,6 +47,7 @@ export class AuthController {
    * inactive users.
    */
   @Post("refresh")
+  @Header("Cache-Control", "no-store")
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -52,6 +62,7 @@ export class AuthController {
    * still cleared and the request succeeds.
    */
   @Post("logout")
+  @Header("Cache-Control", "no-store")
   async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,

@@ -34,11 +34,19 @@ function makeDbService(
     authVersion: number;
     status: "ACTIVE" | "INACTIVE";
   } | null,
+  family: {
+    id: string;
+    userId: string;
+    status: "ACTIVE" | "TERMINATED";
+  } | null = null,
 ) {
   return {
     client: {
       responsibleUser: {
         findUnique: vi.fn().mockResolvedValue(user),
+      },
+      refreshFamily: {
+        findUnique: vi.fn().mockResolvedValue(family),
       },
     },
   } as unknown as DbService;
@@ -190,5 +198,27 @@ describe("AuthGuard", () => {
       email: ACTIVE_USER.email,
       displayName: ACTIVE_USER.displayName,
     });
+  });
+
+  it("rejects a JWT whose refresh family is terminal", async () => {
+    verifySpy.mockReturnValue({
+      sub: "u-1",
+      type: "access",
+      authVersion: 0,
+      familyId: "family-1",
+    });
+    const jwt = { verify: verifySpy } as unknown as JwtService;
+    const db = makeDbService(ACTIVE_USER, {
+      id: "family-1",
+      userId: "u-1",
+      status: "TERMINATED",
+    });
+    const guard = new AuthGuard(jwt, db);
+
+    await expect(
+      guard.canActivate(
+        makeExecutionContext({ [ACCESS_TOKEN]: "dead-family-token" }),
+      ),
+    ).rejects.toThrow("Refresh family has been terminated");
   });
 });

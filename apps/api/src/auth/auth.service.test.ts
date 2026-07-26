@@ -1,509 +1,663 @@
 /**
- * AuthService unit tests (AR-01, AR-02, AR-03).
- *
- * Proves login, refresh, logout, and session lifecycle using mocked
- * DbService + JwtService. Follows the pattern from db.service.test.ts:
- * Test.createTestingModule with explicit provider overrides.
- *
- * bcryptjs and node:crypto are mocked at the module level so tests are
- * deterministic and never perform real hashing.
+ * AuthService behavior tests for durable family rotation and recovery.
+ * The Prisma surface is mocked in memory; no PostgreSQL process is required
+ * for these transaction, proof, cookie, and terminal-state assertions.
  */
 import { Test } from "@nestjs/testing";
 import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { RequestTimeoutException, UnauthorizedException } from "@nestjs/common";
+import { AuthService, type AuthUser } from "./auth.service.js";
+import { DbService } from "../db/db.service.js";
+import {
+  REFRESH_OPERATION_TIMEOUT_MS,
+  REFRESH_TOKEN,
+  REFRESH_TRANSACTION_TIMEOUT_MS,
+} from "./auth.constants.js";
 
-// ---- hoisted mocks --------------------------------------------------------
 const { compareMock } = vi.hoisted(() => ({
   compareMock: vi.fn<(password: string, hash: string) => Promise<boolean>>(),
 }));
 
 vi.mock("bcryptjs", () => ({
-  default: {
-    compare: compareMock,
-  },
+  default: { compare: compareMock },
 }));
 
-const { randomBytesMock, createHashMock } = vi.hoisted(() => ({
-  randomBytesMock: vi.fn(),
-  createHashMock: {
-    update: vi.fn(),
-    digest: vi.fn(),
-  },
-}));
+const ACTIVE_USER = {
+  id: "u-1",
+  email: "admin@test.com",
+  displayName: "Admin",
+  passwordHash: "hash",
+  authVersion: 0,
+  status: "ACTIVE" as const,
+};
 
-vi.mock("node:crypto", () => ({
-  createHash: vi.fn(() => createHashMock),
-  randomBytes: randomBytesMock,
-}));
+const OPERATION_A = "11111111-1111-4111-8111-111111111111";
+const OPERATION_B = "22222222-2222-4222-8222-222222222222";
 
-// ---- imports after mocks --------------------------------------------------
-import { AuthService, type AuthUser } from "./auth.service.js";
-import { DbService } from "../db/db.service.js";
-import { ACCESS_TOKEN, REFRESH_TOKEN } from "./auth.constants.js";
-
-// ---- helpers --------------------------------------------------------------
-
-interface MockResponse {
-  cookie: ReturnType<typeof vi.fn>;
-  clearCookie: ReturnType<typeof vi.fn>;
-}
-
-function mockRes(): MockResponse {
+function mockRes() {
   return {
     cookie: vi.fn(),
     clearCookie: vi.fn(),
+    setHeader: vi.fn(),
   };
 }
 
-function mockReq(cookies?: Record<string, string>) {
-  return { cookies } as unknown as import("express").Request;
+function mockReq(token?: string, operationId?: string, minEpoch?: number) {
+  const headers: Record<string, string> = {};
+  if (operationId) headers["x-refresh-operation-id"] = operationId;
+  if (minEpoch !== undefined) headers["x-auth-min-epoch"] = String(minEpoch);
+  return {
+    cookies: token ? { [REFRESH_TOKEN]: token } : undefined,
+    headers,
+  } as unknown as import("express").Request;
 }
 
-interface SessionOverride {
-  id: string;
-  userId: string;
-  tokenHash: string;
-  status: "ACTIVE" | "REVOKED" | "EXPIRED";
-  expiresAt: Date;
-  revokedAt: Date | null;
+function refreshCookie(res: ReturnType<typeof mockRes>): string {
+  const call = res.cookie.mock.calls.find(([name]) => name === REFRESH_TOKEN);
+  if (!call) throw new Error("refresh cookie was not set");
+  return call[1] as string;
 }
 
-interface UserOverride {
-  id: string;
-  email: string;
-  displayName: string;
-  passwordHash: string;
-  authVersion: number;
-  status: "ACTIVE" | "INACTIVE";
+function expectNoAuthCookies(res: ReturnType<typeof mockRes>): void {
+  expect(res.cookie).not.toHaveBeenCalled();
+  expect(res.clearCookie).not.toHaveBeenCalled();
 }
 
-interface MockDbOverrides {
-  user?: UserOverride | null;
-  session?: SessionOverride | null;
-}
+function makeFixture() {
+  let tokenCounter = 0;
+  const claims = new Map<string, Record<string, unknown>>();
+  const families = new Map<string, Record<string, unknown>>();
+  const operations = new Map<string, Record<string, unknown>>();
+  const user = { ...ACTIVE_USER };
 
-/**
- * Builds a DbService mock whose client exposes stubbed Prisma models.
- * Each call to makeDbService returns fresh vi.fn() mocks so per-test
- * assertions don't interfere.
- */
-function makeDbValue(overrides: MockDbOverrides = {}) {
-  const refreshSession = {
-    findUnique: vi.fn().mockResolvedValue(overrides.session ?? null),
-    create: vi.fn().mockResolvedValue({ id: "new-session-id" }),
-    update: vi.fn().mockResolvedValue({}),
-    updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+  const jwt = {
+    sign: vi.fn(
+      (
+        payload: Record<string, unknown>,
+        options?: { expiresIn?: number | string },
+      ) => {
+        const token =
+          payload.type === "refresh"
+            ? `refresh-${++tokenCounter}`
+            : `access-${++tokenCounter}`;
+        if (payload.type === "refresh") {
+          const seconds =
+            typeof options?.expiresIn === "number" ? options.expiresIn : 900;
+          claims.set(token, {
+            ...payload,
+            exp: Math.floor(Date.now() / 1000) + seconds,
+          });
+        }
+        return token;
+      },
+    ),
+    verify: vi.fn((token: string) => {
+      const value = claims.get(token);
+      if (!value) throw new Error("invalid token");
+      return value;
+    }),
   };
 
   const client = {
     responsibleUser: {
-      findUnique: vi.fn().mockResolvedValue(overrides.user ?? null),
-      update: vi.fn().mockResolvedValue({}),
+      findUnique: vi.fn(
+        async ({ where }: { where: { id?: string; email?: string } }) => {
+          if (where.id === user.id || where.email === user.email) return user;
+          return null;
+        },
+      ),
+      update: vi.fn(
+        async ({ data }: { data: { authVersion: { increment: number } } }) => {
+          user.authVersion += data.authVersion.increment;
+          return user;
+        },
+      ),
     },
-    refreshSession,
-    $transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
-      fn(client),
+    refreshSession: {
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    },
+    refreshFamily: {
+      findUnique: vi.fn(
+        async ({ where }: { where: { id: string } }) =>
+          families.get(where.id) ?? null,
+      ),
+      findMany: vi.fn(async () =>
+        [...families.values()]
+          .filter(
+            (family) => family.userId === user.id && family.status === "ACTIVE",
+          )
+          .map((family) => ({ id: family.id as string })),
+      ),
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+        families.set(data.id as string, data);
+        return data;
+      }),
+      update: vi.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: { id: string };
+          data: Record<string, unknown>;
+        }) => {
+          const family = families.get(where.id);
+          if (!family) throw new Error("family not found");
+          Object.assign(family, data);
+          return family;
+        },
+      ),
+      updateMany: vi.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: { userId?: string; status?: string };
+          data: Record<string, unknown>;
+        }) => {
+          let count = 0;
+          for (const family of families.values()) {
+            if (
+              (!where.userId || family.userId === where.userId) &&
+              (!where.status || family.status === where.status)
+            ) {
+              Object.assign(family, data);
+              count++;
+            }
+          }
+          return { count };
+        },
+      ),
+    },
+    refreshOperation: {
+      findFirst: vi.fn(
+        async ({
+          where,
+          orderBy,
+        }: {
+          where: Record<string, unknown>;
+          orderBy?: Record<string, string>;
+        }) => {
+          const rows = [...operations.values()].filter((operation) =>
+            Object.entries(where).every(
+              ([key, value]) => operation[key] === value,
+            ),
+          );
+          const orderKey = orderBy ? Object.keys(orderBy)[0] : undefined;
+          if (orderKey)
+            rows.sort(
+              (a, b) =>
+                Number(b[orderKey] as Date) - Number(a[orderKey] as Date),
+            );
+          return rows[0] ?? null;
+        },
+      ),
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+        operations.set(data.id as string, data);
+        return data;
+      }),
+      updateMany: vi.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: { familyId: string };
+          data: Record<string, unknown>;
+        }) => {
+          let count = 0;
+          for (const operation of operations.values()) {
+            if (operation.familyId === where.familyId) {
+              Object.assign(operation, data);
+              count++;
+            }
+          }
+          return { count };
+        },
+      ),
+    },
+    $queryRaw: vi.fn(
+      async (_strings: TemplateStringsArray, familyId: string) =>
+        families.has(familyId) ? [{ id: familyId }] : [],
     ),
+    $transaction: vi.fn(),
   };
 
-  return {
-    client,
-  };
+  // Model the database transaction boundary deterministically. This makes
+  // Promise.all tests exercise the API's serialized contract without claiming
+  // to replace PostgreSQL row-lock/contention coverage.
+  let transactionTail = Promise.resolve();
+  client.$transaction.mockImplementation(
+    async (fn: (tx: typeof client) => Promise<unknown>) => {
+      const previous = transactionTail;
+      let release!: () => void;
+      transactionTail = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await previous;
+      try {
+        return await fn(client);
+      } finally {
+        release();
+      }
+    },
+  );
+
+  return { client, jwt, claims, families, operations, user };
 }
 
-const ACTIVE_USER: UserOverride = {
-  id: "u-1",
-  email: "a@test.com",
-  displayName: "Alice",
-  passwordHash: "$2b$hashed",
-  authVersion: 0,
-  status: "ACTIVE",
-};
-
-const INACTIVE_USER: UserOverride = {
-  ...ACTIVE_USER,
-  id: "u-2",
-  email: "b@test.com",
-  displayName: "Bob",
-  status: "INACTIVE",
-};
-
-// ---- test helpers ---------------------------------------------------------
-
-interface ServiceFixture {
-  service: AuthService;
-  signSpy: ReturnType<typeof vi.fn>;
-  dbValue: ReturnType<typeof makeDbValue>;
-}
-
-async function buildService(
-  dbOverrides: MockDbOverrides = {},
-): Promise<ServiceFixture> {
-  const signSpy = vi.fn().mockReturnValue("jwt-access-token");
-  randomBytesMock.mockReturnValue({ toString: () => "raw-refresh-token" });
-  createHashMock.update.mockReturnValue(createHashMock);
-  createHashMock.digest.mockReturnValue("hashed-refresh-token");
-
-  const dbValue = makeDbValue(dbOverrides);
-
+async function buildService() {
+  compareMock.mockResolvedValue(true);
+  const fixture = makeFixture();
   const module = await Test.createTestingModule({
     providers: [
       AuthService,
-      { provide: JwtService, useValue: { sign: signSpy } },
-      { provide: DbService, useValue: dbValue },
+      { provide: JwtService, useValue: fixture.jwt },
+      { provide: DbService, useValue: { client: fixture.client } },
+      {
+        provide: ConfigService,
+        useValue: {
+          getOrThrow: vi.fn(() => "unit-test-jwt-secret"),
+        },
+      },
     ],
   }).compile();
-
-  return {
-    service: module.get(AuthService),
-    signSpy,
-    dbValue,
-  };
+  return { service: module.get(AuthService), ...fixture };
 }
 
-// ---- tests ----------------------------------------------------------------
+describe("AuthService family contract", () => {
+  beforeEach(() => vi.clearAllMocks());
 
-describe("AuthService", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  it("creates durable family state and encrypted initial lineage on login", async () => {
+    const { service, families, operations, client } = await buildService();
+    const res = mockRes();
 
-  // ---- AR-01: Login -------------------------------------------------------
+    const result = await service.login(
+      { email: ACTIVE_USER.email, password: "password123" },
+      res as unknown as import("express").Response,
+    );
 
-  describe("login (AR-01)", () => {
-    it("returns user and sets cookies on valid credentials", async () => {
-      compareMock.mockResolvedValue(true);
-      const { service, signSpy, dbValue } = await buildService({
-        user: ACTIVE_USER,
-      });
-
-      const res = mockRes();
-      const result = await service.login(
-        { email: ACTIVE_USER.email, password: "valid-password" },
-        res as unknown as import("express").Response,
-      );
-
-      expect(result).toEqual<AuthUser>({
-        id: ACTIVE_USER.id,
-        email: ACTIVE_USER.email,
-        displayName: ACTIVE_USER.displayName,
-      });
-      expect(signSpy).toHaveBeenCalledWith(
-        { sub: ACTIVE_USER.id, type: "access", authVersion: 0 },
-        { expiresIn: "15m" },
-      );
-      expect(res.cookie).toHaveBeenCalledWith(
-        ACCESS_TOKEN,
-        "jwt-access-token",
-        expect.objectContaining({ httpOnly: true }),
-      );
-      expect(res.cookie).toHaveBeenCalledWith(
-        REFRESH_TOKEN,
-        "raw-refresh-token",
-        expect.objectContaining({ httpOnly: true, path: "/" }),
-      );
-      expect(res.clearCookie).toHaveBeenCalledWith(
-        REFRESH_TOKEN,
-        expect.objectContaining({ path: "/auth/refresh" }),
-      );
-      expect(dbValue.client.refreshSession.create).toHaveBeenCalled();
+    expect(result).toEqual<AuthUser>({
+      id: ACTIVE_USER.id,
+      email: ACTIVE_USER.email,
+      displayName: ACTIVE_USER.displayName,
     });
-
-    it("throws 401 on invalid password", async () => {
-      compareMock.mockResolvedValue(false);
-      const { service } = await buildService({ user: ACTIVE_USER });
-
-      const res = mockRes();
-      await expect(
-        service.login(
-          { email: ACTIVE_USER.email, password: "wrong" },
-          res as unknown as import("express").Response,
-        ),
-      ).rejects.toThrow("Invalid credentials");
-
-      expect(res.cookie).not.toHaveBeenCalled();
-    });
-
-    it("throws 401 when user not found", async () => {
-      const { service } = await buildService({ user: null });
-
-      const res = mockRes();
-      await expect(
-        service.login(
-          { email: "nope@test.com", password: "x" },
-          res as unknown as import("express").Response,
-        ),
-      ).rejects.toThrow("Invalid credentials");
-    });
-
-    it("throws 403 for inactive user", async () => {
-      const { service } = await buildService({ user: INACTIVE_USER });
-
-      const res = mockRes();
-      await expect(
-        service.login(
-          { email: INACTIVE_USER.email, password: "x" },
-          res as unknown as import("express").Response,
-        ),
-      ).rejects.toThrow("User is inactive");
-
-      expect(res.cookie).not.toHaveBeenCalled();
-    });
-  });
-
-  // ---- AR-02: Refresh -----------------------------------------------------
-
-  describe("refresh (AR-02)", () => {
-    const ACTIVE_SESSION: SessionOverride = {
-      id: "s-1",
-      userId: ACTIVE_USER.id,
-      tokenHash: "hashed-refresh-token",
+    expect(families.size).toBe(1);
+    expect(operations.size).toBe(1);
+    expect([...families.values()][0]).toMatchObject({
+      currentVersion: 1,
       status: "ACTIVE",
-      expiresAt: new Date(Date.now() + 86_400_000),
-      revokedAt: null,
-    };
-
-    it("rotates session and sets new cookies on valid refresh", async () => {
-      const { service, dbValue } = await buildService({
-        user: ACTIVE_USER,
-        session: ACTIVE_SESSION,
-      });
-
-      const req = mockReq({ refresh_token: "raw-refresh-token" });
-      const res = mockRes();
-      const result = await service.refresh(
-        req,
-        res as unknown as import("express").Response,
-      );
-
-      expect(result).toEqual<AuthUser>({
-        id: ACTIVE_USER.id,
-        email: ACTIVE_USER.email,
-        displayName: ACTIVE_USER.displayName,
-      });
-      // Old session revoked inside the same transaction that creates the new one.
-      expect(dbValue.client.$transaction).toHaveBeenCalledTimes(1);
-      expect(dbValue.client.refreshSession.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: ACTIVE_SESSION.id, status: "ACTIVE" },
-          data: expect.objectContaining({ status: "REVOKED" }),
-        }),
-      );
-      // New session created
-      expect(dbValue.client.refreshSession.create).toHaveBeenCalled();
-      expect(res.cookie).toHaveBeenCalledTimes(2);
     });
-
-    it("emits legacy refresh cookie deletion before the new root refresh cookie", async () => {
-      const { service } = await buildService({
-        user: ACTIVE_USER,
-        session: ACTIVE_SESSION,
-      });
-
-      const req = mockReq({ refresh_token: "raw-refresh-token" });
-      const res = mockRes();
-
-      await service.refresh(req, res as unknown as import("express").Response);
-
-      expect(res.clearCookie).toHaveBeenCalledWith(
-        REFRESH_TOKEN,
-        expect.objectContaining({ path: "/auth/refresh" }),
-      );
-      expect(res.cookie).toHaveBeenCalledWith(
-        REFRESH_TOKEN,
-        "raw-refresh-token",
-        expect.objectContaining({ path: "/" }),
-      );
-
-      const legacyDeleteOrder = res.clearCookie.mock.invocationCallOrder[0];
-      const rootRefreshSetOrder = res.cookie.mock.invocationCallOrder[1];
-
-      expect(legacyDeleteOrder).toBeDefined();
-      expect(rootRefreshSetOrder).toBeDefined();
-
-      expect(legacyDeleteOrder as number).toBeLessThan(
-        rootRefreshSetOrder as number,
-      );
-    });
-
-    it("rejects a concurrent rotation when another request already revoked the session", async () => {
-      const { service, dbValue } = await buildService({
-        user: ACTIVE_USER,
-        session: ACTIVE_SESSION,
-      });
-      dbValue.client.refreshSession.updateMany.mockResolvedValueOnce({
-        count: 0,
-      });
-
-      const req = mockReq({ refresh_token: "raw-refresh-token" });
-      const res = mockRes();
-
-      await expect(
-        service.refresh(req, res as unknown as import("express").Response),
-      ).rejects.toThrow("Invalid or revoked token");
-
-      expect(dbValue.client.$transaction).toHaveBeenCalledTimes(1);
-      expect(dbValue.client.refreshSession.create).not.toHaveBeenCalled();
-      expect(res.clearCookie).not.toHaveBeenCalled();
-    });
-
-    it("throws 401 without clearing cookies for revoked token", async () => {
-      const revokedSession = {
-        ...ACTIVE_SESSION,
-        status: "REVOKED" as const,
-      };
-      const { service } = await buildService({
-        user: ACTIVE_USER,
-        session: revokedSession,
-      });
-
-      const req = mockReq({ refresh_token: "old-token" });
-      const res = mockRes();
-
-      await expect(
-        service.refresh(req, res as unknown as import("express").Response),
-      ).rejects.toThrow("Invalid or revoked token");
-
-      expect(res.clearCookie).not.toHaveBeenCalled();
-    });
-
-    it("throws 401 without clearing newer cookies for expired token", async () => {
-      const expiredSession = {
-        ...ACTIVE_SESSION,
-        expiresAt: new Date(Date.now() - 1_000),
-      };
-      const { service } = await buildService({
-        user: ACTIVE_USER,
-        session: expiredSession,
-      });
-
-      const req = mockReq({ refresh_token: "old-token" });
-      const res = mockRes();
-
-      await expect(
-        service.refresh(req, res as unknown as import("express").Response),
-      ).rejects.toThrow("Refresh token expired");
-
-      expect(res.clearCookie).not.toHaveBeenCalled();
-    });
-
-    it("throws 401 and clears cookies when cookie is missing", async () => {
-      const { service } = await buildService();
-
-      const req = mockReq(undefined);
-      const res = mockRes();
-
-      await expect(
-        service.refresh(req, res as unknown as import("express").Response),
-      ).rejects.toThrow("Missing refresh token");
-
-      expect(res.clearCookie).toHaveBeenCalled();
-    });
-
-    it("throws 403 and clears cookies for inactive user", async () => {
-      const { service } = await buildService({
-        user: INACTIVE_USER,
-        session: ACTIVE_SESSION,
-      });
-
-      const req = mockReq({ refresh_token: "raw-refresh-token" });
-      const res = mockRes();
-
-      await expect(
-        service.refresh(req, res as unknown as import("express").Response),
-      ).rejects.toThrow("User is inactive");
-
-      expect(res.clearCookie).toHaveBeenCalled();
-    });
+    expect(res.setHeader).toHaveBeenCalledWith("Cache-Control", "no-store");
+    expect(client.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        isolationLevel: "Serializable",
+        timeout: expect.any(Number),
+      }),
+    );
   });
 
-  // ---- AR-03: Logout ------------------------------------------------------
+  it("converges concurrent/stale callers to the same current-family result", async () => {
+    const { service } = await buildService();
+    const loginRes = mockRes();
+    await service.login(
+      { email: ACTIVE_USER.email, password: "password123" },
+      loginRes as unknown as import("express").Response,
+    );
+    const firstToken = refreshCookie(loginRes);
 
-  describe("logout (AR-03)", () => {
-    it("revokes session and clears cookies", async () => {
-      const ACTIVE_SESSION: SessionOverride = {
-        id: "s-1",
-        userId: ACTIVE_USER.id,
-        tokenHash: "hashed-refresh-token",
-        status: "ACTIVE",
-        expiresAt: new Date(Date.now() + 86_400_000),
-        revokedAt: null,
-      };
-      const { service, dbValue } = await buildService({
-        session: ACTIVE_SESSION,
-      });
+    const firstRes = mockRes();
+    const secondRes = mockRes();
+    const [first, replay] = await Promise.all([
+      service.refresh(
+        mockReq(firstToken, OPERATION_A),
+        firstRes as unknown as import("express").Response,
+      ),
+      service.refresh(
+        mockReq(firstToken, OPERATION_B),
+        secondRes as unknown as import("express").Response,
+      ),
+    ]);
 
-      const req = mockReq({ refresh_token: "raw-refresh-token" });
-      const res = mockRes();
-
-      await service.logout(req, res as unknown as import("express").Response);
-
-      expect(dbValue.client.refreshSession.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { tokenHash: ACTIVE_SESSION.tokenHash, status: "ACTIVE" },
-          data: expect.objectContaining({ status: "REVOKED" }),
-        }),
-      );
-      expect(res.clearCookie).toHaveBeenCalledWith(
-        ACCESS_TOKEN,
-        expect.objectContaining({ path: "/" }),
-      );
-      expect(res.clearCookie).toHaveBeenCalledWith(
-        REFRESH_TOKEN,
-        expect.objectContaining({ path: "/" }),
-      );
-      expect(res.clearCookie).toHaveBeenCalledWith(
-        REFRESH_TOKEN,
-        expect.objectContaining({ path: "/auth/refresh" }),
-      );
-    });
-
-    it("uses a root-scoped refresh cookie so browser logout sends the current session token", async () => {
-      compareMock.mockResolvedValue(true);
-      const { service } = await buildService({ user: ACTIVE_USER });
-
-      const res = mockRes();
-      await service.login(
-        { email: ACTIVE_USER.email, password: "valid-password" },
-        res as unknown as import("express").Response,
-      );
-
-      expect(res.cookie).toHaveBeenCalledWith(
-        REFRESH_TOKEN,
-        "raw-refresh-token",
-        expect.objectContaining({ path: "/" }),
-      );
-    });
-
-    it("clears cookies even when token is missing (idempotent)", async () => {
-      const { service } = await buildService();
-
-      const req = mockReq(undefined);
-      const res = mockRes();
-
-      await service.logout(req, res as unknown as import("express").Response);
-
-      expect(res.clearCookie).toHaveBeenCalledTimes(3);
-    });
+    expect(first).toEqual(replay);
+    expect(refreshCookie(firstRes)).toBe(refreshCookie(secondRes));
   });
 
-  // ---- revokeAllUserSessions ----------------------------------------------
+  it("serializes a headerless legacy caller with an identified caller", async () => {
+    const { service, families, operations } = await buildService();
+    const loginRes = mockRes();
+    await service.login(
+      { email: ACTIVE_USER.email, password: "password123" },
+      loginRes as unknown as import("express").Response,
+    );
+    const legacyToken = refreshCookie(loginRes);
+    const legacyRes = mockRes();
+    const identifiedRes = mockRes();
 
-  describe("revokeAllUserSessions", () => {
-    it("increments authVersion and revokes all ACTIVE refresh sessions", async () => {
-      const { service, dbValue } = await buildService();
+    const [legacy, identified] = await Promise.all([
+      service.refresh(
+        mockReq(legacyToken),
+        legacyRes as unknown as import("express").Response,
+      ),
+      service.refresh(
+        mockReq(legacyToken, OPERATION_B),
+        identifiedRes as unknown as import("express").Response,
+      ),
+    ]);
 
-      await service.revokeAllUserSessions("u-1");
+    expect(legacy).toEqual(identified);
+    expect(refreshCookie(legacyRes)).toBe(refreshCookie(identifiedRes));
+    expect([...families.values()][0]).toMatchObject({ currentVersion: 2 });
+    expect(operations.size).toBe(2);
+    expect(legacyRes.setHeader).toHaveBeenCalledWith(
+      "x-refresh-family-version",
+      "2",
+    );
+    expect(identifiedRes.setHeader).toHaveBeenCalledWith(
+      "x-refresh-family-version",
+      "2",
+    );
+  });
 
-      expect(dbValue.client.$transaction).toHaveBeenCalledTimes(1);
-      expect(dbValue.client.responsibleUser.update).toHaveBeenCalledWith({
-        where: { id: "u-1" },
-        data: { authVersion: { increment: 1 } },
-      });
-      expect(dbValue.client.refreshSession.updateMany).toHaveBeenCalledWith({
-        where: { userId: "u-1", status: "ACTIVE" },
-        data: { status: "REVOKED", revokedAt: expect.any(Date) as Date },
-      });
+  it("returns the exact operation result for a valid identified retry", async () => {
+    const { service } = await buildService();
+    const loginRes = mockRes();
+    await service.login(
+      { email: ACTIVE_USER.email, password: "password123" },
+      loginRes as unknown as import("express").Response,
+    );
+    const token = refreshCookie(loginRes);
+
+    const firstRes = mockRes();
+    const first = await service.refresh(
+      mockReq(token, OPERATION_A),
+      firstRes as unknown as import("express").Response,
+    );
+    const retryRes = mockRes();
+    const retry = await service.refresh(
+      mockReq(token, OPERATION_A),
+      retryRes as unknown as import("express").Response,
+    );
+
+    expect(retry).toEqual(first);
+    expect(refreshCookie(retryRes)).toBe(refreshCookie(firstRes));
+  });
+
+  it("treats X-Auth-Min-Epoch as compatibility input, not family authority", async () => {
+    const { service } = await buildService();
+    const loginRes = mockRes();
+    await service.login(
+      { email: ACTIVE_USER.email, password: "password123" },
+      loginRes as unknown as import("express").Response,
+    );
+    const token = refreshCookie(loginRes);
+    const firstRes = mockRes();
+    const first = await service.refresh(
+      mockReq(token, OPERATION_A),
+      firstRes as unknown as import("express").Response,
+    );
+
+    const replayRes = mockRes();
+    const replay = await service.refresh(
+      mockReq(token, OPERATION_B, 999),
+      replayRes as unknown as import("express").Response,
+    );
+
+    expect(replay).toEqual(first);
+    expect(replayRes.setHeader).toHaveBeenCalledWith(
+      "x-refresh-family-version",
+      "2",
+    );
+    expect(refreshCookie(replayRes)).toBe(refreshCookie(firstRes));
+  });
+
+  it("rejects proof mismatch and expired bounded replay", async () => {
+    const { service, operations } = await buildService();
+    const loginRes = mockRes();
+    await service.login(
+      { email: ACTIVE_USER.email, password: "password123" },
+      loginRes as unknown as import("express").Response,
+    );
+    const token = refreshCookie(loginRes);
+    await service.refresh(
+      mockReq(token, OPERATION_A),
+      mockRes() as unknown as import("express").Response,
+    );
+
+    const operation = [...operations.values()].find(
+      (row) => row.presentedVersion === 1,
+    );
+    if (!operation) throw new Error("refresh operation was not recorded");
+    const validProofHash = operation.presentedProofHash;
+    operation.presentedProofHash = "wrong-proof";
+    const proofMismatchRes = mockRes();
+    await expect(
+      service.refresh(
+        mockReq(token, OPERATION_B),
+        proofMismatchRes as unknown as import("express").Response,
+      ),
+    ).rejects.toThrow(UnauthorizedException);
+    expectNoAuthCookies(proofMismatchRes);
+
+    operation.presentedProofHash = validProofHash;
+    operation.replayUntil = new Date(Date.now() - 1);
+    const expiredReplayRes = mockRes();
+    await expect(
+      service.refresh(
+        mockReq(token, OPERATION_B),
+        expiredReplayRes as unknown as import("express").Response,
+      ),
+    ).rejects.toThrow("Refresh replay proof is invalid or expired");
+    expectNoAuthCookies(expiredReplayRes);
+  });
+
+  it("rejects malformed lineage, signed-lineage mismatch, and future versions without cookies", async () => {
+    const { service, claims } = await buildService();
+    const loginRes = mockRes();
+    await service.login(
+      { email: ACTIVE_USER.email, password: "password123" },
+      loginRes as unknown as import("express").Response,
+    );
+    const token = refreshCookie(loginRes);
+    const initialClaims = claims.get(token);
+    if (!initialClaims)
+      throw new Error("initial refresh claims were not recorded");
+
+    const malformedToken = "malformed-lineage";
+    claims.set(malformedToken, {
+      ...initialClaims,
+      issuedByOperationId: undefined,
+    });
+    const malformedRes = mockRes();
+    await expect(
+      service.refresh(
+        mockReq(malformedToken, OPERATION_A),
+        malformedRes as unknown as import("express").Response,
+      ),
+    ).rejects.toThrow("Invalid refresh token lineage");
+    expectNoAuthCookies(malformedRes);
+
+    const validIssuedByOperationId = initialClaims.issuedByOperationId;
+    const rotationRes = mockRes();
+    await service.refresh(
+      mockReq(token, OPERATION_A),
+      rotationRes as unknown as import("express").Response,
+    );
+    const currentToken = refreshCookie(rotationRes);
+    initialClaims.issuedByOperationId = "signed-lineage-mismatch";
+    const lineageRes = mockRes();
+    await expect(
+      service.refresh(
+        mockReq(token, OPERATION_B),
+        lineageRes as unknown as import("express").Response,
+      ),
+    ).rejects.toThrow("Refresh replay proof is invalid or expired");
+    expectNoAuthCookies(lineageRes);
+
+    initialClaims.issuedByOperationId = validIssuedByOperationId;
+    const currentClaims = claims.get(currentToken);
+    if (!currentClaims)
+      throw new Error("current refresh claims were not recorded");
+    const futureToken = "future-version";
+    claims.set(futureToken, { ...currentClaims, version: 99 });
+    const futureRes = mockRes();
+    await expect(
+      service.refresh(
+        mockReq(futureToken, OPERATION_B),
+        futureRes as unknown as import("express").Response,
+      ),
+    ).rejects.toThrow("Refresh token version is ahead of family state");
+    expectNoAuthCookies(futureRes);
+  });
+
+  it("terminates the whole family and increments authVersion atomically on logout", async () => {
+    const { service, families, operations, user } = await buildService();
+    const loginRes = mockRes();
+    await service.login(
+      { email: ACTIVE_USER.email, password: "password123" },
+      loginRes as unknown as import("express").Response,
+    );
+    const token = refreshCookie(loginRes);
+    const logoutRes = mockRes();
+
+    await service.logout(
+      mockReq(token),
+      logoutRes as unknown as import("express").Response,
+    );
+
+    expect([...families.values()][0]).toMatchObject({ status: "TERMINATED" });
+    expect(
+      [...operations.values()].every((row) => row.status === "INVALIDATED"),
+    ).toBe(true);
+    expect(user.authVersion).toBe(1);
+    const terminalRefreshRes = mockRes();
+    await expect(
+      service.refresh(
+        mockReq(token, OPERATION_A),
+        terminalRefreshRes as unknown as import("express").Response,
+      ),
+    ).rejects.toThrow("Refresh family is terminated");
+    expectNoAuthCookies(terminalRefreshRes);
+    expect(logoutRes.clearCookie).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries only a bounded Serializable P2034 conflict", async () => {
+    const { service, client } = await buildService();
+    const transaction = client.$transaction;
+    transaction.mockRejectedValueOnce(
+      Object.assign(new Error("conflict"), { code: "P2034" }),
+    );
+    const res = mockRes();
+
+    await service.login(
+      { email: ACTIVE_USER.email, password: "password123" },
+      res as unknown as import("express").Response,
+    );
+
+    expect(transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("emits structured telemetry when Serializable retries are exhausted", async () => {
+    const { service, client } = await buildService();
+    const transaction = client.$transaction;
+    const conflict = Object.assign(new Error("serialization conflict"), {
+      code: "P2034",
+    });
+    transaction.mockRejectedValue(conflict);
+    const warn = vi.spyOn(
+      (service as unknown as { logger: { warn: (...args: unknown[]) => void } })
+        .logger,
+      "warn",
+    );
+
+    await expect(
+      service.login(
+        { email: ACTIVE_USER.email, password: "password123" },
+        mockRes() as unknown as import("express").Response,
+      ),
+    ).rejects.toBe(conflict);
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "auth.serializable_conflict_exhausted",
+      }),
+      "Serializable auth transaction retries exhausted",
+    );
+  });
+
+  it("emits structured telemetry when the transaction deadline expires", async () => {
+    const { service, client } = await buildService();
+    const deadlineError = Object.assign(new Error("transaction timeout"), {
+      code: "P2028",
+    });
+    client.$transaction.mockRejectedValue(deadlineError);
+    const warn = vi.spyOn(
+      (service as unknown as { logger: { warn: (...args: unknown[]) => void } })
+        .logger,
+      "warn",
+    );
+
+    await expect(
+      service.login(
+        { email: ACTIVE_USER.email, password: "password123" },
+        mockRes() as unknown as import("express").Response,
+      ),
+    ).rejects.toBe(deadlineError);
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "auth.transaction_deadline_exceeded",
+      }),
+      "Auth transaction deadline exceeded",
+    );
+  });
+
+  it("maps the absolute operation deadline while preserving transaction bounds", async () => {
+    const { service, client } = await buildService();
+    const transaction = client.$transaction;
+    const warn = vi.spyOn(
+      (service as unknown as { logger: { warn: (...args: unknown[]) => void } })
+        .logger,
+      "warn",
+    );
+    const conflict = Object.assign(new Error("serialization conflict"), {
+      code: "P2034",
+    });
+    let expired = false;
+    const start = Date.now();
+    const nowSpy = vi
+      .spyOn(Date, "now")
+      .mockImplementation(() =>
+        expired ? start + REFRESH_OPERATION_TIMEOUT_MS + 1 : start,
+      );
+    transaction.mockImplementationOnce(async () => {
+      expired = true;
+      throw conflict;
+    });
+
+    try {
+      await expect(
+        service.login(
+          { email: ACTIVE_USER.email, password: "password123" },
+          mockRes() as unknown as import("express").Response,
+        ),
+      ).rejects.toThrow(RequestTimeoutException);
+    } finally {
+      nowSpy.mockRestore();
+    }
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "auth.operation_deadline_exceeded",
+      }),
+      "Auth operation deadline exceeded",
+    );
+    expect(transaction.mock.calls[0]?.[1]).toMatchObject({
+      isolationLevel: "Serializable",
+      timeout: REFRESH_TRANSACTION_TIMEOUT_MS,
+      maxWait: 1_000,
     });
   });
 });

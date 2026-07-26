@@ -25,6 +25,16 @@ enum RefreshSessionStatus {
   EXPIRED
 }
 
+enum RefreshFamilyStatus {
+  ACTIVE
+  TERMINATED
+}
+
+enum RefreshOperationStatus {
+  COMPLETED
+  INVALIDATED
+}
+
 enum ContentStatus {
   DRAFT
   PUBLISHED
@@ -64,6 +74,7 @@ model ResponsibleUser {
   updatedAt    DateTime              @updatedAt
 
   refreshSessions RefreshSession[]
+  refreshFamilies RefreshFamily[]
   authoredOutings Outing[]
   authoredPosts   Post[]
   authoredVerses  Verse[]
@@ -93,6 +104,54 @@ model RefreshSession {
   @@index([userId, status])
   @@index([expiresAt])
   @@index([status, expiresAt])
+}
+
+model RefreshFamily {
+  // APP: the family row is the serialized authority for refresh rotation,
+  // bounded replay, and terminal logout. Current token material is encrypted;
+  // only its hash is used for indexed equality checks.
+  id                    String             @id
+  userId                String
+  status                RefreshFamilyStatus @default(ACTIVE)
+  currentVersion        Int
+  currentTokenHash      String             @unique
+  encryptedCurrentToken String
+  expiresAt             DateTime
+  terminalAt            DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  user       ResponsibleUser   @relation(fields: [userId], references: [id])
+  operations RefreshOperation[]
+
+  @@index([userId, status])
+  @@index([status, expiresAt])
+}
+
+model RefreshOperation {
+  // APP: one operation can be retried only with the same presented lineage and
+  // proof. The presented-version unique key records each consumed descendant.
+  id                           String                  @id
+  familyId                     String
+  operationId                  String
+  presentedVersion             Int
+  presentedJti                 String
+  presentedIssuedByOperationId String
+  presentedProofHash           String
+  childVersion                 Int
+  encryptedResult              String
+  completedAt                  DateTime
+  replayUntil                  DateTime
+  status                       RefreshOperationStatus @default(COMPLETED)
+  createdAt                    DateTime                @default(now())
+  updatedAt                    DateTime                @updatedAt
+
+  family RefreshFamily @relation(fields: [familyId], references: [id])
+
+  @@unique([familyId, operationId])
+  @@unique([familyId, presentedVersion])
+  @@index([familyId, childVersion])
+  @@index([familyId, replayUntil])
 }
 
 model FileAsset {
