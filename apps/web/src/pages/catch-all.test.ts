@@ -19,6 +19,16 @@ describe("pages/[...path].astro — React route bridge", () => {
     );
   });
 
+  it("selects the document theme from the SSR pathname", () => {
+    expect(PAGE_SOURCE).toMatch(
+      /import\s+\{\s*resolveDocumentTheme\s*\}\s+from\s+["']\.\.\/lib\/server\/document-theme\.js["'];/,
+    );
+    expect(PAGE_SOURCE).toMatch(
+      /const\s+theme\s*=\s*resolveDocumentTheme\(Astro\.url\.pathname\);/,
+    );
+    expect(PAGE_SOURCE).toMatch(/<body\s+data-theme=\{theme\}>/);
+  });
+
   it("keeps the document shell and public CSS available to interactive public routes", () => {
     expect(PAGE_SOURCE).toMatch(/import\s+["']\.\.\/public\.css["']/);
     expect(PAGE_SOURCE).toMatch(/<html\s+lang=["']es["']>/);

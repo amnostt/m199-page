@@ -81,7 +81,7 @@ describe("pages/index.astro — imports and delegation", () => {
     );
     expect(PAGE_CODE).toMatch(/<title>Misión 1-99<\/title>/);
     expect(PAGE_CODE).toMatch(
-      /<body>\s*<Landing\s+payload=\{payload\}\s+failure=\{failure\}\s*\/>\s*<\/body>/,
+      /<body\s+data-theme=["']public["']>\s*<Landing\s+payload=\{payload\}\s+failure=\{failure\}\s*\/>\s*<\/body>/,
     );
   });
 
