@@ -105,7 +105,7 @@ export default defineConfig({
   vite: {
     envDir: ROOT_ENV_DIRECTORY,
     // Astro's Tailwind v4 integration uses this plugin to process the
-    // @import "tailwindcss/*" directives in public.css.
+    // @import "tailwindcss" directives in the shared shadcn globals.
     plugins: [tailwindcss()],
     server: {
       proxy: {

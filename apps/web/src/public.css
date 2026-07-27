@@ -1,13 +1,13 @@
 /* ---------------------------------------------------------------------------
  * public.css — public-only visual system for the Mision 1-99 web app.
  *
- * Imports Tailwind CSS v4 in pieces:
+ * Imports the public-specific Tailwind CSS v4 layers in pieces:
  *   - theme.css   → design tokens (CSS custom properties)
  *   - utilities.css → utility classes
  *
- * Deliberately OMITS preflight.css. Preflight is Tailwind's global reset and
- * would restyle the admin UI; the design scopes all authored rules and tokens
- * under `.public-ui` so the admin presentation stays unchanged.
+ * Deliberately OMITS preflight.css here. The shared shadcn globals own the
+ * application-wide reset; this file scopes its authored rules and public
+ * tokens under `.public-ui` so public-specific behavior remains explicit.
  *
  * Every public top-level state must carry the `.public-ui` root class for
  * these tokens and reusable classes to apply. Admin markup does not.
