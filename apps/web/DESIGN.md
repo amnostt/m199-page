@@ -4,9 +4,16 @@ name: Misión 1-99 — Kinship & Action
 
 # Misión 1-99 Design System
 
-This document defines the target design system for `apps/web`. It is the source
-of truth for public and administrative visual decisions, component usage, and
-interaction standards.
+This document defines the target design system for `apps/web`. It is normative
+for public and administrative visual decisions, component usage, and
+interaction behavior. Existing code may temporarily differ while migration is
+in progress; such differences are implementation debt, not alternative design
+rules.
+
+The terms **must**, **must not**, **should**, and **may** indicate requirement,
+prohibition, recommendation, and permission respectively. Product capabilities
+explicitly marked as future are approved direction but are not implementation
+requirements until their product change is scoped.
 
 ## Design-system architecture
 
@@ -116,7 +123,7 @@ asset's function and surrounding context without redundant announcements.
 ## Theme tokens
 
 All shared components consume semantic roles instead of hard-coded brand
-colors:
+colors. Base roles are:
 
 - `background` / `foreground`;
 - `card` / `card-foreground`;
@@ -129,6 +136,10 @@ colors:
 - `border`;
 - `input`;
 - `ring`.
+
+Interactive color roles additionally define `primary-hover`,
+`secondary-hover`, and `accent-hover`. Hover roles must not be used as the sole
+active, selected, focus, or validation indicator.
 
 ### Public theme
 
@@ -179,10 +190,12 @@ accent and focus color. Color must not be the only state indicator.
   --primary-hover: #1e40af;
   --secondary: #e5e7eb;
   --secondary-foreground: #1f2937;
+  --secondary-hover: #d1d5db;
   --muted: #f3f4f6;
   --muted-foreground: #4b5563;
   --accent: #dbeafe;
   --accent-foreground: #1e40af;
+  --accent-hover: #bfdbfe;
   --destructive: #b91c1c;
   --destructive-foreground: #ffffff;
   --border: #d1d5db;
@@ -195,6 +208,11 @@ accent and focus color. Color must not be the only state indicator.
 The administrative theme prioritizes clarity and efficient content management.
 It remains related to the product without reproducing the public editorial
 layout.
+
+In both themes, `input` is the default control-border color, not the input
+surface color. Control surfaces use `background` or `card` according to their
+container. `ring` is reserved for focus indication; it does not communicate
+success or selection by itself.
 
 ## Typography
 
@@ -219,6 +237,8 @@ display typeface.
 | Public heading large | Archivo Narrow | `clamp(2rem, 5vw, 3rem)` | 700 | 1.15 |
 | Public heading medium | Archivo Narrow | `clamp(1.5rem, 3vw, 2rem)` | 600 | 1.25 |
 | Heading small | Inter | `1.25rem` | 600 | 1.35 |
+| Admin heading large | Inter | `1.875rem` | 700 | 1.2 |
+| Admin heading medium | Inter | `1.5rem` | 600 | 1.3 |
 | Body large | Inter | `1.125rem` | 400 | 1.6 |
 | Body medium | Inter | `1rem` | 400 | 1.5 |
 | Body small | Inter | `0.875rem` | 400 | 1.5 |
@@ -227,8 +247,9 @@ display typeface.
 Public calls to action and short editorial labels may use Archivo Narrow and
 uppercase treatment. Administrative controls use Inter and sentence case.
 
-Limit long-form text to approximately `65ch`. Load only required font weights
-and preserve system fallbacks.
+Long-form prose must use `max-width: 65ch`; short labels, controls, tables, and
+data grids are exempt. Load only the weights used by the rendered page and
+preserve the documented system fallbacks.
 
 ## Layout and spacing
 
@@ -256,7 +277,9 @@ layout:
 
 Public editorial compositions may use a 12-column desktop grid. Repeated cards
 use simpler responsive grids. Mobile defaults to one primary content column;
-tablet may introduce two columns.
+additional columns may be introduced only when every item remains readable
+without horizontal page overflow. Breakpoints follow the configured Tailwind
+breakpoints rather than a separate document-specific scale.
 
 Full-width section backgrounds may contain constrained content. Preserve
 logical DOM order in asymmetric layouts. Remove decorative overlap when it
@@ -299,6 +322,10 @@ rounded surfaces.
 | Large | 16px | Featured actions, dialogs, feature containers |
 | Extra large | 24px | Large public media and editorial blocks |
 | Full | 9999px | Avatars, chips, deliberate pill controls |
+
+`--radius` represents the medium value (`8px`). Implementations derive the
+other values from explicit radius utilities or aliases; they must not interpret
+`--radius` as the radius for every component.
 
 Pill-shaped controls are exceptional rather than default. Full-width imagery
 may remain square. Logos are never cropped, masked, or forced into circles; a
@@ -346,12 +373,16 @@ Use anchors for navigation and buttons for actions. Links may use
 `buttonVariants` without losing navigation semantics.
 
 Small buttons support compact controls, default buttons support general actions,
-and large buttons support important public calls to action. Touch-oriented
-targets should approach at least 44px.
+and large buttons support important public calls to action. Primary touch
+targets must provide a hit area of at least 44 by 44 CSS pixels. Dense
+administrative controls may use a smaller visible control only when spacing or
+an expanded hit area prevents overlapping targets and still satisfies WCAG 2.2
+target-size requirements.
 
-Every applicable variant defines default, hover, active, focus-visible,
-disabled, and loading states. Loading controls preserve their width, prevent
-duplicate activation, and retain an accessible label.
+Every interactive variant defines default, hover, active, focus-visible, and
+disabled states. Controls that initiate asynchronous work also define a loading
+state, preserve their width, prevent duplicate activation, expose the busy state
+with `aria-busy` when applicable, and retain an accessible name.
 
 Public typography, uppercase labels, large sizing, and pill shapes are
 composition-level choices, not defaults of the shared Button primitive.
@@ -396,12 +427,15 @@ radius. Bottom-border-only fields are not the global default.
 A complete field may contain a visible label, optional description, control,
 and validation message. Placeholders never replace labels.
 
-Every applicable control defines empty, populated, hover, focus-visible,
-disabled, readonly, invalid, and loading states. Invalid controls use
+Every control defines the states supported by its semantics: empty or populated,
+hover when pointer-interactive, focus-visible, disabled, readonly when the
+element supports it, and invalid when validation applies. Controls involved in
+asynchronous work also define a loading or busy state. Invalid controls use
 `aria-invalid` and associate textual messages through `aria-describedby`.
 
-Standard text inputs and selects use an approximate minimum height of 40px.
-Touch-critical controls approach 44px. Textareas resize vertically.
+Standard text inputs and selects have a minimum visible height of 40px and obey
+the target-size rule defined for actions. Textareas resize vertically unless a
+specific interaction requires a fixed editor viewport.
 
 Prefer native controls when they satisfy the interaction. Rich shadcn controls
 must justify their additional keyboard, focus, portal, and accessibility
@@ -416,8 +450,11 @@ while the product provides only email and telephone contact actions.
 
 ### File upload
 
-File upload experiences communicate accepted formats, maximum size, selected
-file, progress, success, failure, and available replacement or removal actions.
+File upload experiences communicate accepted formats and maximum size before
+selection, then the selected file, submission state, success or failure, and
+available replacement or removal actions. Determinate progress is shown only
+when the upload implementation reports measurable progress; otherwise use an
+indeterminate busy state.
 Drag-and-drop may supplement but never replace keyboard-accessible file
 selection.
 
@@ -456,7 +493,8 @@ Warm grading is acceptable, but skin tones remain natural.
 
 ## Public information architecture
 
-The primary navigation follows this order:
+The target primary navigation follows this order. Items for future capabilities
+are omitted until the corresponding capability is delivered:
 
 1. Inicio;
 2. Misiones;
@@ -464,7 +502,7 @@ The primary navigation follows this order:
 4. Nosotros;
 5. Contacto.
 
-Landing sections use stable anchors:
+Implemented landing sections use these stable anchors:
 
 - `#inicio`;
 - `#misiones`;
@@ -474,7 +512,8 @@ Landing sections use stable anchors:
 
 Sticky navigation accounts for anchor positioning through scroll margin.
 
-The landing follows this order:
+The target landing follows this order, omitting unavailable optional or future
+sections without changing the relative order of the remaining sections:
 
 1. Header;
 2. Hero / Inicio;
@@ -493,9 +532,11 @@ Optional sections do not render empty containers when their data is absent.
 Misiones presents ministry projects associated with Misión 1-99. It is distinct
 from the institutional mission statement shown under Nosotros.
 
-This capability is part of the approved target design. Its data model,
-administration, public API, and navigation will be implemented in a subsequent
-product change.
+This capability is approved future direction. Until its data model,
+administration, public API, and navigation are delivered by a separate product
+change, implementations must not add placeholder mission content, routes, or
+empty navigation targets. The `#misiones` anchor and navigation item become
+required with that delivery, not before it.
 
 Each mission requires a verified identifier, name, logo, and short description.
 A mission action appears only when a valid destination exists. Do not invent
@@ -551,9 +592,12 @@ All experiences provide:
 - readable layouts from 320px without page overflow;
 - support for `prefers-reduced-motion`.
 
-Normal text requires at least 4.5:1 contrast. Large text and meaningful
-interface boundaries require at least 3:1. Color, position, animation, and
-iconography must not be the only way information is communicated.
+Normal text requires a contrast ratio of at least 4.5:1. Large text requires at
+least 3:1, using the WCAG definition of at least 18pt regular or 14pt bold.
+Visual information required to identify user-interface components and their
+states requires at least 3:1 against adjacent colors. Color, position,
+animation, and iconography must not be the only way information is
+communicated.
 
 Accessibility behavior provided by shadcn components must be preserved when
 their styles or composition are customized.
@@ -584,9 +628,12 @@ Content and controls remain understandable when animation is unavailable.
 - [ ] Archivo Narrow is reserved for expressive public typography.
 - [ ] Inter is the global interface and body typeface.
 - [ ] Components consume semantic tokens instead of hard-coded colors.
+- [ ] Hover roles exist for every interactive color role in both themes.
+- [ ] `input` is used as a control-border role and `ring` as a focus role.
 - [ ] Cards have no shadow by default.
 - [ ] Buttons and links preserve correct HTML semantics.
 - [ ] Forms provide visible labels and accessible validation.
+- [ ] Primary touch targets provide a hit area of at least 44 by 44 CSS pixels.
 - [ ] Optional public sections do not render empty containers.
 - [ ] No content fields, statuses, routes, or capabilities are invented.
 - [ ] Keyboard focus remains visible.
@@ -594,3 +641,4 @@ Content and controls remain understandable when animation is unavailable.
 - [ ] Layouts remain usable from 320px without page overflow.
 - [ ] Nonessential motion respects `prefers-reduced-motion`.
 - [ ] Existing routes, API contracts, and authentication boundaries remain intact.
+- [ ] Future capabilities do not create placeholder data, routes, or navigation.
