@@ -23,7 +23,7 @@ describe("admin foundation", () => {
   it("provides the administrative root and toast host", () => {
     // prettier-ignore
     render(<AdminProviders><p>content</p></AdminProviders>);
-    expect(screen.getByTestId("admin-ui-root").className).toBe("admin-ui");
+    expect(screen.getByTestId("admin-ui-root").className).toContain("admin-ui");
   });
   it("contains render failures in the shared feedback boundary", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);

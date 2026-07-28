@@ -75,37 +75,62 @@ function AdminLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
   };
 
   return (
-    <div data-testid="admin-login">
-      <h1>Admin Login</h1>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="admin-email">Email</label>
-        <input
-          id="admin-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          disabled={submitting}
-        />
-        <label htmlFor="admin-password">Password</label>
-        <input
-          id="admin-password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={submitting}
-        />
-        <button type="submit" disabled={submitting}>
-          Sign In
-        </button>
-      </form>
-      {error && (
-        <div data-testid="admin-login-error">
-          Invalid credentials. Try again.
-        </div>
-      )}
-    </div>
+    <main
+      className="admin-ui grid min-h-screen place-items-center bg-background p-4"
+      data-testid="admin-login"
+    >
+      <section className="w-full max-w-sm rounded-lg border border-border bg-card p-6 text-card-foreground">
+        <h1 className="mb-6 font-heading text-3xl font-bold">Admin Login</h1>
+        <form className="grid gap-4" onSubmit={handleSubmit}>
+          <label
+            className="grid gap-1.5 text-sm font-semibold"
+            htmlFor="admin-email"
+          >
+            Email
+            <input
+              id="admin-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={submitting}
+              className="min-h-10 rounded-md border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:opacity-60"
+            />
+          </label>
+          <label
+            className="grid gap-1.5 text-sm font-semibold"
+            htmlFor="admin-password"
+          >
+            Password
+            <input
+              id="admin-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={submitting}
+              className="min-h-10 rounded-md border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:opacity-60"
+            />
+          </label>
+          <button
+            className="min-h-11 rounded-md bg-primary px-4 font-medium text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
+            type="submit"
+            disabled={submitting}
+          >
+            Sign In
+          </button>
+        </form>
+        {error && (
+          <div
+            className="mt-4 text-sm text-destructive"
+            role="alert"
+            data-testid="admin-login-error"
+          >
+            Invalid credentials. Try again.
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
 
@@ -166,7 +191,10 @@ export function AdminApp() {
   // Loading state
   if (loading) {
     return (
-      <div data-testid="admin-loading">
+      <div
+        className="admin-ui grid min-h-screen place-items-center bg-background text-muted-foreground"
+        data-testid="admin-loading"
+      >
         <p>Loading…</p>
       </div>
     );

@@ -5,8 +5,7 @@
  *
  * Renders the validated `LandingPublicPayload` produced by
  * `fetchLandingPublicPayload` (PR2) as semantic HTML using the
- * existing `.public-ui` scope and class hooks defined in
- * `apps/web/src/public.css`. The failure branch is intentionally
+ * shared `.public-ui` composition hooks. The failure branch is intentionally
  * generic and NEVER includes the failure reason, the API host, the
  * stack, or any driver detail. The HTTP status (503) is set in the
  * page wrapper, not here.
@@ -15,8 +14,7 @@
  * `featuredVideoUrl`. The URL has already been sanitized by
  * `validateFeaturedVideoUrl` inside `validateLandingPublicPayload`
  * (PR2 / A-006), so the renderer does not duplicate the allowlist
- * policy. This component does NOT import `public.css`; the page
- * wrapper owns the CSS boundary so the test pipeline can render
+ * policy. The page wrapper owns the CSS boundary so the test pipeline can render
  * the component in isolation through the Container API.
  */
 import type {

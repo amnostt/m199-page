@@ -42,10 +42,16 @@ export function AdminShell({
 }: AdminShellProps) {
   const label = sections.find(([section]) => section === activeSection)?.[1];
   return (
-    <div className="admin-shell" data-testid="admin-shell">
-      <aside className="admin-sidebar" data-testid="admin-sidebar">
-        <strong>Misión 1-99</strong>
-        <nav aria-label="Admin sections">
+    <div
+      className="grid min-h-screen grid-cols-1 md:grid-cols-[15rem_1fr]"
+      data-testid="admin-shell"
+    >
+      <aside
+        className="border-b border-border bg-card p-4 md:row-span-3 md:border-r md:border-b-0"
+        data-testid="admin-sidebar"
+      >
+        <strong className="font-heading">Misión 1-99</strong>
+        <nav className="mt-4 grid gap-2" aria-label="Admin sections">
           {sections.map(([section, sectionLabel]) => (
             <button
               key={section}
@@ -53,34 +59,54 @@ export function AdminShell({
               data-testid={`nav-${section === "landing" ? "landing-settings" : section}`}
               onClick={() => onNavigate(section)}
               disabled={activeSection === section}
+              className="min-h-10 rounded-md border border-input bg-card px-3 py-2 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:bg-accent disabled:text-accent-foreground disabled:opacity-100"
             >
               {sectionLabel}
             </button>
           ))}
-          <button type="button" disabled data-testid="nav-placeholder-files">
+          <button
+            type="button"
+            disabled
+            className="min-h-10 rounded-md border border-input bg-muted px-3 py-2 text-left opacity-60"
+            data-testid="nav-placeholder-files"
+          >
             Files (coming soon)
           </button>
         </nav>
       </aside>
-      <header className="admin-header">
-        <p>Administration</p>
+      <header className="flex items-center justify-between border-b border-border bg-card p-4">
+        <p className="text-muted-foreground">Administration</p>
         <strong data-testid="admin-user-name">{user.displayName}</strong>
       </header>
-      <main className="admin-main" data-testid="admin-content">
-        <div className="admin-page-heading">
-          <p>Admin portal</p>
-          <h1>{label}</h1>
+      <main
+        className="min-w-0 p-[clamp(1rem,3vw,2rem)]"
+        data-testid="admin-content"
+      >
+        <div className="mb-6">
+          <p className="text-sm text-muted-foreground">Admin portal</p>
+          <h1 className="font-heading text-3xl font-bold leading-tight">
+            {label}
+          </h1>
         </div>
-        <div className="admin-page-content">
+        <div>
           <SectionContent section={activeSection} user={user} />
         </div>
       </main>
-      <footer className="admin-footer">
-        <button type="button" data-testid="admin-logout" onClick={onLogout}>
+      <footer className="flex flex-wrap items-center gap-3 border-t border-border bg-card p-4 md:col-start-2">
+        <button
+          type="button"
+          className="min-h-10 rounded-md border border-input bg-card px-3 py-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          data-testid="admin-logout"
+          onClick={onLogout}
+        >
           Logout
         </button>
         {logoutError && (
-          <span role="alert" data-testid="admin-logout-error">
+          <span
+            className="text-destructive"
+            role="alert"
+            data-testid="admin-logout-error"
+          >
             Logout failed. Please try again.
           </span>
         )}

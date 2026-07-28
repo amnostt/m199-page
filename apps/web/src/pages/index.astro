@@ -7,9 +7,7 @@
    * Sibling Astro pages own the remaining public routes; React is hydrated
    * only by the explicit admin page and focused interactive islands.
  *
- * Imports the shared shadcn globals before the existing `public.css` so the
- * shared token and utility foundation is available without removing the
- * public-specific visual system. Calls the PR2 helper
+ * The public layout imports the shared visual system. Calls the PR2 helper
  * `fetchLandingPublicPayload` against the server-only
  * `ASTRO_API_BASE_URL` validated in `apps/web/src/lib/server/env.ts`.
  *

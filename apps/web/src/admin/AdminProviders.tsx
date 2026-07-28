@@ -32,7 +32,10 @@ export interface AdminProvidersProps { children: ReactNode; }
 // prettier-ignore
 export function AdminProviders({ children }: AdminProvidersProps) {
   return (
-    <div className="admin-ui" data-testid="admin-ui-root">
+    <div
+      className="admin-ui min-h-screen bg-background text-foreground"
+      data-testid="admin-ui-root"
+    >
       <ToastContext.Provider value={adminToast}>
         <AdminErrorBoundary>{children}</AdminErrorBoundary>
         <Toaster id="admin" position="bottom-right" closeButton richColors />
