@@ -24,20 +24,20 @@ foundations.
 
 The two experiences use separate visual themes:
 
-| Theme | Context | Purpose |
-| --- | --- | --- |
+| Theme    | Context                           | Purpose                               |
+| -------- | --------------------------------- | ------------------------------------- |
 | `public` | Public website and content routes | Express the Kinship & Action identity |
-| `admin` | Authenticated administration | Provide a clear, efficient workspace |
+| `admin`  | Authenticated administration      | Provide a clear, efficient workspace  |
 
 The active theme is declared at the document-shell level so portalled dialogs,
 selects, menus, tooltips, and popovers inherit the correct values:
 
 ```html
-<body data-theme="public">
+<body data-theme="public"></body>
 ```
 
 ```html
-<body data-theme="admin">
+<body data-theme="admin"></body>
 ```
 
 Theme context and structural scope have separate responsibilities:
@@ -65,14 +65,14 @@ prioritizes active service over religious formality.
 
 The identity is:
 
-| Attribute | Expression |
-| --- | --- |
-| Warm | Warm backgrounds, human photography, approachable shapes |
-| Active | Bold red, condensed headings, dynamic composition |
-| Hopeful | Restrained amber and green accents |
-| Human | Documentary imagery and authentic stories |
-| Contemporary | Clear hierarchy, flat surfaces, responsive layouts |
-| Grounded | Charcoal text and restrained decoration |
+| Attribute    | Expression                                               |
+| ------------ | -------------------------------------------------------- |
+| Warm         | Warm backgrounds, human photography, approachable shapes |
+| Active       | Bold red, condensed headings, dynamic composition        |
+| Hopeful      | Restrained amber and green accents                       |
+| Human        | Documentary imagery and authentic stories                |
+| Contemporary | Clear hierarchy, flat surfaces, responsive layouts       |
+| Grounded     | Charcoal text and restrained decoration                  |
 
 The visual direction is Editorial / Urban Modern. It combines strong condensed
 typography, documentary photography, generous whitespace, and clear calls to
@@ -231,18 +231,18 @@ display typeface.
 }
 ```
 
-| Role | Family | Size | Weight | Line height |
-| --- | --- | --- | ---: | ---: |
-| Public display | Archivo Narrow | `clamp(3rem, 7vw, 4.5rem)` | 700 | 1.05 |
-| Public heading large | Archivo Narrow | `clamp(2rem, 5vw, 3rem)` | 700 | 1.15 |
-| Public heading medium | Archivo Narrow | `clamp(1.5rem, 3vw, 2rem)` | 600 | 1.25 |
-| Heading small | Inter | `1.25rem` | 600 | 1.35 |
-| Admin heading large | Inter | `1.875rem` | 700 | 1.2 |
-| Admin heading medium | Inter | `1.5rem` | 600 | 1.3 |
-| Body large | Inter | `1.125rem` | 400 | 1.6 |
-| Body medium | Inter | `1rem` | 400 | 1.5 |
-| Body small | Inter | `0.875rem` | 400 | 1.5 |
-| Label | Inter | `0.875rem` | 600 | 1.4 |
+| Role                  | Family         | Size                       | Weight | Line height |
+| --------------------- | -------------- | -------------------------- | -----: | ----------: |
+| Public display        | Archivo Narrow | `clamp(3rem, 7vw, 4.5rem)` |    700 |        1.05 |
+| Public heading large  | Archivo Narrow | `clamp(2rem, 5vw, 3rem)`   |    700 |        1.15 |
+| Public heading medium | Archivo Narrow | `clamp(1.5rem, 3vw, 2rem)` |    600 |        1.25 |
+| Heading small         | Inter          | `1.25rem`                  |    600 |        1.35 |
+| Admin heading large   | Inter          | `1.875rem`                 |    700 |         1.2 |
+| Admin heading medium  | Inter          | `1.5rem`                   |    600 |         1.3 |
+| Body large            | Inter          | `1.125rem`                 |    400 |         1.6 |
+| Body medium           | Inter          | `1rem`                     |    400 |         1.5 |
+| Body small            | Inter          | `0.875rem`                 |    400 |         1.5 |
+| Label                 | Inter          | `0.875rem`                 |    600 |         1.4 |
 
 Public calls to action and short editorial labels may use Archivo Narrow and
 uppercase treatment. Administrative controls use Inter and sentence case.
@@ -293,11 +293,11 @@ near `48rem`; tables may grow or use controlled horizontal scrolling.
 Prefer tonal layering, borders, photography, and restrained editorial overlap
 over prominent shadows.
 
-| Level | Treatment | Use |
-| --- | --- | --- |
-| Flat | No shadow | Sections, forms, standard cards, tables |
-| Raised | Soft 5% charcoal shadow | Featured content and sticky navigation |
-| Overlay | Controlled 12% charcoal shadow | Dialogs, menus, selects, popovers |
+| Level   | Treatment                      | Use                                     |
+| ------- | ------------------------------ | --------------------------------------- |
+| Flat    | No shadow                      | Sections, forms, standard cards, tables |
+| Raised  | Soft 5% charcoal shadow        | Featured content and sticky navigation  |
+| Overlay | Controlled 12% charcoal shadow | Dialogs, menus, selects, popovers       |
 
 ```css
 :root {
@@ -315,13 +315,13 @@ reading order, visibility, and viewport containment.
 The shape system balances assertive typography with approachable, moderately
 rounded surfaces.
 
-| Role | Value | Use |
-| --- | ---: | --- |
-| Small | 4px | Compact indicators and badges |
-| Medium | 8px | Inputs, standard buttons, Cards |
-| Large | 16px | Featured actions, dialogs, feature containers |
-| Extra large | 24px | Large public media and editorial blocks |
-| Full | 9999px | Avatars, chips, deliberate pill controls |
+| Role        |  Value | Use                                           |
+| ----------- | -----: | --------------------------------------------- |
+| Small       |    4px | Compact indicators and badges                 |
+| Medium      |    8px | Inputs, standard buttons, Cards               |
+| Large       |   16px | Featured actions, dialogs, feature containers |
+| Extra large |   24px | Large public media and editorial blocks       |
+| Full        | 9999px | Avatars, chips, deliberate pill controls      |
 
 `--radius` represents the medium value (`8px`). Implementations derive the
 other values from explicit radius utilities or aliases; they must not interpret
@@ -360,14 +360,14 @@ solely to reuse a visual component.
 
 Shared Button implementations consume semantic tokens and support:
 
-| Variant | Purpose |
-| --- | --- |
-| Default | Primary action in the current context |
-| Secondary | Important supporting action |
-| Outline | Alternative or cancel action |
-| Ghost | Low-emphasis and compact controls |
-| Destructive | Irreversible or damaging actions |
-| Link | Button-aligned textual navigation when necessary |
+| Variant     | Purpose                                          |
+| ----------- | ------------------------------------------------ |
+| Default     | Primary action in the current context            |
+| Secondary   | Important supporting action                      |
+| Outline     | Alternative or cancel action                     |
+| Ghost       | Low-emphasis and compact controls                |
+| Destructive | Irreversible or damaging actions                 |
+| Link        | Button-aligned textual navigation when necessary |
 
 Use anchors for navigation and buttons for actions. Links may use
 `buttonVariants` without losing navigation semantics.

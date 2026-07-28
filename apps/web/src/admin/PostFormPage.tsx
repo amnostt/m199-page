@@ -12,7 +12,7 @@
 // The route owns fetching, uploads, confirmation ordering, and API payload
 // construction while RHF/Zod owns the native form.
 // ---------------------------------------------------------------------------
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useFieldArray, useForm, type SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,11 +28,19 @@ import {
 import { FileUploadWidget } from "./FileUploadWidget.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 import { useAdminToast } from "./AdminProviders.js";
+import { mapAdminError } from "./adminErrors.js";
+import { Alert, AlertDescription } from "../components/ui/alert.js";
 import { Button } from "../components/ui/button.js";
-// prettier-ignore
-import { ErrorFeedback, LoadingFeedback, mapAdminError } from "../components/ui/feedback.js";
-import { Field } from "../components/ui/field.js";
-import { Form } from "../components/ui/form.js";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "../components/ui/field.js";
+import { Input } from "../components/ui/input.js";
+import { Textarea } from "../components/ui/textarea.js";
 // prettier-ignore
 const postSchema = z.object({ title: z.string().refine((value) => value.trim().length > 0, "Title is required."), slug: z.string(), content: z.string(), description: z.string(), tagsInput: z.string(), coverImageId: z.string().nullable(), downloadIds: z.array(z.string()), downloads: z.array(z.object({ entryId: z.string(), fileId: z.string(), label: z.string() })) });
 type EditorDownload = { entryId: string; fileId: string; label: string };
@@ -162,30 +170,244 @@ export function PostFormPage({
   if (loadError) {
     return (
       <div data-testid="post-form-load-error">
-        <ErrorFeedback message="Failed to load post. Please try again." />
+        <Alert variant="destructive">
+          <AlertDescription>
+            Failed to load post. Please try again.
+          </AlertDescription>
+        </Alert>
         {/* prettier-ignore */}<Button type="button" onClick={onCancel}>Back to Posts</Button>
       </div>
     );
   }
   if (loading) {
-    // prettier-ignore
-    return <div data-testid="post-form-loading"><LoadingFeedback /></div>;
+    return (
+      <div data-testid="post-form-loading" role="status" aria-live="polite">
+        Loading…
+      </div>
+    );
   }
 
   const fieldError = (name: keyof EditorValues) => errors[name]?.message;
-  // prettier-ignore
-  return <div data-testid="post-form"><h2>{mode === "create" ? "New Post" : "Edit Post"}</h2><Form onSubmit={handleSubmit(onValid)} noValidate>
-    <Field name="title" label="Title" error={fieldError("title")}><input id="pf-title" type="text" disabled={saving} {...register("title", { onChange: () => clearErrors("root.server") })} /></Field>
-    <Field name="slug" label="Slug" error={fieldError("slug")}><input id="pf-slug" type="text" disabled={saving} {...register("slug", { onChange: () => clearErrors("root.server") })} /></Field>
-    <Field name="content" label="Content" error={fieldError("content")}><textarea id="pf-content" disabled={saving} {...register("content", { onChange: () => clearErrors("root.server") })} /></Field>
-    <Field name="description" label="Description" error={fieldError("description")}><input id="pf-description" type="text" disabled={saving} {...register("description", { onChange: () => clearErrors("root.server") })} /></Field>
-    <Field name="tagsInput" label="Tags (comma-separated)" error={fieldError("tagsInput")}><input id="pf-tags" type="text" placeholder="e.g. react, typescript" disabled={saving} {...register("tagsInput", { onChange: () => clearErrors("root.server") })} /></Field>
-    {mode === "edit" && <p>Status: {loadedStatus}</p>}
-    <fieldset><legend>Cover Image</legend>{coverImageId && <img src={thumbUrl(coverImageId)!} alt="Cover preview" data-testid="post-form-cover-preview" />}<FileUploadWidget category="POST_COVER_IMAGE" fileId={coverImageId} onUploaded={(asset) => setValue("coverImageId", asset.id, { shouldDirty: true })} onRemove={() => setValue("coverImageId", null, { shouldDirty: true })} data-testid="post-form-cover-widget" /></fieldset>
-    <fieldset><legend>Downloads</legend>{fields.map((download, index) => <div key={download.fieldKey}><a href={fileUrl(download.fileId)!} target="_blank" rel="noopener noreferrer" data-testid={`post-form-download-link-${download.fileId}`}>{download.fileId}</a><Field name={`downloads.${index}.label`} label="File label" error={errors.downloads?.[index]?.label?.message}><input type="text" placeholder="File label" data-testid={`post-form-download-label-${download.fileId}`} {...register(`downloads.${index}.label`, { onChange: () => clearErrors("root.server") })} /></Field><FileUploadWidget category="POST_DOWNLOAD" fileId={download.fileId} onUploaded={(asset) => updateDownload(download.entryId, asset.id)} onRemove={() => remove(index)} data-testid={`post-form-download-widget-${download.fileId}`} /></div>)}<FileUploadWidget category="POST_DOWNLOAD" fileId={null} onUploaded={(asset) => append({ entryId: crypto.randomUUID(), fileId: asset.id, label: "" })} onRemove={() => undefined} data-testid="post-form-download-add" /></fieldset>
-    <div><Button type="submit" disabled={saving}>Save Post</Button><Button type="button" variant="outline" onClick={onCancel} disabled={saving}>Cancel</Button></div>
-    {errors.title?.message && <div data-testid="post-form-validation-error" aria-hidden="true" />}{errors.root?.server?.message && <div data-testid="post-form-save-error" role="alert"><p>Failed to save post. Please try again.</p><p>{errors.root.server.message}</p></div>}{saveSuccess && <div data-testid="post-form-save-success" role="status">Post saved successfully.</div>}
-  </Form><ConfirmDialog open={confirmation !== null} title={confirmation?.kind === "slug" ? "Change published URL?" : "Save post?"} description={confirmation?.kind === "slug" ? "You are changing the URL of a published post. Existing links to this post will break. Continue?" : "Save changes to this post?"} confirmLabel={confirmation?.kind === "slug" ? "Continue" : "Confirm"} onCancel={() => setConfirmation(null)} onConfirm={async () => { if (!confirmation) return; if (confirmation.kind === "slug") setConfirmation({ kind: "save", values: confirmation.values }); else { setConfirmation(null); await saveValues(confirmation.values); } }} /></div>;
+  const renderField = (
+    name: "title" | "slug" | "content" | "description" | "tagsInput",
+    label: string,
+    control: ReactNode,
+    controlId = `pf-${name}`,
+  ) => (
+    <Field data-invalid={Boolean(fieldError(name))}>
+      <FieldLabel htmlFor={controlId}>{label}</FieldLabel>
+      {control}
+      {fieldError(name) && <FieldError>{fieldError(name)}</FieldError>}
+    </Field>
+  );
+
+  return (
+    <div data-testid="post-form">
+      <h2>{mode === "create" ? "New Post" : "Edit Post"}</h2>
+      <form onSubmit={handleSubmit(onValid)} noValidate>
+        <FieldGroup>
+          {renderField(
+            "title",
+            "Title",
+            <Input
+              id="pf-title"
+              type="text"
+              disabled={saving}
+              aria-invalid={Boolean(fieldError("title"))}
+              {...register("title", {
+                onChange: () => clearErrors("root.server"),
+              })}
+            />,
+          )}
+          {renderField(
+            "slug",
+            "Slug",
+            <Input
+              id="pf-slug"
+              type="text"
+              disabled={saving}
+              aria-invalid={Boolean(fieldError("slug"))}
+              {...register("slug", {
+                onChange: () => clearErrors("root.server"),
+              })}
+            />,
+          )}
+          {renderField(
+            "content",
+            "Content",
+            <Textarea
+              id="pf-content"
+              disabled={saving}
+              aria-invalid={Boolean(fieldError("content"))}
+              {...register("content", {
+                onChange: () => clearErrors("root.server"),
+              })}
+            />,
+          )}
+          {renderField(
+            "description",
+            "Description",
+            <Input
+              id="pf-description"
+              type="text"
+              disabled={saving}
+              aria-invalid={Boolean(fieldError("description"))}
+              {...register("description", {
+                onChange: () => clearErrors("root.server"),
+              })}
+            />,
+          )}
+          {renderField(
+            "tagsInput",
+            "Tags (comma-separated)",
+            <Input
+              id="pf-tags"
+              type="text"
+              placeholder="e.g. react, typescript"
+              disabled={saving}
+              aria-invalid={Boolean(fieldError("tagsInput"))}
+              {...register("tagsInput", {
+                onChange: () => clearErrors("root.server"),
+              })}
+            />,
+            "pf-tags",
+          )}
+        </FieldGroup>
+        {mode === "edit" && <p>Status: {loadedStatus}</p>}
+        <FieldSet>
+          <FieldLegend>Cover Image</FieldLegend>
+          {coverImageId && (
+            <img
+              src={thumbUrl(coverImageId)!}
+              alt="Cover preview"
+              data-testid="post-form-cover-preview"
+            />
+          )}
+          <FileUploadWidget
+            category="POST_COVER_IMAGE"
+            fileId={coverImageId}
+            onUploaded={(asset) =>
+              setValue("coverImageId", asset.id, { shouldDirty: true })
+            }
+            onRemove={() =>
+              setValue("coverImageId", null, { shouldDirty: true })
+            }
+            data-testid="post-form-cover-widget"
+          />
+        </FieldSet>
+        <FieldSet>
+          <FieldLegend>Downloads</FieldLegend>
+          {fields.map((download, index) => {
+            const fieldName = `downloads.${index}.label` as const;
+            const error = errors.downloads?.[index]?.label?.message;
+            const inputId = `download-label-${download.fieldKey}`;
+            return (
+              <div key={download.fieldKey}>
+                <a
+                  href={fileUrl(download.fileId)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid={`post-form-download-link-${download.fileId}`}
+                >
+                  {download.fileId}
+                </a>
+                <Field data-invalid={Boolean(error)}>
+                  <FieldLabel htmlFor={inputId}>File label</FieldLabel>
+                  <Input
+                    id={inputId}
+                    type="text"
+                    placeholder="File label"
+                    data-testid={`post-form-download-label-${download.fileId}`}
+                    aria-invalid={Boolean(error)}
+                    {...register(fieldName, {
+                      onChange: () => clearErrors("root.server"),
+                    })}
+                  />
+                  {error && <FieldError>{error}</FieldError>}
+                </Field>
+                <FileUploadWidget
+                  category="POST_DOWNLOAD"
+                  fileId={download.fileId}
+                  onUploaded={(asset) =>
+                    updateDownload(download.entryId, asset.id)
+                  }
+                  onRemove={() => remove(index)}
+                  data-testid={`post-form-download-widget-${download.fileId}`}
+                />
+              </div>
+            );
+          })}
+          <FileUploadWidget
+            category="POST_DOWNLOAD"
+            fileId={null}
+            onUploaded={(asset) =>
+              append({
+                entryId: crypto.randomUUID(),
+                fileId: asset.id,
+                label: "",
+              })
+            }
+            onRemove={() => undefined}
+            data-testid="post-form-download-add"
+          />
+        </FieldSet>
+        <div>
+          <Button type="submit" disabled={saving}>
+            Save Post
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+        </div>
+        {errors.title?.message && (
+          <div data-testid="post-form-validation-error" aria-hidden="true" />
+        )}
+        {errors.root?.server?.message && (
+          <Alert
+            data-testid="post-form-save-error"
+            variant="destructive"
+          >
+            <AlertDescription>
+              <p>Failed to save post. Please try again.</p>
+              <p>{errors.root.server.message}</p>
+            </AlertDescription>
+          </Alert>
+        )}
+        {saveSuccess && (
+          <div data-testid="post-form-save-success" role="status">
+            Post saved successfully.
+          </div>
+        )}
+      </form>
+      <ConfirmDialog
+        open={confirmation !== null}
+        title={
+          confirmation?.kind === "slug" ? "Change published URL?" : "Save post?"
+        }
+        description={
+          confirmation?.kind === "slug"
+            ? "You are changing the URL of a published post. Existing links to this post will break. Continue?"
+            : "Save changes to this post?"
+        }
+        confirmLabel={confirmation?.kind === "slug" ? "Continue" : "Confirm"}
+        onCancel={() => setConfirmation(null)}
+        onConfirm={async () => {
+          if (!confirmation) return;
+          if (confirmation.kind === "slug") {
+            setConfirmation({ kind: "save", values: confirmation.values });
+          } else {
+            setConfirmation(null);
+            await saveValues(confirmation.values);
+          }
+        }}
+      />
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------

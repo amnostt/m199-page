@@ -3,15 +3,27 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { AdminProviders } from "./AdminProviders.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
-// prettier-ignore
-import { Badge, Field, LoadingFeedback, Table, TableBody, TableCell, TableRow } from "../components/ui/core.js";
+import { Alert, AlertDescription } from "../components/ui/alert.js";
+import { Badge } from "../components/ui/badge.js";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "../components/ui/field.js";
+import { Input } from "../components/ui/input.js";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "../components/ui/table.js";
 
 describe("admin foundation", () => {
-  it("provides an authenticated token and portal root", () => {
+  it("provides the administrative root and toast host", () => {
     // prettier-ignore
     render(<AdminProviders><p>content</p></AdminProviders>);
     expect(screen.getByTestId("admin-ui-root").className).toBe("admin-ui");
-    expect(screen.getByTestId("admin-portal-root")).toBeTruthy();
   });
   it("contains render failures in the shared feedback boundary", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -42,14 +54,37 @@ describe("admin foundation", () => {
   });
 
   it("wires field errors and exposes semantic primitive states", () => {
-    // prettier-ignore
-    render(<><Field name="title" label="Title" description="Required" error="Missing"><input /></Field><LoadingFeedback /><Table><TableBody><TableRow><TableCell>Row</TableCell></TableRow></TableBody></Table><Badge>Draft</Badge></>);
+    render(
+      <>
+        <Field data-invalid="true">
+          <FieldLabel htmlFor="title">Title</FieldLabel>
+          <Input id="title" aria-invalid="true" />
+          <FieldDescription>Required</FieldDescription>
+          <FieldError>Missing</FieldError>
+        </Field>
+        <div role="status" aria-live="polite">
+          Loading…
+        </div>
+        <Table>
+          <TableBody>
+            <TableRow>
+              <TableCell>Row</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+        <Badge>Draft</Badge>
+        <Alert variant="destructive">
+          <AlertDescription>Failure</AlertDescription>
+        </Alert>
+      </>,
+    );
     expect(screen.getByLabelText("Title").getAttribute("aria-invalid")).toBe(
       "true",
     );
     expect(screen.getByText("Missing")).toBeTruthy();
     expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
     expect(screen.getByRole("cell").textContent).toContain("Row");
-    expect(screen.getByText("Draft").className).toContain("admin-badge");
+    expect(screen.getByText("Draft").getAttribute("data-slot")).toBe("badge");
+    expect(screen.getByText("Failure")).toBeTruthy();
   });
 });

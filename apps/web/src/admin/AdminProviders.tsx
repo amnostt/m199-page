@@ -1,8 +1,8 @@
 import { Component, createContext, useContext, type ReactNode } from "react";
 import { Toaster, toast } from "sonner";
-import { ErrorFeedback } from "../components/ui/feedback.js";
+import { Alert, AlertDescription } from "../components/ui/alert.js";
 // prettier-ignore
-class AdminErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> { state = { failed: false }; static getDerivedStateFromError() { return { failed: true }; } render() { return this.state.failed ? <ErrorFeedback message="Something went wrong. Please try again." /> : this.props.children; } }
+class AdminErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> { state = { failed: false }; static getDerivedStateFromError() { return { failed: true }; } render() { return this.state.failed ? <Alert variant="destructive"><AlertDescription>Something went wrong. Please try again.</AlertDescription></Alert> : this.props.children; } }
 export type ToastApi = {
   success(message: string): void;
   error(
@@ -27,16 +27,15 @@ export function useAdminToast(): ToastApi {
   return useContext(ToastContext);
 }
 // prettier-ignore
-export interface AdminProvidersProps { children: ReactNode; portalId?: string; }
+export interface AdminProvidersProps { children: ReactNode; }
 
 // prettier-ignore
-export function AdminProviders({ children, portalId = "admin-portal-root" }: AdminProvidersProps) {
+export function AdminProviders({ children }: AdminProvidersProps) {
   return (
     <div className="admin-ui" data-testid="admin-ui-root">
       <ToastContext.Provider value={adminToast}>
         <AdminErrorBoundary>{children}</AdminErrorBoundary>
         <Toaster id="admin" position="bottom-right" closeButton richColors />
-        <div id={portalId} className="admin-portal" data-testid="admin-portal-root" />
       </ToastContext.Provider>
     </div>
   );

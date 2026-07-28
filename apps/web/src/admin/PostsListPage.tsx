@@ -14,12 +14,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PostListItem, PostStatus } from "./adminTypes.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 import { useAdminToast } from "./AdminProviders.js";
+import { mapAdminError } from "./adminErrors.js";
+import { Alert, AlertDescription } from "../components/ui/alert.js";
 import { Badge } from "../components/ui/badge.js";
 import { Button } from "../components/ui/button.js";
 // prettier-ignore
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table.js";
-// prettier-ignore
-import { EmptyFeedback, ErrorFeedback, LoadingFeedback, mapAdminError } from "../components/ui/feedback.js";
 import {
   listPosts,
   publishPost,
@@ -196,7 +196,11 @@ export function PostsListPage({
   if (loadError) {
     return (
       <div data-testid="posts-list-load-error">
-        <ErrorFeedback message="Failed to load posts. Please try again." />
+        <Alert variant="destructive">
+          <AlertDescription>
+            Failed to load posts. Please try again.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -205,7 +209,9 @@ export function PostsListPage({
   if (filteredPosts === null) {
     return (
       <div data-testid="posts-list-loading">
-        <LoadingFeedback />
+        <div role="status" aria-live="polite">
+          Loading…
+        </div>
       </div>
     );
   }
@@ -214,7 +220,7 @@ export function PostsListPage({
   if (filteredPosts.length === 0) {
     return (
       <div data-testid="posts-list-empty">
-        <EmptyFeedback>No posts found.</EmptyFeedback>
+        <div role="status">No posts found.</div>
         {onCreatePost && (
           <Button type="button" onClick={onCreatePost}>
             New Post

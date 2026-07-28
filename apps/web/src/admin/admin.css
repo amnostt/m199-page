@@ -14,17 +14,4 @@
 .admin-ui .admin-main { min-width:0; padding:calc(var(--admin-space) * 2); }
 .admin-ui .admin-footer { grid-column:2; border-top:1px solid var(--admin-border); border-bottom:0; }
 .admin-ui .admin-header p, .admin-ui .admin-page-heading p, .admin-ui p { color:var(--admin-muted); }
-.admin-ui .admin-button { display:inline-flex; gap:.5rem; padding:.55rem .85rem; border:1px solid var(--admin-border); border-radius:var(--admin-radius); }
-.admin-ui .admin-button--default { color:#fff; background:var(--admin-primary); }
-.admin-ui .admin-button--destructive { color:#fff; background:var(--admin-danger); }
-.admin-ui .admin-field { display:grid; gap:.25rem; margin-bottom:var(--admin-space); }
-.admin-ui .admin-field input, .admin-ui .admin-field textarea, .admin-ui .admin-field select { width:100%; padding:.55rem; border:1px solid var(--admin-border); border-radius:var(--admin-radius); }
-.admin-ui .admin-field [aria-invalid="true"], .admin-ui .admin-field__error, .admin-ui .admin-feedback--error { border-color:var(--admin-danger); color:var(--admin-danger); }
-.admin-ui .admin-feedback, .admin-ui .admin-table-wrap { padding:.75rem; background:var(--admin-surface); border:1px solid var(--admin-border); border-radius:var(--admin-radius); }
-.admin-ui .admin-table { width:100%; border-collapse:collapse; text-align:left; }
-.admin-ui .admin-badge { display:inline-flex; padding:.2rem .55rem; border-radius:999px; background:#e5e7eb; }
-.admin-ui .admin-dialog-backdrop { position:fixed; inset:0; z-index:50; display:grid; place-items:center; background:rgb(15 23 42 / .45); }
-.admin-ui .admin-dialog { width:min(32rem, 100%); padding:calc(var(--admin-space) * 1.5); border:1px solid var(--admin-border); border-radius:var(--admin-radius); background:var(--admin-surface); }
-.admin-ui .admin-dialog__actions { display:flex; justify-content:flex-end; gap:.5rem; margin-top:var(--admin-space); }
-.admin-ui .admin-portal { display:contents; }
 }
