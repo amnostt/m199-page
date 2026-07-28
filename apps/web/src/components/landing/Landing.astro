@@ -141,7 +141,7 @@ const { payload, failure } = Astro.props;
           {payload.featuredPosts.map((post) => (
             <li data-testid={`post-${post.id}`}>
               <article class="public-card">
-                <h3>{post.title}</h3>
+                <h3><a href={`/posts/${post.slug}`} class="public-action">{post.title}</a></h3>
               </article>
             </li>
           ))}

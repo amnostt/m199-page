@@ -16,8 +16,7 @@ export default defineConfig(
       // `getViteConfig()` is required so Astro's integration plugins (and
       // the Tailwind v4 plugin wired in `astro.config.mjs`) are loaded into
       // the Vitest transform pipeline. Without it, Vitest cannot import
-      // `.astro` files or transform the React island used by the catch-all
-      // route.
+      // `.astro` files or transform React islands.
       environmentMatchGlobs: [
         ["src/lib/server/**", "node"],
         ["**/server-port.test.*", "node"],

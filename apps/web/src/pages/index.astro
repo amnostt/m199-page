@@ -4,8 +4,8 @@
  * (PR3 root rendering).
  *
    * This page owns `GET /` and delegates presentation to `<Landing />`.
-   * The sibling catch-all page mounts the existing React application for
-   * admin and interactive public routes.
+   * Sibling Astro pages own the remaining public routes; React is hydrated
+   * only by the explicit admin page and focused interactive islands.
  *
  * Imports the shared shadcn globals before the existing `public.css` so the
  * shared token and utility foundation is available without removing the
@@ -19,9 +19,8 @@
  * reason, the API host, the stack, or any driver detail. The
  * wrapper never echoes `cause.*` into the rendered output.
  */
-import "../styles/globals.css";
-import "../public.css";
 import Landing from "../components/landing/Landing.astro";
+import PublicLayout from "../layouts/PublicLayout.astro";
 import {
   fetchLandingPublicPayload,
   LandingFetchError,
@@ -49,13 +48,6 @@ if (failure) {
 }
 ---
 
-<html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>Misión 1-99</title>
-  </head>
-  <body data-theme="public">
-    <Landing payload={payload} failure={failure} />
-  </body>
-</html>
+<PublicLayout>
+  <Landing payload={payload} failure={failure} />
+</PublicLayout>

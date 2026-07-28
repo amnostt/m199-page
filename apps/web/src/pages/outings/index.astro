@@ -1,0 +1,22 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import {
+  fetchPublicContent,
+  type OutingPublicResponse,
+} from "../../lib/server/public-content.js";
+
+let outings: OutingPublicResponse[] = [];
+let failed = false;
+try {
+  outings = await fetchPublicContent<OutingPublicResponse[]>("outings");
+} catch {
+  failed = true;
+  Astro.response.status = 503;
+}
+---
+
+<PublicLayout title="Salidas | Misión 1-99">
+  <main class="public-ui public-page">
+    {failed ? <section class="public-state public-state--error"><p>No se pudo cargar la lista de salidas.</p></section> : outings.length === 0 ? <section class="public-section"><p class="public-state">No hay salidas publicadas.</p></section> : <section class="public-section" data-testid="outings-list-section"><ul class="public-card-list">{outings.map((outing) => <li data-testid={`outing-${outing.id}`}><article class="public-card"><a href={`/outings/${outing.slug}`} class="public-action">{outing.title}</a></article></li>)}</ul></section>}
+  </main>
+</PublicLayout>

@@ -1,0 +1,37 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import PostContent from "../../components/PostContent.astro";
+import {
+  fetchPublicContent,
+  formatPublicDate,
+  PublicContentFetchError,
+  type PostPublicResponse,
+} from "../../lib/server/public-content.js";
+
+const { slug } = Astro.params;
+let post: PostPublicResponse | null = null;
+let notFound = false;
+try {
+  post = await fetchPublicContent<PostPublicResponse>(`posts/${encodeURIComponent(slug ?? "")}`);
+} catch (error) {
+  notFound = error instanceof PublicContentFetchError && error.status === 404;
+  Astro.response.status = notFound ? 404 : 503;
+}
+---
+
+<PublicLayout title={post ? `${post.title} | Misión 1-99` : "Publicación | Misión 1-99"}>
+  <main class="public-ui public-page">
+    {!post ? (
+      <section class="public-state public-state--error"><p>{notFound ? "Post no encontrado." : "No se pudo cargar el post."}</p></section>
+    ) : (
+      <article class="public-section" data-testid="post-detail-section">
+        {post.coverImageUrl && <figure class="public-media public-media--cover"><img src={post.coverImageUrl} alt={post.title} /></figure>}
+        <h1>{post.title}</h1><p>{post.description}</p>
+        {post.publishedAt && <time>{formatPublicDate(post.publishedAt)}</time>}
+        {post.tags.length > 0 && <ul class="public-tags">{post.tags.map((tag) => <li>{tag}</li>)}</ul>}
+        <PostContent html={post.content} testId="post-detail-content" />
+        {post.downloads.length > 0 && <section class="public-section" data-testid="post-detail-downloads"><h2>Descargas</h2><ul class="public-action-row">{post.downloads.map((download) => <li><a href={download.fileUrl} target="_blank" rel="noopener noreferrer" class="public-action">{download.label ?? download.fileUrl}</a></li>)}</ul></section>}
+      </article>
+    )}
+  </main>
+</PublicLayout>

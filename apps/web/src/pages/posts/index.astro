@@ -1,0 +1,43 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import PostContent from "../../components/PostContent.astro";
+import {
+  fetchPublicContent,
+  formatPublicDate,
+  type PostPublicResponse,
+} from "../../lib/server/public-content.js";
+
+let posts: PostPublicResponse[] = [];
+let failed = false;
+try {
+  posts = await fetchPublicContent<PostPublicResponse[]>("posts");
+} catch {
+  failed = true;
+  Astro.response.status = 503;
+}
+---
+
+<PublicLayout title="Publicaciones | Misión 1-99">
+  <main class="public-ui public-page">
+    {failed ? (
+      <section class="public-state public-state--error"><p>No se pudo cargar la lista de posts.</p></section>
+    ) : posts.length === 0 ? (
+      <section class="public-section"><p class="public-state">No hay posts publicados.</p></section>
+    ) : (
+      <section class="public-section" data-testid="posts-list-section">
+        <ul class="public-card-list">
+          {posts.map((post) => (
+            <li><article class="public-card" data-testid={`post-${post.id}`}>
+              {post.coverImageUrl && <figure class="public-media public-media--cover"><img src={post.coverImageUrl} alt={post.title} /></figure>}
+              <h2><a class="public-action" href={`/posts/${post.slug}`}>{post.title}</a></h2>
+              <p>{post.description}</p>
+              {post.publishedAt && <time>{formatPublicDate(post.publishedAt)}</time>}
+              {post.tags.length > 0 && <ul class="public-tags">{post.tags.map((tag) => <li>{tag}</li>)}</ul>}
+              <PostContent html={post.content} testId={`post-content-${post.id}`} />
+            </article></li>
+          ))}
+        </ul>
+      </section>
+    )}
+  </main>
+</PublicLayout>

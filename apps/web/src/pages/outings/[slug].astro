@@ -1,0 +1,31 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import { LikeButton } from "../../components/LikeButton.js";
+import {
+  fetchPublicContent,
+  PublicContentFetchError,
+  type OutingPublicResponse,
+} from "../../lib/server/public-content.js";
+
+const { slug } = Astro.params;
+let outing: OutingPublicResponse | null = null;
+let notFound = false;
+try {
+  outing = await fetchPublicContent<OutingPublicResponse>(`outings/${encodeURIComponent(slug ?? "")}`);
+} catch (error) {
+  notFound = error instanceof PublicContentFetchError && error.status === 404;
+  Astro.response.status = notFound ? 404 : 503;
+}
+---
+
+<PublicLayout title={outing ? `${outing.title} | Misión 1-99` : "Salida | Misión 1-99"}>
+  <main class="public-ui public-page">
+    {!outing ? <section class="public-state public-state--error"><p>{notFound ? "Salida no encontrada." : "No se pudo cargar la salida."}</p></section> : <article class="public-section" data-testid="outing-detail-section">
+      <h1>{outing.title}</h1><p>{outing.location}</p><time>{outing.dateTime}</time><p class="public-prose">{outing.description}</p>
+      {outing.mainImageUrl && <figure class="public-media public-media--cover"><img src={outing.mainImageUrl} alt={outing.title} /></figure>}
+      {outing.croquisUrl && <figure class="public-media"><img src={outing.croquisUrl} alt="Croquis" /></figure>}
+      {outing.planUrl && <figure class="public-media"><img src={outing.planUrl} alt="Plan" /></figure>}
+      <LikeButton initialCount={outing.likesCount} slug={outing.slug} client:load />
+    </article>}
+  </main>
+</PublicLayout>

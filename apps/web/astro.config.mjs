@@ -1,10 +1,9 @@
 // ---------------------------------------------------------------------------
-// astro.config.mjs — Node standalone SSR for the public landing route.
+// astro.config.mjs — Node standalone SSR for the Astro web application.
 //
-// Scope: Astro owns every web route. GET / is server-rendered directly and
-// the catch-all page mounts the existing React application for admin and
-// interactive public routes. API-bound requests are proxied to Nest locally
-// and dispatched to the API upstream by Caddy in production.
+// Scope: Astro owns explicit public routes and React owns only the hydrated
+// admin application plus focused public islands. API-bound requests are
+// proxied to Nest locally and dispatched upstream by Caddy in production.
 //
 // Runtime contract:
 //   - The standalone Node server reads `PORT` (Astro adapter contract), with
@@ -41,7 +40,7 @@ const API_TARGET = process.env.API_TARGET ?? "http://localhost:3000";
 function bypassHtmlDocument(req) {
   if (req.method === "GET" && req.headers?.accept?.includes("text/html")) {
     // Returning the original URL makes Vite call next() instead of proxying.
-    // Astro's route middleware then renders the React document shell. Fetches
+    // Astro's route middleware then renders the HTML document. Fetches
     // with */* continue through this proxy to the Nest API.
     return req.url;
   }

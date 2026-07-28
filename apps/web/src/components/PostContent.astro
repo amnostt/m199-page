@@ -1,0 +1,27 @@
+---
+import { sanitizePostContent } from "../lib/server/post-content.js";
+
+interface Props {
+  html: string;
+  testId: string;
+}
+
+const { html, testId } = Astro.props;
+const sanitizedHtml = sanitizePostContent(html);
+---
+
+<div class="public-prose" data-post-content data-testid={testId} set:html={sanitizedHtml} />
+
+<script>
+  import DOMPurify from "dompurify";
+
+  for (const element of document.querySelectorAll<HTMLElement>(
+    "[data-post-content]",
+  )) {
+    element.innerHTML = DOMPurify.sanitize(element.innerHTML);
+    for (const link of element.querySelectorAll("a")) {
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+    }
+  }
+</script>
