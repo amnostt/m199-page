@@ -7,13 +7,13 @@ historical implementation notes.
 
 ## Repository Map
 
-| Path          | Responsibility                                                                                            |
-| ------------- | --------------------------------------------------------------------------------------------------------- |
-| `apps/web`    | Astro web runtime with React 19 public/admin islands; Vitest uses jsdom and Testing Library.              |
-| `apps/api`    | NestJS API organized by feature modules: auth, responsibles, files, landing, outings, posts, and verses.  |
-| `packages/db` | Prisma schema, config, migrations, seed, and the shared Prisma client factory.                            |
-| `docs`        | Documentation index, product context, technical state, roadmap, process, glossary, and learning material. |
-| `compose.yml` | Local PostgreSQL 16 service and persistent named volume.                                                  |
+| Path          | Responsibility                                                                                           |
+| ------------- | -------------------------------------------------------------------------------------------------------- |
+| `apps/web`    | Astro web runtime with React 19 public/admin islands; Vitest uses jsdom and Testing Library.             |
+| `apps/api`    | NestJS API organized by feature modules: auth, responsibles, files, landing, outings, posts, and verses. |
+| `packages/db` | Prisma schema, config, migrations, seed, and the shared Prisma client factory.                           |
+| `docs`        | Brand identity, technical foundation, and development roadmap (including MVP scope and actors).          |
+| `compose.yml` | Local PostgreSQL 16 service and persistent named volume.                                                 |
 
 The workspace uses pnpm, strict TypeScript, ESM, Vitest, ESLint, and Prettier.
 Supported runtimes are Node `^20.19.0 || >=22.12.0` and pnpm `>=9`; the pinned
@@ -50,7 +50,10 @@ that is the web app, not the API. Astro proxies API routes to
 | `pnpm --filter @m199/api test` | Run one package suite; replace the filter with `@m199/web` or `@m199/db`. |
 | `pnpm db:status`               | Inspect the local database service.                                       |
 | `pnpm db:down`                 | Stop services while preserving the database volume.                       |
-| `pnpm db:reset`                | Destroy local database data and recreate PostgreSQL.                      |
+| `pnpm db:reset`                | Destroy local database data and recreate PostgreSQL. Refuses to run       |
+|                                | unless `DATABASE_URL` targets the local Compose PostgreSQL                |
+|                                | (`localhost` or `127.0.0.1` on port `5432`, database `m199`, with the     |
+|                                | Compose credentials enforced by `assertExpectedLocalDatabaseUrl`).        |
 
 ## Architecture Boundaries
 
@@ -101,6 +104,12 @@ that is the web app, not the API. Astro proxies API routes to
 - The current seed creates landing settings ID `1` or fills only null fields. It
   preserves existing non-null admin values. Keep seeds repeatable and
   non-destructive unless a task explicitly defines otherwise.
+- The local seed is deterministic and development-only. It provisions an
+  administrator with email `admin@example.com` and password `qawsedrf`; these
+  credentials are for local use and must never reach a shared or production
+  database. The seed does not create sessions, likes, revisions, downloads,
+  or orphan file assets. The seed text demonstrates the product; it is not a
+  brand source. See `docs/brand.md` for identity and tone.
 
 ## Secrets, Generated Files, And Uploads
 

@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   prisma = await getPrisma();
   await seedDevelopmentData(prisma as unknown as DevelopmentSeedClient);
   console.info(
-    "Local development seed complete. Administrator email: admin@example.com (development-only credentials are documented in docs/local-development-seed.md).",
+    "Local development seed complete. Administrator email: admin@example.com (development-only credentials are documented in AGENTS.md).",
   );
 }
 

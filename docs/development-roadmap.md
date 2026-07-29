@@ -1,65 +1,83 @@
 # Hoja de ruta de desarrollo
 
-La hoja de ruta ordena resultados y capacidades. El estado se basa en el código actual y debe actualizarse cuando una capacidad se verifique de extremo a extremo.
+Esta hoja de ruta ordena resultados pendientes. Separa el estado comprobado del objetivo y no considera completa una capacidad por la sola existencia de una API.
 
-| Mantenimiento       | Valor                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------ |
-| Estado              | Vigente; contiene estado actual volátil.                                                               |
-| Responsable         | Equipo de producto y desarrollo.                                                                       |
-| Última verificación | 2026-07-21                                                                                             |
-| Actualizar cuando   | Se verifique un slice, cambie una prioridad o dependencia, o el código contradiga un estado declarado. |
+**Última verificación:** 2026-07-29. Debe actualizarse cuando se verifique un recorrido completo o cambien una prioridad o dependencia.
+
+## Alcance del MVP
+
+La identidad del producto y los principios visuales se mantienen en [`brand.md`](./brand.md); este capítulo fija qué se construye, para quién y cómo se reconoce el cierre.
+
+### Actores
+
+| Actor                           | Necesidad                                      | Resultado esperado                                                                                        |
+| ------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Visitante                       | Comprender la misión y conocer acciones reales | Encuentra una narrativa clara, publicaciones, salidas y el versículo vigente desde cualquier dispositivo. |
+| Responsable                     | Mantener el contenido público                  | Administra la landing, publicaciones, salidas, responsables y versículos mediante una sesión protegida.   |
+| Equipo de producto y desarrollo | Evolucionar el MVP con control                 | Distingue el estado implementado de los objetivos y verifica cada cambio antes de entregarlo.             |
+
+### Capacidades previstas
+
+- Experiencia pública para landing, publicaciones, salidas, likes anónimos, versículo vigente e historial de versículos.
+- Administración autenticada de landing, publicaciones, salidas, responsables y versículos.
+- Carga de imágenes y PDF dentro de los flujos que los utilizan.
+- Contenido enriquecido de publicaciones sanitizado en servidor y cliente.
+- Experiencia pública coherente con la identidad definida en [`brand.md`](./brand.md).
+- Operación desplegable con persistencia, observabilidad mínima, copias de seguridad y recuperación documentada.
+
+### Fuera del MVP
+
+- Roles o permisos diferenciados.
+- Registro público, login social o recuperación de contraseña por correo.
+- Buscador público, modo presentador o modo oscuro.
+- Imágenes embebidas dentro del contenido enriquecido de publicaciones.
+- Formulario de contacto o mapa embebido.
+- Sustituir la gestión editorial por un CMS externo.
+
+### Criterios de éxito
+
+- Un visitante comprende la misión y recorre el contenido principal en móvil y escritorio sin enlaces ni estados rotos.
+- Un responsable completa los flujos editoriales previstos sin asistencia técnica ni acceso directo a la base de datos.
+- Las reglas de publicación, acceso y archivos se mantienen aunque la interfaz cliente sea omitida.
+- El despliegue conserva datos y archivos, ofrece una señal de salud útil y puede recuperarse mediante copias verificadas.
 
 ## Estado actual
 
-| Capacidad                | Estado       | Evidencia o límite                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Plataforma local         | Implementada | Monorepo pnpm, Astro con React, NestJS, Prisma/PostgreSQL y [scripts de calidad](../package.json).                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Sitio público            | Parcial      | Landing, posts y salidas tienen recorridos en [`apps/web`](../apps/web/src/App.tsx); falta historial de versículos y madurez visual, responsive, a11y y SEO.                                                                                                                                                                                                                                                                                                                                                                                   |
-| Administración editorial | Parcial      | [`AdminApp`](../apps/web/src/admin/AdminApp.tsx) integra landing base, posts, salidas, responsables y versículos; cada área conserva brechas indicadas abajo.                                                                                                                                                                                                                                                                                                                                                                                  |
-| Archivos                 | Parcial      | Posts permite cargar, reemplazar y desasociar portada y descargas ([formulario](../apps/web/src/admin/PostFormPage.tsx), [payload](../apps/web/src/admin/postsApi.ts)). Salidas permite cargar o reemplazar imagen principal, croquis y plan, pero no quitar una asociación existente: los controles no limpian el valor y el `PATCH` omite IDs nulos ([formulario](../apps/web/src/admin/OutingFormPage.tsx), [payload](../apps/web/src/admin/outingsApi.ts)). `DELETE` solo existe en la API; no hay UI de listado ni gestión independiente. |
-| Seguridad y contratos    | Parcial      | Hay autenticación, validación y sanitización; quedan invariantes y contratos críticos por endurecer.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Operación de producción  | No iniciada  | No hay topología, almacenamiento persistente, copias de seguridad, CI/CD ni E2E ejecutable.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Capacidad                | Estado actual                                                                                                                                | Objetivo                                                                                                    |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Plataforma local         | Implementada: monorepo pnpm con Astro, React, NestJS, Prisma y PostgreSQL; dispone de scripts de calidad y seed repetible.                   | Mantener el entorno reproducible mientras evoluciona la operación.                                          |
+| Sitio público            | Parcial: landing, publicaciones y salidas son páginas Astro explícitas; la landing muestra el versículo vigente y las salidas admiten likes. | Completar historial de versículos y verificar identidad de marca, responsive, accesibilidad, estados y SEO. |
+| Administración editorial | Parcial: gestiona landing, héroe, salida destacada, publicaciones, salidas, responsables y versículos.                                       | Completar edición de responsables y desasociación de archivos.                                              |
+| Archivos                 | Parcial: carga y asociación dentro de publicaciones, salidas y héroe; no hay listado general.                                                | Definir el ciclo de vida antes de ofrecer una biblioteca o eliminación global.                              |
+| Operación de producción  | No iniciada: el runtime web se puede construir e iniciar, pero la API y la infraestructura no tienen un recorrido de producción completo.    | Lograr una entrega persistente, observable, recuperable y automatizada.                                     |
 
-## Ahora
+## Próximos resultados
 
-El orden de esta sección es intencional. Cada fila posterior al arreglo directo pequeño debe tratarse como un vertical slice independiente.
+No hay un cambio activo declarado en este documento. El orden siguiente conserva la prioridad de trabajo pendiente; iniciar un resultado requiere confirmar su alcance y evidencia de cierre.
 
-| Orden | Slice                         | Resultado                                                                                                          | Estado                                | Dependencia                                                                                                    |
-| ----- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| 1     | Proxy local de versículos     | La UI administrativa de versículos puede consumir `/verses/admin` durante desarrollo con Astro.                   | Implementado y verificado.            | Astro reenvía `/verses/...` sin reescritura al `API_TARGET`.                                                  |
-| 2     | Gestión del héroe             | Un responsable administra `heroTitle`, `heroSubtitle` y la imagen `LANDING_HERO`, y verifica el resultado público. | Implementado y verificado.            | Editor administrativo, validación `LANDING_HERO` y recorrido público verificados de extremo a extremo.         |
-| 3     | Selección de salida destacada | Un responsable selecciona una salida `PUBLISHED` y ve el resultado en la landing.                                  | Implementado y verificado.            | Selección y deselección manuales, reemplazo confirmado y presentación pública tras el héroe, con `LandingSettings.featuredOutingId` como fuente única. |
-| 4     | Transición segura de posts    | Toda publicación pasa por una única regla y garantiza `publishedAt`; crear o editar no puede eludirla.             | Implementado y verificado.            | Migración reclasifica a DRAFT las publicaciones sin fecha sin perder datos; el API aplica transiciones explícitas y las lecturas públicas exigen estado publicado con fecha. |
-| 5     | Etiquetas de descargas        | Las etiquetas y el orden enviados por el editor se persisten y vuelven en lectura administrativa y pública.        | Implementado y verificado.            | El editor envía etiquetas opcionales; el DTO las valida contra `downloadIds`; el servicio persiste etiqueta y orden de forma transaccional; las lecturas administrativa y pública las devuelven. |
-
-Los posts destacados ya se gestionan desde Posts. No deben añadirse controles duplicados en Landing Settings sin una decisión de producto explícita.
-
-## Siguiente
-
-| Capacidad o slice                    | Resultado                                                                                                                                                                                                                                            | Estado                                        | Dependencia                                                               |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------- |
-| Ciclo de responsables                | Se puede editar `displayName`, restablecer contraseña y gestionar estados desde UI.                                                                                                                                                                  | Parcial.                                      | API existente.                                                            |
-| Invariantes de responsables          | La API impide auto-desactivación y desactivar al último responsable activo.                                                                                                                                                                          | Pendiente.                                    | Definir actor autorizado y respuesta de conflicto.                        |
-| Historial público de versículos      | El visitante navega el historial disponible en `GET /verses/history`.                                                                                                                                                                                | API lista; UI pendiente.                      | El proxy local está disponible; falta el diseño de navegación pública.    |
-| Desasociación de archivos en salidas | Un responsable puede quitar una imagen principal, croquis o plan existente sin eliminar globalmente el archivo.                                                                                                                                      | Pendiente; la edición solo carga o reemplaza. | Definir semántica explícita de `null`, UX y conservación del `FileAsset`. |
-| Endurecimiento de consultas          | Posts y salidas validan paginación, límites y fechas con contratos consistentes.                                                                                                                                                                     | Pendiente.                                    | Criterios de volumen y UX de listado.                                     |
-| Endurecimiento HTTP                  | CORS, `API_ORIGIN`, proxy confiable y detalle seguro de errores responden a una topología definida.                                                                                                                                                  | Pendiente.                                    | Diseño de despliegue.                                                     |
-| Experiencia pública                  | La web alcanza diseño responsive consistente, accesibilidad, estados vacíos/de error y SEO por página.                                                                                                                                               | Parcial.                                      | Identidad visual y recorridos públicos acordados.                         |
-| Preparación de producción            | API compilable, almacenamiento persistente, migraciones, secretos, health con DB, copias de seguridad y restauración quedan operables; el scaffold público `POST /echo` se elimina o queda fuera del registro en producción y se verifica con `404`. | Pendiente.                                    | Proveedor, topología de hosting y condición de retiro del scaffold.       |
-| Entrega automatizada                 | CI/CD y E2E ejecutable verifican el recorrido crítico antes de release.                                                                                                                                                                              | Pendiente.                                    | Entorno integrado reproducible.                                           |
+| Orden | Resultado                              | Estado actual                                                                                                                                             | Se considera completo cuando                                                                                       |
+| ----- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 1     | Completar el ciclo de responsables     | La API edita `displayName` y restablece contraseñas; la interfaz no.                                                                                      | Ambas acciones se completan desde la interfaz y los errores son recuperables.                                      |
+| 2     | Proteger invariantes de responsables   | La interfaz bloquea la auto-desactivación, pero la API puede ser invocada directamente y tampoco protege al último responsable activo.                    | La API rechaza ambos casos de forma transaccional y probada.                                                       |
+| 3     | Publicar el historial de versículos    | `GET /verses/history` existe; no hay página pública.                                                                                                      | El visitante puede recorrer el historial con estados vacío, error y navegación definidos.                          |
+| 4     | Desasociar archivos de salidas y héroe | La interfaz permite cargar o reemplazar, no quitar la asociación existente.                                                                               | El cliente puede enviar una intención explícita de desasociación sin borrar globalmente el `FileAsset`.            |
+| 5     | Endurecer consultas y fechas           | Paginación, límites y algunas fechas conservan contratos ambiguos.                                                                                        | DTOs y servicios validan rangos, formatos y límites consistentes.                                                  |
+| 6     | Definir el contrato HTTP de despliegue | CORS, origen y proxy confiable dependen de una topología aún no acordada.                                                                                 | La topología determina orígenes, proxy, cookies y errores seguros, con pruebas pertinentes.                        |
+| 7     | Completar la experiencia pública       | Existe un sistema visual consolidado, pero su aplicación integral no está verificada contra [`brand.md`](./brand.md). El seed usa contenido demostrativo. | Los recorridos públicos aplican la identidad acordada y superan revisión responsive, accesibilidad, estados y SEO. |
+| 8     | Preparar producción                    | Faltan build/start de API, persistencia, health dependiente, copias y retiro de `POST /echo`.                                                             | El sistema se despliega, monitorea, respalda, restaura y no expone scaffolding.                                    |
+| 9     | Automatizar la entrega                 | Las verificaciones existen como comandos locales.                                                                                                         | CI/CD y E2E ejecutan el recorrido crítico y conservan evidencia antes de una release.                              |
 
 ## Más adelante
 
-| Capacidad                                | Resultado                                                           | Condición de entrada                                                                                |
-| ---------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Gestión independiente de archivos        | Un responsable consulta y mantiene archivos sin romper contenido.   | Definir referencias en uso, orfandad, retención, eliminación y recuperación; añadir API de listado. |
-| Roles diferenciados                      | Las acciones administrativas respetan permisos por rol.             | Necesidad operativa comprobada y modelo de autorización diseñado.                                   |
-| Recuperación por correo                  | Un responsable recupera acceso sin intervención manual.             | Servicio de correo, seguridad de tokens y operación definidos.                                      |
-| Búsqueda, modo presentador o modo oscuro | Se incorporan solo si aportan un resultado medible después del MVP. | Validación de producto y prioridad frente a operación.                                              |
+| Capacidad                                | Condición de entrada                                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Gestión independiente de archivos        | Definir referencias en uso, orfandad, retención, eliminación y recuperación; añadir una API de listado. |
+| Roles diferenciados                      | Comprobar la necesidad operativa y diseñar un modelo de autorización.                                   |
+| Recuperación por correo                  | Definir servicio de correo, seguridad de tokens y operación.                                            |
+| Búsqueda, modo presentador o modo oscuro | Demostrar un resultado medible y priorizarlo frente a las necesidades del MVP.                          |
 
 ## Regla de actualización
 
-- Mover una capacidad de estado solo con evidencia del recorrido completo; una API aislada no equivale a una capacidad terminada.
-- Mantener un resultado observable por slice y registrar dependencias antes de comprometer una fecha.
-- Convertir cada slice acotado en tareas antes de iniciar su implementación.
-- Usar las definiciones del [glosario](./glossary.md) para evitar que milestone, capability, slice y task se vuelvan sinónimos.
+- Cambiar un estado solo con evidencia del recorrido completo.
+- Mantener un resultado observable y una condición de cierre por fila.
+- No duplicar comandos ni reglas de contribución: pertenecen a [`AGENTS.md`](../AGENTS.md).

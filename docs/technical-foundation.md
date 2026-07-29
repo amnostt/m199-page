@@ -1,122 +1,68 @@
 # Fundamento técnico de Misión 1-99
 
-Este documento describe la arquitectura que existe hoy, sus límites obligatorios y las brechas técnicas conocidas. No representa una arquitectura futura ni implica que una capacidad esté completa solo porque exista en la API.
+Este documento resume la arquitectura que existe hoy, las capacidades comprobadas y las brechas conocidas. No presenta un objetivo como si ya estuviera implementado.
 
-| Mantenimiento       | Valor                                                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Estado              | Vigente; contiene estado actual volátil.                                                                              |
-| Responsable         | Equipo de desarrollo.                                                                                                 |
-| Última verificación | 2026-07-19                                                                                                            |
-| Actualizar cuando   | Cambien arquitectura, configuración efectiva, esquema, migraciones, contratos, invariantes o capacidades verificadas. |
+**Última verificación:** 2026-07-29. Debe actualizarse cuando cambien la arquitectura, la configuración efectiva, el esquema, las migraciones, los contratos o las capacidades verificadas.
 
-## Fuentes de verdad
+Para afirmar el estado actual prevalecen el código, la configuración, el esquema, las migraciones y las pruebas. Los comandos y las reglas de contribución se mantienen únicamente en [`AGENTS.md`](../AGENTS.md).
 
-| Necesidad                                     | Fuente                                            |
-| --------------------------------------------- | ------------------------------------------------- |
-| Propósito y alcance del producto              | [Resumen ejecutivo](./executive-summary.md)       |
-| Arquitectura, decisiones e invariantes        | Este documento                                    |
-| Prioridad y estado de entrega                 | [Hoja de ruta](./development-roadmap.md)          |
-| Terminología compartida                       | [Glosario](./glossary.md)                         |
-| Comandos, estructura y reglas para contribuir | [`AGENTS.md`](../AGENTS.md)                       |
-
-Para afirmar el estado actual prevalecen la fuente ejecutable, la configuración efectiva, las declaraciones del esquema, las migraciones y las pruebas. Los comentarios y las descripciones de paquetes orientan, pero pueden conservar contexto histórico y no demuestran por sí solos el comportamiento vigente. Si esas fuentes ejecutables se contradicen, se debe verificar el recorrido real y corregir la inconsistencia en lugar de elegir la afirmación más conveniente. Las decisiones de producto pendientes deben resolverse antes de modificar comportamiento.
-
-## Estado actual: arquitectura
+## Arquitectura actual
 
 ```text
 apps/web ──HTTP──> apps/api ──DbService──> packages/db ──Prisma──> PostgreSQL
 ```
 
-| Área          | Tecnología              | Responsabilidad actual                                                                      |
-| ------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
-| `apps/web`    | Astro y React 19        | Runtime web, sitio público, routing interactivo, sesión administrativa y panel de gestión.  |
-| `apps/api`    | NestJS                  | Contratos HTTP, autenticación, validación, reglas de aplicación, archivos y acceso a datos. |
-| `packages/db` | Prisma                  | Esquema, configuración, migraciones, seed y creación compartida del cliente.                |
-| PostgreSQL 16 | Docker Compose en local | Persistencia relacional y restricciones durables.                                           |
+| Área          | Responsabilidad actual                                                                                                               | Evidencia principal                                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`    | Runtime Astro con páginas públicas SSR explícitas. React 19 queda acotado a la aplicación administrativa y al botón de like público. | [`src/pages`](../apps/web/src/pages), [`admin.astro`](../apps/web/src/pages/admin.astro), [`LikeButton.tsx`](../apps/web/src/components/LikeButton.tsx) |
+| `apps/api`    | API NestJS para autenticación, validación, reglas de aplicación, archivos y persistencia.                                            | [`app.module.ts`](../apps/api/src/app.module.ts)                                                                                                        |
+| `packages/db` | Esquema Prisma, migraciones, seed y creación compartida del cliente.                                                                 | [`packages/db`](../packages/db)                                                                                                                         |
+| PostgreSQL 16 | Persistencia relacional local mediante Docker Compose.                                                                               | [`compose.yml`](../compose.yml)                                                                                                                         |
 
-### Invariantes de arquitectura
+Las fronteras obligatorias —dirección de dependencias, uso de `DbService`, DTOs, transacciones e imports ESM— están definidas en `AGENTS.md` y no se repiten aquí.
 
-- Mantener la dirección `web -> HTTP -> API -> database`; `apps/web` no importa Prisma ni accede a PostgreSQL.
-- Acceder a Prisma desde la API mediante `DbService`; `packages/db` conserva la propiedad del cliente y del ciclo de migraciones.
-- Validar entradas HTTP en DTOs y aplicar reglas de dominio en servicios de la API.
-- Usar restricciones de base de datos para invariantes durables y transacciones de servicio para reglas entre registros o ciclos de vida.
-- Mantener separados los controladores públicos y administrativos cuando el módulo ya usa esa frontera.
-- Preservar los sufijos `.js` en imports relativos de TypeScript ESM.
-- No introducir un paquete compartido hasta que exista duplicación real entre paquetes.
+## Capacidades comprobadas
 
-## Estado actual: capacidades
+| Área          | Estado actual                                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Autenticación | Login, access token y refresh token en cookies `httpOnly`, rotación, logout, revocación y bloqueo de responsables `INACTIVE`.                                                         |
+| Sitio público | Landing, listado y detalle de publicaciones, listado y detalle de salidas, 404 y likes como rutas Astro explícitas; no existe una ruta pública para el historial de versículos.       |
+| Landing       | Lectura pública y edición administrativa de texto, contacto, video, héroe y salida destacada. La imagen del héroe se puede cargar o reemplazar, pero no desasociar desde la interfaz. |
+| Publicaciones | CRUD administrativo, transiciones de publicación y archivo, portada, descargas etiquetadas y ordenadas, hasta tres destacados y lectura pública sanitizada.                           |
+| Salidas       | Gestión administrativa, publicación, archivo, lectura pública, likes anónimos y archivos asociados. La interfaz permite cargar o reemplazar archivos, pero no desasociarlos.          |
+| Responsables  | La API permite crear, listar, editar `displayName`, cambiar estado y restablecer contraseña. La interfaz solo crea, lista y cambia estado.                                            |
+| Versículos    | API pública y administrativa con historial; el panel permite crear, listar y eliminar. La landing muestra el publicado más reciente.                                                  |
+| Archivos      | Carga autenticada, validación por categoría y firma, miniaturas, entrega pública y eliminación. No hay listado general ni pantalla independiente.                                     |
 
-| Módulo       | Estado actual comprobado                                                                                                                                                                      | Evidencia principal                                                                                                                                                                          |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth         | Login, access token y refresh token en cookies `httpOnly`, rotación, logout, revocación y control de responsable `ACTIVE`.                                                                    | [`apps/api/src/auth`](../apps/api/src/auth)                                                                                                                                                  |
-| Landing      | Lectura pública y edición administrativa de campos base. La API y el modelo soportan héroe y salida destacada, pero la interfaz no los administra.                                            | [`landing.service.ts`](../apps/api/src/landing/landing.service.ts), [`LandingSettingsPage.tsx`](../apps/web/src/admin/LandingSettingsPage.tsx)                                               |
-| Posts        | CRUD administrativo, publicación, archivo, sanitización, descargas con etiquetas opcionales, destacados y lectura pública. El formulario permite cargar, reemplazar y desasociar portada y descargas. | [`posts.service.ts`](../apps/api/src/posts/posts.service.ts), [`PostFormPage.tsx`](../apps/web/src/admin/PostFormPage.tsx)                                                                   |
-| Outings      | Gestión administrativa, publicación, archivo, lectura pública, likes anónimos y carga o reemplazo de imagen principal, croquis y plan. La interfaz no permite quitar asociaciones existentes. | [`outings.service.ts`](../apps/api/src/outings/outings.service.ts), [`OutingFormPage.tsx`](../apps/web/src/admin/OutingFormPage.tsx), [`outingsApi.ts`](../apps/web/src/admin/outingsApi.ts) |
-| Responsibles | API para crear, listar, editar `displayName`, cambiar estado y restablecer contraseña. La interfaz solo crea, lista y cambia estado.                                                          | [`apps/api/src/responsibles`](../apps/api/src/responsibles), [`ResponsiblesPage.tsx`](../apps/web/src/admin/ResponsiblesPage.tsx)                                                            |
-| Verses       | API pública y administrativa, historial y panel para crear, listar y eliminar. Astro reenvía `/verses/...` sin reescritura al `API_TARGET` durante el desarrollo local.                  | [`apps/api/src/verses`](../apps/api/src/verses), [`versesApi.ts`](../apps/web/src/admin/versesApi.ts), [`astro.config.mjs`](../apps/web/astro.config.mjs)                                  |
-| Files        | Carga autenticada, validación, miniaturas, entrega pública y eliminación. No existe endpoint para listar archivos ni pantalla independiente.                                                  | [`apps/api/src/file-module`](../apps/api/src/file-module), [`FileUploadWidget.tsx`](../apps/web/src/admin/FileUploadWidget.tsx)                                                              |
+## Invariantes vigentes
 
-## Decisiones e invariantes
+| Tema                     | Regla protegida                                                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Landing                  | Existe una sola configuración con `id = 1`. Solo una salida `PUBLISHED` puede aparecer como destacada.                                    |
+| Publicaciones destacadas | Existen tres lugares fijos; un cuarto intento se rechaza y no reemplaza contenido automáticamente.                                        |
+| Contenido público        | Las consultas públicas filtran contenido `PUBLISHED`; las publicaciones también requieren `publishedAt`.                                  |
+| Likes de salidas         | La combinación `outingId` + `visitorHash` es única y no guarda la IP sin procesar.                                                        |
+| Versículo vigente        | Es el último `PUBLISHED` por `publishedAt`; la fecha de negocio usa `America/Lima`.                                                       |
+| Archivos                 | `FileService` controla categoría, tamaño, firma, rutas, metadatos, rollback y eliminación. Los binarios de `GET /files/:id` son públicos. |
+| Contenido enriquecido    | El HTML de publicaciones se sanitiza en servidor y cliente.                                                                               |
+| Responsable inactivo     | No puede iniciar ni refrescar sesión; al desactivarlo se revocan sus sesiones.                                                            |
 
-| Tema                  | Invariante o regla vigente                                                                                            | Mecanismo                                                            |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Landing singleton     | Existe una única configuración con `id = 1`.                                                                          | Upsert en `LandingService`.                                          |
-| Salida destacada      | `LandingSettings.featuredOutingId` admite una selección; la respuesta pública solo la incluye si está `PUBLISHED`.    | Restricción `@unique` y filtro de servicio.                          |
-| Posts destacados      | Hay tres slots fijos y un post no puede ocupar más de uno. El cuarto intento se rechaza; no hay reemplazo automático. | `FeaturedPostSlot`, índices únicos y validación de servicio.         |
-| Contenido público     | Posts, salidas y versículos públicos deben estar `PUBLISHED`.                                                         | Consultas y proyecciones públicas.                                   |
-| Likes de salidas      | Cada combinación `outingId` + `visitorHash` es única; no se persiste identidad pública ni IP sin procesar.            | Restricción compuesta y actualización transaccional de `likesCount`. |
-| Versículo vigente     | Es el último `PUBLISHED` por `publishedAt`; la fecha de negocio se deriva con zona `America/Lima`.                    | Servicio de versículos e índice por estado y fecha.                  |
-| Archivos              | El binario vive en almacenamiento local y `FileAsset` conserva metadatos, categoría, ruta y URL.                      | `FileService`, validación por categoría y contención de rutas.       |
-| Contenido enriquecido | El HTML de posts se sanitiza en servidor y en cliente.                                                                | `sanitize-html` y DOMPurify.                                         |
-| Responsable inactivo  | No puede iniciar sesión, refrescar sesión ni atravesar rutas protegidas; al desactivarlo se revocan sus sesiones.     | Guards, auth service y servicio de responsables.                     |
+La [identidad de marca](./brand.md) gobierna el mensaje y la experiencia visual, pero no prueba por sí sola que la interfaz la implemente.
 
-## Seguridad y contratos HTTP
+## Seguridad y runtime
 
-- La configuración se valida antes de inicializar la base de datos. Son obligatorias `NODE_ENV`, `PORT`, `DATABASE_URL`, `JWT_SECRET` y `VISITOR_HASH_SECRET`.
-- Las cookies de autenticación son `httpOnly`, usan `SameSite=Lax` y activan `secure` en producción.
-- Las mutaciones requieren que `Origin` coincida con `API_ORIGIN`; la configuración actual admite un solo origen.
-- El `ValidationPipe` global aplica `whitelist` y `transform`.
-- El filtro global normaliza errores como `{ statusCode, message, timestamp, path }` y oculta stacks no controlados.
-- Los archivos aceptan JPEG, PNG, WebP, GIF y, según la categoría, PDF. `MAX_FILE_SIZE` tiene un valor predeterminado de 10 MiB.
-- Los archivos entregados por `GET /files/:id` son públicos. No deben usarse para información privada.
+- La API valida `NODE_ENV`, `PORT`, `DATABASE_URL`, `JWT_SECRET` y `VISITOR_HASH_SECRET` antes de inicializar la base de datos.
+- Las mutaciones protegidas exigen una sesión activa y un `Origin` igual a `API_ORIGIN`.
+- El `ValidationPipe` global aplica `whitelist` y `transform`; el filtro global normaliza errores sin exponer stacks inesperados.
+- El runtime web dispone de build y start para Astro Node. La API solo dispone de ejecución de desarrollo, typecheck y pruebas; todavía no tiene build/start de producción.
+- El almacenamiento de archivos es local. Es adecuado para desarrollo, pero no garantiza durabilidad en producción.
 
-### Scaffold temporal de validación
+## Brechas técnicas conocidas
 
-- **Estado actual:** `ValidationProofModule` está registrado en `AppModule` y expone `POST /echo` sin `AuthGuard` para demostrar el `ValidationPipe` global ([módulo](../apps/api/src/common/validation-proof/validation-proof.module.ts), [controlador](../apps/api/src/common/validation-proof/echo.controller.ts), [registro](../apps/api/src/app.module.ts)). Es scaffolding técnico, no un contrato de producto.
-- **Invariante:** una release desplegable no debe exponer este endpoint de prueba en producción.
-- **Brecha objetivo:** antes de la primera release se debe retirar `ValidationProofModule` de `AppModule` o condicionar su registro para que `NODE_ENV=production` no cree la ruta. La evidencia de release debe comprobar que `POST /echo` responde `404` en la configuración de producción.
+- `ValidationProofModule` sigue registrado y expone `POST /echo`; una release no debe publicar ese scaffold.
+- `GET /health` informa proceso y entorno, pero no comprueba PostgreSQL ni almacenamiento.
+- La API no impide todavía la auto-desactivación ni desactivar al último responsable activo.
+- La paginación, los límites, algunas fechas y ciertos contratos de archivo necesitan validación más estricta.
+- Faltan topología de producción, persistencia de archivos, copias de seguridad y restauración verificadas, CI/CD y E2E integrado.
 
-## Almacenamiento de archivos
-
-**Estado actual:** el almacenamiento local es una decisión válida para desarrollo, no una garantía de durabilidad en producción.
-
-- Los controles de carga están integrados en posts y salidas; gestionar el héroe deberá reutilizar la misma frontera de `FileService` y validar la categoría `LANDING_HERO`.
-- No hay API de listado general, por lo que todavía no existe una fuente completa para una biblioteca de archivos.
-- `DELETE /files/:id` elimina metadatos y binarios, pero una interfaz global de borrado requiere antes políticas de archivos en uso, huérfanos, retención y recuperación.
-- **Brecha objetivo:** la topología de producción debe montar almacenamiento persistente o adoptar otro proveedor sin romper las referencias de `FileAsset`.
-
-## Estado actual y brecha objetivo: operación
-
-| Área                   | Estado actual                                                        | Brecha para producción                                                                        |
-| ---------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Desarrollo local       | PostgreSQL 16 mediante Compose, migraciones Prisma y seed repetible. | No aplica como topología de producción.                                                       |
-| Calidad                | Scripts raíz para Prettier, ESLint, typecheck, Vitest y build web.   | Falta CI/CD que los ejecute y conserve evidencia.                                             |
-| API                    | `start:dev`, typecheck y pruebas unitarias.                          | Faltan scripts de build e inicio de producción.                                               |
-| Salud                  | `GET /health` informa proceso, uptime y entorno.                     | No comprueba conectividad con PostgreSQL ni almacenamiento.                                   |
-| Persistencia           | PostgreSQL y `UPLOAD_DIR` local.                                     | Faltan almacenamiento persistente, copias de seguridad, restauración y política de retención. |
-| Verificación integrada | Pruebas por paquete.                                                 | Falta un E2E ejecutable sobre web, API, base de datos y archivos.                             |
-
-Los comandos y prerrequisitos detallados se mantienen en [`AGENTS.md`](../AGENTS.md), no se duplican aquí.
-
-## Brechas objetivo conocidas
-
-| Prioridad         | Brecha                                                                                                                                       | Riesgo                                                                               |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Alta              | La prevención de auto-desactivación existe en la interfaz, no como invariante de API; tampoco se protege al último responsable activo.       | Bloqueo administrativo o bypass mediante HTTP directo.                               |
-| Media             | `skip` y `take` carecen de validación numérica y límites explícitos; las consultas públicas no tienen una estrategia uniforme de paginación. | Consultas costosas o contratos ambiguos.                                             |
-| Media             | Fechas de salidas, categorías de archivos y detalles de errores requieren validación y contratos más estrictos.                              | Inconsistencias de datos y diagnósticos insuficientes.                               |
-| Media             | No se configura CORS ni `trust proxy`; `API_ORIGIN` admite un solo origen.                                                                   | Fallos o supuestos incorrectos detrás de proxy y despliegues con orígenes separados. |
-| Alta para release | `POST /echo` sigue registrado como scaffold público de validación.                                                                           | Exposición de una ruta sin contrato de producto en producción.                       |
-| Alta para release | Faltan build/start de API, topología, almacenamiento persistente, copias de seguridad, health dependiente de DB, CI/CD y E2E.                | No existe una ruta de despliegue recuperable y verificable.                          |
-
-Estas brechas se priorizan como slices en la [hoja de ruta](./development-roadmap.md).
+La prioridad y la condición de cierre de estas brechas se mantienen en la [hoja de ruta](./development-roadmap.md).
