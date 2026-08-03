@@ -18,6 +18,13 @@ import { mapAdminError } from "./adminErrors.js";
 import { Alert, AlertDescription } from "../components/ui/alert.js";
 import { Badge } from "../components/ui/badge.js";
 import { Button } from "../components/ui/button.js";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select.js";
 // prettier-ignore
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table.js";
 import {
@@ -188,6 +195,28 @@ export function PostsListPage({
         ? posts
         : posts.filter((p) => p.status === statusFilter);
 
+  const statusFilterSelect = (
+    <>
+      <label htmlFor="posts-filter-status">Status</label>
+      <Select
+        value={statusFilter || null}
+        onValueChange={(value) =>
+          setStatusFilter((value ?? "") as PostStatus | "")
+        }
+      >
+        <SelectTrigger id="posts-filter-status">
+          <SelectValue placeholder="All" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={null}>All</SelectItem>
+          <SelectItem value="DRAFT">DRAFT</SelectItem>
+          <SelectItem value="PUBLISHED">PUBLISHED</SelectItem>
+          <SelectItem value="ARCHIVED">ARCHIVED</SelectItem>
+        </SelectContent>
+      </Select>
+    </>
+  );
+
   // ------------------------------------------------------------------
   // States
   // ------------------------------------------------------------------
@@ -226,17 +255,7 @@ export function PostsListPage({
             New Post
           </Button>
         )}
-        <label htmlFor="posts-filter-status">Status</label>
-        <select
-          id="posts-filter-status"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as PostStatus | "")}
-        >
-          <option value="">All</option>
-          <option value="DRAFT">DRAFT</option>
-          <option value="PUBLISHED">PUBLISHED</option>
-          <option value="ARCHIVED">ARCHIVED</option>
-        </select>
+        {statusFilterSelect}
       </div>
     );
   }
@@ -260,17 +279,7 @@ export function PostsListPage({
         </Button>
       )}
 
-      <label htmlFor="posts-filter-status">Status</label>
-      <select
-        id="posts-filter-status"
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value as PostStatus | "")}
-      >
-        <option value="">All</option>
-        <option value="DRAFT">DRAFT</option>
-        <option value="PUBLISHED">PUBLISHED</option>
-        <option value="ARCHIVED">ARCHIVED</option>
-      </select>
+      {statusFilterSelect}
 
       <Table>
         <TableHeader>

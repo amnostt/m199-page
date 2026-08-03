@@ -66,6 +66,21 @@ afterEach(() => {
   cleanup();
 });
 
+async function selectStatus(
+  status: "All" | "DRAFT" | "PUBLISHED" | "ARCHIVED",
+) {
+  const trigger = screen.getByRole("combobox", { name: "Status" });
+  fireEvent.click(trigger);
+  const option = await screen.findByRole("option", { name: status });
+  fireEvent.mouseMove(option);
+  fireEvent.click(option);
+  await waitFor(() =>
+    expect(
+      screen.getByRole("combobox", { name: "Status" }).textContent,
+    ).toContain(status),
+  );
+}
+
 async function acceptDialog(label = /continue/i) {
   await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
   // prettier-ignore
@@ -133,16 +148,9 @@ describe("PostsListPage loaded", () => {
     expect(screen.getByText("Archived Post")).toBeTruthy();
     expect(screen.getByText("archived-post")).toBeTruthy();
 
-    // Status values appear both in dropdown options and table cells.
-    // getAllByText returns both; at least 2 occurrences proves table rendering.
-    const publishedTexts = screen.getAllByText("PUBLISHED");
-    expect(publishedTexts.length).toBeGreaterThanOrEqual(2); // dropdown + table cell
-
-    const draftTexts = screen.getAllByText("DRAFT");
-    expect(draftTexts.length).toBeGreaterThanOrEqual(2);
-
-    const archivedTexts = screen.getAllByText("ARCHIVED");
-    expect(archivedTexts.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("PUBLISHED")).toBeTruthy();
+    expect(screen.getByText("DRAFT")).toBeTruthy();
+    expect(screen.getByText("ARCHIVED")).toBeTruthy();
   });
 });
 
@@ -170,13 +178,15 @@ describe("PostsListPage status filter", () => {
     });
   }
 
-  it("renders a status filter dropdown with All/DRAFT/PUBLISHED/ARCHIVED options", async () => {
+  it("renders the canonical accessible status filter with all lifecycle values", async () => {
     await renderWithPosts();
 
-    const select = screen.getByLabelText(/status/i);
-    expect(select).toBeTruthy();
+    const trigger = screen.getByRole("combobox", { name: "Status" });
+    expect(trigger.id).toBe("posts-filter-status");
+    expect(trigger.getAttribute("data-slot")).toBe("select-trigger");
 
-    expect(screen.getByRole("option", { name: /all/i })).toBeTruthy();
+    fireEvent.click(trigger);
+    expect(await screen.findByRole("option", { name: "All" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "DRAFT" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "PUBLISHED" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "ARCHIVED" })).toBeTruthy();
@@ -185,8 +195,7 @@ describe("PostsListPage status filter", () => {
   it("filters rows by status — selecting DRAFT shows only draft posts", async () => {
     await renderWithPosts();
 
-    const select = screen.getByLabelText(/status/i);
-    fireEvent.change(select, { target: { value: "DRAFT" } });
+    await selectStatus("DRAFT");
 
     // Only the draft post should be visible
     expect(screen.getByText("Draft Post")).toBeTruthy();
@@ -197,8 +206,7 @@ describe("PostsListPage status filter", () => {
   it("filters rows by status — selecting PUBLISHED shows only published posts", async () => {
     await renderWithPosts();
 
-    const select = screen.getByLabelText(/status/i);
-    fireEvent.change(select, { target: { value: "PUBLISHED" } });
+    await selectStatus("PUBLISHED");
 
     expect(screen.getByText("Hello World")).toBeTruthy();
     expect(screen.queryByText("Draft Post")).toBeNull();
@@ -214,9 +222,8 @@ describe("PostsListPage status filter", () => {
     expect(screen.getByText("Archived Post")).toBeTruthy();
 
     // Select PUBLISHED then back to All
-    const select = screen.getByLabelText(/status/i);
-    fireEvent.change(select, { target: { value: "PUBLISHED" } });
-    fireEvent.change(select, { target: { value: "" } });
+    await selectStatus("PUBLISHED");
+    await selectStatus("All");
 
     expect(screen.getByText("Hello World")).toBeTruthy();
     expect(screen.getByText("Draft Post")).toBeTruthy();
@@ -242,6 +249,15 @@ describe("PostsListPage empty state", () => {
     });
 
     expect(screen.getByText(/no posts/i)).toBeTruthy();
+    const trigger = screen.getByRole("combobox", { name: "Status" });
+    expect(trigger.id).toBe("posts-filter-status");
+    expect(trigger.getAttribute("data-slot")).toBe("select-trigger");
+
+    fireEvent.click(trigger);
+    expect(await screen.findByRole("option", { name: "All" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "DRAFT" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "PUBLISHED" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "ARCHIVED" })).toBeTruthy();
   });
 
   it("shows empty message when filter matches nothing", async () => {
@@ -274,8 +290,7 @@ describe("PostsListPage empty state", () => {
     });
 
     // Filter to DRAFT — no posts match
-    const select = screen.getByLabelText(/status/i);
-    fireEvent.change(select, { target: { value: "DRAFT" } });
+    await selectStatus("DRAFT");
 
     await waitFor(() => {
       expect(screen.getByTestId("posts-list-empty")).toBeTruthy();
