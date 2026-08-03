@@ -22,6 +22,7 @@ import type {
   LandingPayloadShape,
 } from "./landing-shape.js";
 import LandingNavbar from "./LandingNavbar.astro";
+import LandingHero from "./LandingHero.astro";
 
 interface Props {
   payload: LandingPayloadShape | null;
@@ -68,22 +69,11 @@ const contactHref =
       aboutHref={aboutHref}
       contactHref={contactHref}
     />
-    {payload.heroImageUrl && (
-      <section class="public-hero" data-testid="hero-section">
-        <img
-          src={payload.heroImageUrl}
-          alt="Hero"
-          class="public-media public-media--cover"
-          data-testid="hero-image"
-        />
-        {payload.heroTitle && (
-          <h1 data-testid="hero-title">{payload.heroTitle}</h1>
-        )}
-        {payload.heroSubtitle && (
-          <p data-testid="hero-subtitle">{payload.heroSubtitle}</p>
-        )}
-      </section>
-    )}
+    <LandingHero
+      heroTitle={payload.heroTitle}
+      heroSubtitle={payload.heroSubtitle}
+      heroImageUrl={payload.heroImageUrl}
+    />
 
     {payload.featuredOuting && (
       <section

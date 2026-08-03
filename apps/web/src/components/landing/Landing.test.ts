@@ -116,6 +116,11 @@ describe("Landing.astro — successful markup", () => {
     for (const id of sections) {
       expect(html).toContain(`data-testid="${id}"`);
     }
+    const sectionOffsets = sections.map((id) =>
+      html.indexOf(`data-testid="${id}"`),
+    );
+    expect(sectionOffsets).toEqual([...sectionOffsets].sort((a, b) => a - b));
+    expect(html.match(/data-testid="hero-section"/g)).toHaveLength(1);
     // Sanity-check the section content for the most error-prone fields.
     expect(html).toContain("Misión 1-99");
     expect(html).toContain("Transformamos vidas");
@@ -210,6 +215,13 @@ describe("Landing.astro — failure markup", () => {
     ]) {
       expect(html).not.toContain(leak);
     }
+  });
+
+  it("renders nothing when both payload and failure are null", async () => {
+    const html = await render(null);
+
+    expect(html).not.toContain('data-testid="landing-page"');
+    expect(html).not.toContain('data-testid="hero-section"');
   });
 
   it("prefers failure over a present payload (defensive precedence)", async () => {

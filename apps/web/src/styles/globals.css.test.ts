@@ -162,6 +162,44 @@ describe("shadcn globals preflight isolation", () => {
   });
 });
 
+describe("landing hero CSS contract", () => {
+  it("defines the scoped desktop three-layer composition", () => {
+    expect(css).toMatch(
+      /\.public-ui \.public-hero\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:[^;]*440px/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui \.public-hero__visual\s*\{[^}]*width:\s*440px;[^}]*height:\s*520px;[^}]*overflow:\s*hidden;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui \.public-hero__accent\s*\{[^}]*width:\s*148px;[^}]*background:\s*var\(--primary\);/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui \.public-hero__image\s*\{[^}]*z-index:\s*1;[^}]*object-fit:\s*cover;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui \.public-hero__accent\s*\{[^}]*z-index:\s*2;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui \.public-hero__isotipo\s*\{[^}]*z-index:\s*3;/s,
+    );
+  });
+
+  it("defines the compact-mobile dimensions and stacked layout", () => {
+    expect(css).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*\.public-ui \.public-hero\s*\{[^}]*grid-template-columns:\s*1fr;/s,
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*\.public-ui \.public-hero__visual\s*\{[^}]*width:\s*342px;[^}]*height:\s*252px;/s,
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*\.public-ui \.public-hero__accent\s*\{[^}]*width:\s*92px;/s,
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*\.public-ui \.public-hero__isotipo\s*\{[^}]*width:\s*220px;[^}]*height:\s*220px;/s,
+    );
+  });
+});
+
 describe("landing navbar CSS contract", () => {
   it("keeps navbar rules scoped to the public landing surface", () => {
     expect(css).toMatch(/\.public-ui \.landing-navbar\s*\{/);
