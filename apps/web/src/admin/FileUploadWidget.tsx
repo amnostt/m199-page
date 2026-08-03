@@ -19,6 +19,8 @@ import { useState, type ChangeEvent } from "react";
 import { adminFetch } from "./session.js";
 import type { FileAssetResponse } from "./adminTypes.js";
 import { useAdminToast } from "./AdminProviders.js";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,7 +88,7 @@ export function FileUploadWidget({
   // prettier-ignore
   return (
     <div data-testid={dataTestId}>
-      <input
+      <Input
         type="file"
         data-testid="file-upload-input"
         aria-label={`Upload ${category.toLowerCase().replaceAll("_", " ")}`}
@@ -103,18 +105,18 @@ export function FileUploadWidget({
       )}
 
       {state === "error" && lastFile && (
-        <button type="button" onClick={() => void upload(lastFile)}>Retry upload</button>
+        <Button type="button" onClick={() => void upload(lastFile)}>Retry upload</Button>
       )}
 
       {fileId && (
-        <button
+        <Button
           type="button"
           data-testid="file-upload-remove"
           onClick={onRemove}
           disabled={state === "uploading"}
         >
           Remove
-        </button>
+        </Button>
       )}
     </div>
   );

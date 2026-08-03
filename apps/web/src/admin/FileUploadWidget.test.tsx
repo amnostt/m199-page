@@ -274,6 +274,80 @@ describe("FileUploadWidget — remove button", () => {
 });
 
 // =========================================================================
+// Canonical primitives and reset
+// =========================================================================
+
+describe("FileUploadWidget — canonical primitives and reset", () => {
+  it("uses canonical Input and Button data-slot markers", () => {
+    render(
+      <FileUploadWidget
+        category="POST_COVER_IMAGE"
+        fileId="existing-file-id"
+        onUploaded={vi.fn()}
+        onRemove={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("file-upload-input").getAttribute("data-slot"),
+    ).toBe("input");
+    expect(
+      screen.getByTestId("file-upload-remove").getAttribute("data-slot"),
+    ).toBe("button");
+  });
+
+  it("resets the file input value after a successful upload", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(MOCK_ASSET),
+    });
+
+    render(
+      <FileUploadWidget
+        category="POST_COVER_IMAGE"
+        fileId={null}
+        onUploaded={vi.fn()}
+        onRemove={vi.fn()}
+      />,
+    );
+
+    const input = screen.getByTestId("file-upload-input") as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(["x"], "c.png", { type: "image/png" })] },
+    });
+
+    await waitFor(() => {
+      expect(input.value).toBe("");
+    });
+  });
+
+  it("renders the retry button as canonical Button after an error", async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
+
+    render(
+      <FileUploadWidget
+        category="POST_COVER_IMAGE"
+        fileId={null}
+        onUploaded={vi.fn()}
+        onRemove={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByTestId("file-upload-input"), {
+      target: { files: [new File(["x"], "c.png", { type: "image/png" })] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("file-upload-error")).toBeTruthy();
+    });
+
+    expect(screen.getByText(/retry upload/i).getAttribute("data-slot")).toBe(
+      "button",
+    );
+  });
+});
+
+// =========================================================================
 // 401-retry-FormData test
 // =========================================================================
 
