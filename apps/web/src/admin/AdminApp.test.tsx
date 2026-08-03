@@ -95,6 +95,11 @@ describe("AdminApp bootstrap", () => {
     await waitFor(() => {
       expect(screen.getByTestId("admin-login")).toBeTruthy();
     });
+
+    expect(
+      screen.getByRole("heading", { name: "Misión 1-99 administration" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Misión 1-99" })).toBeTruthy();
   });
 
   it("shows login form when refresh returns 403", async () => {

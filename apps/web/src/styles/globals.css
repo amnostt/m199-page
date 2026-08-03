@@ -35,6 +35,14 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
   --radius-sm: 0.25rem;
   --radius-md: var(--radius);
   --radius-lg: 1rem;
@@ -84,51 +92,91 @@
 
 [data-theme="admin"] {
   --font-display: var(--font-interface);
-  --background: #f7f7f8;
-  --foreground: #1f2937;
-  --card: #ffffff;
-  --card-foreground: #1f2937;
-  --popover: #ffffff;
-  --popover-foreground: #1f2937;
-  --primary: #1d4ed8;
-  --primary-foreground: #ffffff;
-  --primary-hover: #1e40af;
-  --secondary: #e5e7eb;
-  --secondary-foreground: #1f2937;
-  --secondary-hover: #d1d5db;
-  --muted: #f3f4f6;
-  --muted-foreground: #4b5563;
-  --accent: #dbeafe;
-  --accent-foreground: #1e40af;
-  --accent-hover: #bfdbfe;
-  --destructive: #b91c1c;
-  --destructive-foreground: #ffffff;
-  --border: #d1d5db;
-  --input: #d1d5db;
-  --ring: #2563eb;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.269 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --secondary-hover: oklch(0.922 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --accent-hover: oklch(0.922 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
   --radius: 0.5rem;
 }
 
 @layer components {
+  body[data-theme="admin"] {
+    margin: 0;
+  }
+
   .public-ui,
   .public-ui *,
   .public-ui *::before,
   .public-ui *::after,
-  .admin-ui,
-  .admin-ui *,
-  .admin-ui *::before,
-  .admin-ui *::after {
+  body[data-theme="admin"],
+  body[data-theme="admin"] *,
+  body[data-theme="admin"] *::before,
+  body[data-theme="admin"] *::after {
     box-sizing: border-box;
   }
 
+  body[data-theme="admin"] * {
+    border-color: var(--border);
+  }
+
+  body[data-theme="admin"] :where(button, input, select, textarea) {
+    color: inherit;
+    font: inherit;
+  }
+
+  body[data-theme="admin"] :where(button) {
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+  }
+
+  body[data-theme="admin"] :where(ul, ol, menu) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  body[data-theme="admin"] :where(h1, h2, h3, h4, h5, h6, p) {
+    margin: 0;
+  }
+
   .public-ui :focus-visible,
-  .admin-ui :focus-visible {
+  body[data-theme="admin"] :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
 
   .public-ui :focus:not(:focus-visible),
-  .admin-ui :focus:not(:focus-visible) {
+  body[data-theme="admin"] :focus:not(:focus-visible) {
     outline: none;
   }
 
@@ -1078,7 +1126,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .public-ui *,
-  .admin-ui * {
+  body[data-theme="admin"] * {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;

@@ -1,18 +1,54 @@
+import {
+  BookOpenText,
+  CalendarDays,
+  Files,
+  LogOut,
+  Newspaper,
+  Settings2,
+  UsersRound,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Separator } from "../components/ui/separator.js";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "../components/ui/sidebar.js";
+import { TooltipProvider } from "../components/ui/tooltip.js";
 import type { AuthUser } from "./adminTypes.js";
 import { LandingSettingsPage } from "./LandingSettingsPage.js";
 import { PostsPage } from "./PostsPage.js";
 import { OutingsPage } from "./OutingsPage.js";
 import { ResponsiblesPage } from "./ResponsiblesPage.js";
 import { VersesPage } from "./VersesPage.js";
+
 export type AdminSection =
   "landing" | "posts" | "outings" | "responsibles" | "verses";
-const sections: Array<[AdminSection, string]> = [
-  ["landing", "Landing Settings"],
-  ["verses", "Verses"],
-  ["responsibles", "Responsibles"],
-  ["posts", "Posts"],
-  ["outings", "Outings"],
+
+type AdminNavItem = {
+  section: AdminSection;
+  label: string;
+  icon: LucideIcon;
+};
+
+const sections: AdminNavItem[] = [
+  { section: "landing", label: "Landing Settings", icon: Settings2 },
+  { section: "verses", label: "Verses", icon: BookOpenText },
+  { section: "responsibles", label: "Responsibles", icon: UsersRound },
+  { section: "posts", label: "Posts", icon: Newspaper },
+  { section: "outings", label: "Outings", icon: CalendarDays },
 ];
+
 export interface AdminShellProps {
   user: AuthUser;
   activeSection: AdminSection;
@@ -20,6 +56,7 @@ export interface AdminShellProps {
   onLogout: () => void;
   logoutError: boolean;
 }
+
 function SectionContent({
   section,
   user,
@@ -33,6 +70,7 @@ function SectionContent({
   if (section === "verses") return <VersesPage />;
   return <ResponsiblesPage currentUserId={user.id} />;
 }
+
 export function AdminShell({
   user,
   activeSection,
@@ -40,77 +78,140 @@ export function AdminShell({
   onLogout,
   logoutError,
 }: AdminShellProps) {
-  const label = sections.find(([section]) => section === activeSection)?.[1];
+  const label = sections.find(
+    ({ section }) => section === activeSection,
+  )?.label;
+
   return (
-    <div
-      className="grid min-h-screen grid-cols-1 md:grid-cols-[15rem_1fr]"
-      data-testid="admin-shell"
-    >
-      <aside
-        className="border-b border-border bg-card p-4 md:row-span-3 md:border-r md:border-b-0"
-        data-testid="admin-sidebar"
-      >
-        <strong className="font-heading">Misión 1-99</strong>
-        <nav className="mt-4 grid gap-2" aria-label="Admin sections">
-          {sections.map(([section, sectionLabel]) => (
-            <button
-              key={section}
-              type="button"
-              data-testid={`nav-${section === "landing" ? "landing-settings" : section}`}
-              onClick={() => onNavigate(section)}
-              disabled={activeSection === section}
-              className="min-h-10 rounded-md border border-input bg-card px-3 py-2 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:bg-accent disabled:text-accent-foreground disabled:opacity-100"
-            >
-              {sectionLabel}
-            </button>
-          ))}
-          <button
-            type="button"
-            disabled
-            className="min-h-10 rounded-md border border-input bg-muted px-3 py-2 text-left opacity-60"
-            data-testid="nav-placeholder-files"
+    <TooltipProvider>
+      <SidebarProvider data-testid="admin-shell" className="min-h-svh w-full">
+        <Sidebar collapsible="icon" data-testid="admin-sidebar">
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  size="lg"
+                  tooltip="Misión 1-99"
+                  render={<div aria-label="Misión 1-99" />}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground"
+                  >
+                    1-99
+                  </span>
+                  <span className="font-heading text-base font-semibold">
+                    Misión 1-99
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {sections.map(
+                    ({ section, label: sectionLabel, icon: Icon }) => {
+                      const isActive = activeSection === section;
+
+                      return (
+                        <SidebarMenuItem key={section}>
+                          <SidebarMenuButton
+                            type="button"
+                            render={<button disabled={isActive} />}
+                            data-testid={`nav-${section === "landing" ? "landing-settings" : section}`}
+                            isActive={isActive}
+                            disabled={isActive}
+                            tooltip={sectionLabel}
+                            className="disabled:opacity-100"
+                            aria-current={isActive ? "page" : undefined}
+                            onClick={() => onNavigate(section)}
+                          >
+                            <Icon aria-hidden="true" />
+                            <span>{sectionLabel}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    },
+                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      type="button"
+                      render={<button disabled />}
+                      disabled
+                      data-testid="nav-placeholder-files"
+                      tooltip="Files (coming soon)"
+                    >
+                      <Files aria-hidden="true" />
+                      <span>Files (coming soon)</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  type="button"
+                  variant="outline"
+                  tooltip="Logout"
+                  data-testid="admin-logout"
+                  onClick={onLogout}
+                >
+                  <LogOut aria-hidden="true" />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+            {logoutError && (
+              <span
+                className="px-2 text-sm text-destructive"
+                role="alert"
+                data-testid="admin-logout-error"
+              >
+                Logout failed. Please try again.
+              </span>
+            )}
+          </SidebarFooter>
+        </Sidebar>
+
+        <SidebarInset>
+          <header className="flex min-h-16 shrink-0 items-center gap-3 border-b border-border px-4 sm:px-6">
+            <SidebarTrigger aria-label="Toggle admin sidebar" />
+            <Separator orientation="vertical" className="h-5" />
+            <div className="min-w-0">
+              <p className="truncate text-xs text-muted-foreground">
+                Administration
+              </p>
+              <h1 className="truncate text-sm font-semibold">{label}</h1>
+            </div>
+            <div className="ml-auto min-w-0 text-right">
+              <strong
+                className="block truncate text-sm"
+                data-testid="admin-user-name"
+              >
+                {user.displayName}
+              </strong>
+              <span className="block truncate text-xs text-muted-foreground">
+                {user.email}
+              </span>
+            </div>
+          </header>
+
+          <main
+            className="min-w-0 flex-1 p-[clamp(1rem,3vw,2rem)]"
+            data-testid="admin-content"
           >
-            Files (coming soon)
-          </button>
-        </nav>
-      </aside>
-      <header className="flex items-center justify-between border-b border-border bg-card p-4">
-        <p className="text-muted-foreground">Administration</p>
-        <strong data-testid="admin-user-name">{user.displayName}</strong>
-      </header>
-      <main
-        className="min-w-0 p-[clamp(1rem,3vw,2rem)]"
-        data-testid="admin-content"
-      >
-        <div className="mb-6">
-          <p className="text-sm text-muted-foreground">Admin portal</p>
-          <h1 className="font-heading text-3xl font-bold leading-tight">
-            {label}
-          </h1>
-        </div>
-        <div>
-          <SectionContent section={activeSection} user={user} />
-        </div>
-      </main>
-      <footer className="flex flex-wrap items-center gap-3 border-t border-border bg-card p-4 md:col-start-2">
-        <button
-          type="button"
-          className="min-h-10 rounded-md border border-input bg-card px-3 py-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          data-testid="admin-logout"
-          onClick={onLogout}
-        >
-          Logout
-        </button>
-        {logoutError && (
-          <span
-            className="text-destructive"
-            role="alert"
-            data-testid="admin-logout-error"
-          >
-            Logout failed. Please try again.
-          </span>
-        )}
-      </footer>
-    </div>
+            <SectionContent section={activeSection} user={user} />
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }

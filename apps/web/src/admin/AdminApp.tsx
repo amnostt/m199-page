@@ -20,6 +20,15 @@ import {
 } from "./session.js";
 import { AdminProviders } from "./AdminProviders.js";
 import { AdminShell, type AdminSection } from "./AdminShell.js";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 // ---------------------------------------------------------------------------
 // Timeout constants — prevent permanent loading/submitting when auth
@@ -76,60 +85,77 @@ function AdminLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
 
   return (
     <main
-      className="admin-ui grid min-h-screen place-items-center bg-background p-4"
+      className="admin-ui flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10"
       data-testid="admin-login"
     >
-      <section className="w-full max-w-sm rounded-lg border border-border bg-card p-6 text-card-foreground">
-        <h1 className="mb-6 font-heading text-3xl font-bold">Admin Login</h1>
-        <form className="grid gap-4" onSubmit={handleSubmit}>
-          <label
-            className="grid gap-1.5 text-sm font-semibold"
-            htmlFor="admin-email"
-          >
-            Email
-            <input
-              id="admin-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={submitting}
-              className="min-h-10 rounded-md border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:opacity-60"
-            />
-          </label>
-          <label
-            className="grid gap-1.5 text-sm font-semibold"
-            htmlFor="admin-password"
-          >
-            Password
-            <input
-              id="admin-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={submitting}
-              className="min-h-10 rounded-md border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:opacity-60"
-            />
-          </label>
-          <button
-            className="min-h-11 rounded-md bg-primary px-4 font-medium text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60"
-            type="submit"
-            disabled={submitting}
-          >
-            Sign In
-          </button>
-        </form>
-        {error && (
-          <div
-            className="mt-4 text-sm text-destructive"
-            role="alert"
-            data-testid="admin-login-error"
-          >
-            Invalid credentials. Try again.
-          </div>
-        )}
-      </section>
+      <div className="w-full max-w-sm md:max-w-4xl">
+        <Card className="overflow-hidden p-0">
+          <CardContent className="grid p-0 md:grid-cols-2">
+            <form className="p-6 md:p-8" onSubmit={handleSubmit}>
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <h1 className="text-2xl font-bold">
+                    Misión 1-99 administration
+                  </h1>
+                  <FieldDescription>
+                    Sign in to manage Misión 1-99 content.
+                  </FieldDescription>
+                </div>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="admin-email">Email</FieldLabel>
+                    <Input
+                      id="admin-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
+                      required
+                      disabled={submitting}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="admin-password">Password</FieldLabel>
+                    <Input
+                      id="admin-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                      disabled={submitting}
+                    />
+                  </Field>
+                  <Field>
+                    <Button type="submit" disabled={submitting}>
+                      Sign In
+                    </Button>
+                  </Field>
+                </FieldGroup>
+                {error && (
+                  <div
+                    className="text-sm text-destructive"
+                    role="alert"
+                    aria-live="polite"
+                    data-testid="admin-login-error"
+                  >
+                    Invalid credentials. Try again.
+                  </div>
+                )}
+              </div>
+            </form>
+            <div className="relative hidden bg-muted md:block">
+              <div className="absolute inset-0 flex items-center justify-center bg-foreground p-10">
+                <img
+                  src="/assets/brand/logo-horizontal.png"
+                  alt="Misión 1-99"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 }

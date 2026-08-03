@@ -65,28 +65,28 @@ const EXPECTED_TOKENS: Record<
     radius: "0.5rem",
   },
   admin: {
-    background: "#f7f7f8",
-    foreground: "#1f2937",
-    card: "#ffffff",
-    "card-foreground": "#1f2937",
-    popover: "#ffffff",
-    "popover-foreground": "#1f2937",
-    primary: "#1d4ed8",
-    "primary-foreground": "#ffffff",
-    "primary-hover": "#1e40af",
-    secondary: "#e5e7eb",
-    "secondary-foreground": "#1f2937",
-    "secondary-hover": "#d1d5db",
-    muted: "#f3f4f6",
-    "muted-foreground": "#4b5563",
-    accent: "#dbeafe",
-    "accent-foreground": "#1e40af",
-    "accent-hover": "#bfdbfe",
-    destructive: "#b91c1c",
-    "destructive-foreground": "#ffffff",
-    border: "#d1d5db",
-    input: "#d1d5db",
-    ring: "#2563eb",
+    background: "oklch(1 0 0)",
+    foreground: "oklch(0.145 0 0)",
+    card: "oklch(1 0 0)",
+    "card-foreground": "oklch(0.145 0 0)",
+    popover: "oklch(1 0 0)",
+    "popover-foreground": "oklch(0.145 0 0)",
+    primary: "oklch(0.205 0 0)",
+    "primary-foreground": "oklch(0.985 0 0)",
+    "primary-hover": "oklch(0.269 0 0)",
+    secondary: "oklch(0.97 0 0)",
+    "secondary-foreground": "oklch(0.205 0 0)",
+    "secondary-hover": "oklch(0.922 0 0)",
+    muted: "oklch(0.97 0 0)",
+    "muted-foreground": "oklch(0.556 0 0)",
+    accent: "oklch(0.97 0 0)",
+    "accent-foreground": "oklch(0.205 0 0)",
+    "accent-hover": "oklch(0.922 0 0)",
+    destructive: "oklch(0.577 0.245 27.325)",
+    "destructive-foreground": "oklch(0.985 0 0)",
+    border: "oklch(0.922 0 0)",
+    input: "oklch(0.922 0 0)",
+    ring: "oklch(0.708 0 0)",
     radius: "0.5rem",
   },
 };
@@ -159,6 +159,22 @@ describe("shadcn globals preflight isolation", () => {
     expect(css).toContain("--color-primary-hover: var(--primary-hover);");
     expect(css).toContain("--color-secondary-hover: var(--secondary-hover);");
     expect(css).toContain("--color-accent-hover: var(--accent-hover);");
+  });
+
+  it("resets native admin controls without reintroducing global Preflight", () => {
+    expect(css).toMatch(/body\[data-theme="admin"\]\s*\{[^}]*margin:\s*0;/s);
+    expect(css).toMatch(
+      /body\[data-theme="admin"\] :where\(button, input, select, textarea\)\s*\{[^}]*font:\s*inherit;/s,
+    );
+    expect(css).toMatch(
+      /body\[data-theme="admin"\] :where\(button\)\s*\{[^}]*background:\s*transparent;[^}]*border:\s*0;/s,
+    );
+    expect(css).toMatch(
+      /body\[data-theme="admin"\] :where\(ul, ol, menu\)\s*\{[^}]*list-style:\s*none;/s,
+    );
+    expect(css).toMatch(
+      /body\[data-theme="admin"\] \*\s*\{[^}]*border-color:\s*var\(--border\);/s,
+    );
   });
 });
 
