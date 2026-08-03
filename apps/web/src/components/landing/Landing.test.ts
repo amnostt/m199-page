@@ -105,13 +105,13 @@ describe("Landing.astro — successful markup", () => {
     const sections = [
       "hero-section",
       "featured-outing-section",
-      "mission-section",
-      "vision-section",
-      "description-section",
+      "missions-section",
+      "about-section",
       "video-section",
-      "contact-section",
       "featured-posts-section",
       "verse-section",
+      "contact-section",
+      "landing-footer",
     ];
     for (const id of sections) {
       expect(html).toContain(`data-testid="${id}"`);
@@ -131,13 +131,14 @@ describe("Landing.astro — successful markup", () => {
     expect(html).toContain("Marcos 16:15");
   });
 
-  it("renders the fallback hero and omits empty optional sections", async () => {
+  it("renders the fallback hero and permanent missions slot while omitting empty optional sections", async () => {
     const html = await render(minimalPayload());
     expect(html).toContain('data-testid="landing-page"');
     expect(html).toContain('data-testid="hero-section"');
+    expect(html).toContain('data-testid="missions-section"');
     expect(html).toContain('src="/assets/template-picture.jpg"');
     const sections = [
-      "mission-section",
+      "about-section",
       "video-section",
       "contact-section",
       "featured-posts-section",
@@ -146,6 +147,7 @@ describe("Landing.astro — successful markup", () => {
     for (const id of sections) {
       expect(html).not.toContain(`data-testid="${id}"`);
     }
+    expect(html).toContain('data-testid="landing-footer"');
   });
 
   it.each([
@@ -160,7 +162,11 @@ describe("Landing.astro — successful markup", () => {
       },
       ["#inicio", "#misiones", "#nosotros", "#contacto"],
     ],
-    ["minimal", minimalPayload(), ["#inicio", "#inicio", "#inicio", "#inicio"]],
+    [
+      "minimal",
+      minimalPayload(),
+      ["#inicio", "#misiones", "#inicio", "#inicio"],
+    ],
   ] as const)(
     "renders four navigable destinations with unique target ownership for the %s branch",
     async (_branch, payload, expectedHrefs) => {
@@ -174,6 +180,66 @@ describe("Landing.astro — successful markup", () => {
       expect(new Set(ids(html)).size).toBe(ids(html).length);
     },
   );
+});
+
+describe("Landing.astro — about and contact", () => {
+  it("renders the approved manifesto, principles, and exact contact CTA", async () => {
+    const html = await render(fullPayload());
+
+    expect(html).toContain("No construimos una institución");
+    expect(html).toContain("Buscamos al uno");
+    expect(html).toContain("Cristo es el centro");
+    expect(html).toContain("Cada persona tiene valor");
+    expect(html).toContain("Acción antes que comodidad");
+    expect(html).toContain('href="#contacto"');
+    expect(html).toContain("Quiero ser parte");
+    expect(html).not.toContain('href="/nosotros"');
+  });
+
+  it("renders only available contact channels as direct actions", async () => {
+    const emailOnly = await render({
+      ...minimalPayload(),
+      contactEmail: " contacto@m199.org ",
+    });
+    expect(emailOnly).toContain('href="mailto:contacto@m199.org"');
+    expect(emailOnly).not.toContain('href="tel:');
+
+    const phoneOnly = await render({
+      ...minimalPayload(),
+      contactPhone: "+54 11 1234-5678",
+    });
+    expect(phoneOnly).toContain('href="tel:+541112345678"');
+    expect(phoneOnly).not.toContain('href="mailto:');
+  });
+
+  it("omits the participation CTA when about exists without a contact destination", async () => {
+    const html = await render({
+      ...minimalPayload(),
+      description: "Somos un movimiento que sale a buscar al uno.",
+    });
+
+    expect(html).toContain('id="nosotros"');
+    expect(html).not.toContain('id="contacto"');
+    expect(html).not.toContain('href="#contacto"');
+    expect(html).not.toContain("Quiero ser parte");
+  });
+
+  it("does not render empty about or contact anchors for blank values", async () => {
+    const html = await render({
+      ...minimalPayload(),
+      description: "   ",
+      contactEmail: "   ",
+    });
+
+    expect(html).not.toContain('id="nosotros"');
+    expect(html).not.toContain('id="contacto"');
+    expect(navbarHrefs(html)).toEqual([
+      "#inicio",
+      "#misiones",
+      "#inicio",
+      "#inicio",
+    ]);
+  });
 });
 
 describe("Landing.astro — failure markup", () => {
@@ -270,7 +336,7 @@ describe("Landing.astro — CSS scope contract", () => {
   it("uses public-section for every block-level section", async () => {
     const html = await render(fullPayload());
     expect(
-      html.match(/class="public-section"/g)?.length,
+      html.match(/class="[^"]*\bpublic-section\b[^"]*"/g)?.length,
     ).toBeGreaterThanOrEqual(6);
   });
 
@@ -293,9 +359,9 @@ describe("Landing.astro — iframe omission and safety", () => {
   it("emits the iframe only inside the .public-media wrapper, with a title", async () => {
     const html = await render(fullPayload());
     expect(html).toMatch(
-      /class="public-media public-media--cover"[^]*<iframe[^>]*data-testid="featured-video"/,
+      /class="[^"]*\bpublic-media--cover\b[^"]*"[^]*<iframe[^>]*data-testid="featured-video"/,
     );
     expect(html).toContain('src="https://www.youtube.com/embed/abc"');
-    expect(html).toMatch(/<iframe[^>]*title="Featured Video"/);
+    expect(html).toMatch(/<iframe[^>]*title="Misión 1-99 en acción"/);
   });
 });

@@ -23,6 +23,9 @@ import type {
 } from "./landing-shape.js";
 import LandingNavbar from "./LandingNavbar.astro";
 import LandingHero from "./LandingHero.astro";
+import LandingMissions from "./LandingMissions.astro";
+import LandingAbout from "./LandingAbout.astro";
+import LandingContact from "./LandingContact.astro";
 
 interface Props {
   payload: LandingPayloadShape | null;
@@ -31,16 +34,19 @@ interface Props {
 
 const { payload, failure } = Astro.props;
 
-const missionHref =
-  payload && (payload.featuredOuting || payload.mission)
-    ? "#misiones"
-    : "#inicio";
-const aboutHref =
-  payload && (payload.vision || payload.description) ? "#nosotros" : "#inicio";
-const contactHref =
-  payload && (payload.contactEmail || payload.contactPhone)
-    ? "#contacto"
-    : "#inicio";
+const missionHref = payload ? "#misiones" : "#inicio";
+const hasAbout = Boolean(
+  payload &&
+    (payload.mission?.trim() ||
+      payload.vision?.trim() ||
+      payload.description?.trim() ||
+      payload.featuredVideoUrl),
+);
+const hasContact = Boolean(
+  payload && (payload.contactEmail?.trim() || payload.contactPhone?.trim()),
+);
+const aboutHref = hasAbout ? "#nosotros" : "#inicio";
+const contactHref = hasContact ? "#contacto" : "#inicio";
 ---
 
 {failure ? (
@@ -78,7 +84,6 @@ const contactHref =
     {payload.featuredOuting && (
       <section
         class="public-section"
-        id="misiones"
         data-testid="featured-outing-section"
       >
         <article
@@ -102,59 +107,15 @@ const contactHref =
       </section>
     )}
 
-    {payload.mission && (
-      <section
-        class="public-section"
-        id={payload.featuredOuting ? undefined : "misiones"}
-        data-testid="mission-section"
-      >
-        <p data-testid="mission-text">{payload.mission}</p>
-      </section>
-    )}
+    <LandingMissions />
 
-    {payload.vision && (
-      <section
-        class="public-section"
-        id="nosotros"
-        data-testid="vision-section"
-      >
-        <p data-testid="vision-text">{payload.vision}</p>
-      </section>
-    )}
-
-    {payload.description && (
-      <section
-        class="public-section"
-        id={payload.vision ? undefined : "nosotros"}
-        data-testid="description-section"
-      >
-        <p data-testid="description-text">{payload.description}</p>
-      </section>
-    )}
-
-    {payload.featuredVideoUrl && (
-      <section class="public-section" data-testid="video-section">
-        <div class="public-media public-media--cover">
-          <iframe
-            src={payload.featuredVideoUrl}
-            title="Featured Video"
-            data-testid="featured-video"
-            loading="lazy"
-          ></iframe>
-        </div>
-      </section>
-    )}
-
-    {(payload.contactEmail || payload.contactPhone) && (
-      <section class="public-section" id="contacto" data-testid="contact-section">
-        {payload.contactEmail && (
-          <p data-testid="contact-email">{payload.contactEmail}</p>
-        )}
-        {payload.contactPhone && (
-          <p data-testid="contact-phone">{payload.contactPhone}</p>
-        )}
-      </section>
-    )}
+    <LandingAbout
+      mission={payload.mission}
+      vision={payload.vision}
+      description={payload.description}
+      featuredVideoUrl={payload.featuredVideoUrl}
+      hasContact={hasContact}
+    />
 
     {payload.featuredPosts.length > 0 && (
       <section
@@ -186,5 +147,10 @@ const contactHref =
         </blockquote>
       </section>
     )}
+
+    <LandingContact
+      contactEmail={payload.contactEmail}
+      contactPhone={payload.contactPhone}
+    />
   </main>
 ) : null}

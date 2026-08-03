@@ -1,0 +1,61 @@
+---
+import type { LandingPayloadShape } from "./landing-shape.js";
+
+interface Props extends Pick<
+  LandingPayloadShape,
+  "mission" | "vision" | "description" | "featuredVideoUrl"
+> {
+  hasContact: boolean;
+}
+
+const { mission, vision, description, featuredVideoUrl, hasContact } = Astro.props;
+const narrative = description?.trim() || mission?.trim() || vision?.trim();
+const hasContent = Boolean(narrative || featuredVideoUrl);
+---
+
+{hasContent && (
+  <section
+    class="public-section landing-about"
+    id="nosotros"
+    data-testid="about-section"
+    aria-labelledby="about-title"
+  >
+    <div class="landing-about__visual">
+      <img
+        src="/assets/template-picture.jpg"
+        alt="Dos personas conversando durante una acción en la calle"
+        loading="lazy"
+      />
+      <span aria-hidden="true">1—99</span>
+    </div>
+
+    <div class="landing-about__content">
+      <header class="landing-about__manifesto">
+        <p class="landing-about__kicker">Nosotros</p>
+        <h2 id="about-title">No construimos una institución.<br />Buscamos al uno.</h2>
+        {narrative && <p data-testid="about-description">{narrative}</p>}
+      </header>
+
+      <ol class="landing-about__principles" aria-label="Nuestros principios">
+        <li><span>01</span><strong>Cristo es el centro</strong></li>
+        <li><span>02</span><strong>Cada persona tiene valor</strong></li>
+        <li><span>03</span><strong>Acción antes que comodidad</strong></li>
+      </ol>
+
+      {featuredVideoUrl && (
+        <div class="public-media public-media--cover landing-about__video" data-testid="video-section">
+          <iframe
+            src={featuredVideoUrl}
+            title="Misión 1-99 en acción"
+            data-testid="featured-video"
+            loading="lazy"
+          ></iframe>
+        </div>
+      )}
+
+      {hasContact && (
+        <a class="landing-about__action" href="#contacto">Quiero ser parte <span aria-hidden="true">→</span></a>
+      )}
+    </div>
+  </section>
+)}

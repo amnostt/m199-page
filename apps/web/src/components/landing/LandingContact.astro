@@ -1,0 +1,48 @@
+---
+import type { LandingPayloadShape } from "./landing-shape.js";
+
+interface Props extends Pick<LandingPayloadShape, "contactEmail" | "contactPhone"> {}
+
+const email = Astro.props.contactEmail?.trim() || null;
+const phone = Astro.props.contactPhone?.trim() || null;
+const phoneHref = phone?.replace(/[^+\d]/g, "");
+---
+
+{(email || phone) && (
+  <section
+    class="public-section landing-contact"
+    id="contacto"
+    data-testid="contact-section"
+    aria-labelledby="contact-title"
+  >
+    <div class="landing-contact__intro">
+      <p class="landing-contact__kicker">Contacto</p>
+      <h2 id="contact-title">Vamos juntos.<br />El Evangelio está en acción.</h2>
+      <p>¿Querés servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos.</p>
+    </div>
+
+    <div class="landing-contact__channels">
+      {email && (
+        <a href={`mailto:${email}`} data-testid="contact-email">
+          <span><small>Escribinos</small><strong>{email}</strong></span>
+          <span aria-hidden="true">↗</span>
+        </a>
+      )}
+      {phone && phoneHref && (
+        <a href={`tel:${phoneHref}`} data-testid="contact-phone">
+          <span><small>Llamanos</small><strong>{phone}</strong></span>
+          <span aria-hidden="true">↗</span>
+        </a>
+      )}
+    </div>
+  </section>
+)}
+
+<footer class="landing-footer" data-testid="landing-footer">
+  <div>
+    <strong>Misión 1—99</strong>
+    <span>Vamos por el uno.</span>
+  </div>
+  <p>Cristo es el centro · Cada persona tiene valor</p>
+  <small>© Misión 1—99</small>
+</footer>
