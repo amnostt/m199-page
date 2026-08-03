@@ -1,48 +1,22 @@
+/* ---------------------------------------------------------------------------
+ * public.css — route-owned stylesheet for public Astro routes.
+ *
+ * Public routes never load Tailwind v4 Preflight; the existing Mision
+ * 1-99 brand identity, fonts, and `.public-ui` composition are preserved
+ * verbatim. Admin tokens, the shadcn registry base, and the admin hand
+ * reset never appear here. See proposal/spec/design for the boundary.
+ * --------------------------------------------------------------------------- */
+
 @layer theme, base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/archivo-narrow";
-
-/* Dark utilities are opt-in and never follow the OS preference. */
-@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --font-sans: var(--font-interface);
   --font-heading: var(--font-display);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary-hover: var(--primary-hover);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary-hover: var(--secondary-hover);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent-hover: var(--accent-hover);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
   --radius-sm: 0.25rem;
   --radius-md: var(--radius);
   --radius-lg: 1rem;
@@ -51,7 +25,7 @@
   --shadow-overlay: var(--elevation-overlay);
 }
 
-:is([data-theme="public"], [data-theme="admin"]) {
+:is([data-theme="public"]) {
   --font-interface: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --radius: 0.5rem;
   --elevation-raised: 0 12px 32px rgb(34 31 31 / 5%);
@@ -90,93 +64,25 @@
   --radius: 0.5rem;
 }
 
-[data-theme="admin"] {
-  --font-display: var(--font-interface);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --primary-hover: oklch(0.269 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --secondary-hover: oklch(0.922 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --accent-hover: oklch(0.922 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --radius: 0.5rem;
-}
-
 @layer components {
-  body[data-theme="admin"] {
-    margin: 0;
-  }
-
+  /* The public route stylesheet has no Tailwind Preflight, so the
+   * `.public-ui` subtree needs an explicit `box-sizing: border-box`
+   * to keep padding and borders inside the declared widths. The
+   * `body[data-theme="admin"]` half of the legacy rule moves to
+   * admin.css where canonical Preflight already covers it. */
   .public-ui,
   .public-ui *,
   .public-ui *::before,
-  .public-ui *::after,
-  body[data-theme="admin"],
-  body[data-theme="admin"] *,
-  body[data-theme="admin"] *::before,
-  body[data-theme="admin"] *::after {
+  .public-ui *::after {
     box-sizing: border-box;
   }
 
-  body[data-theme="admin"] * {
-    border-color: var(--border);
-  }
-
-  body[data-theme="admin"] :where(button, input, select, textarea) {
-    color: inherit;
-    font: inherit;
-  }
-
-  body[data-theme="admin"] :where(button) {
-    appearance: none;
-    margin: 0;
-    padding: 0;
-    cursor: pointer;
-    background: transparent;
-    border: 0;
-  }
-
-  body[data-theme="admin"] :where(ul, ol, menu) {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  body[data-theme="admin"] :where(h1, h2, h3, h4, h5, h6, p) {
-    margin: 0;
-  }
-
-  .public-ui :focus-visible,
-  body[data-theme="admin"] :focus-visible {
+  .public-ui :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
 
-  .public-ui :focus:not(:focus-visible),
-  body[data-theme="admin"] :focus:not(:focus-visible) {
+  .public-ui :focus:not(:focus-visible) {
     outline: none;
   }
 
@@ -1125,8 +1031,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .public-ui *,
-  body[data-theme="admin"] * {
+  .public-ui * {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
