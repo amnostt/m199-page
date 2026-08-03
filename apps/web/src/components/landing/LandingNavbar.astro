@@ -1,0 +1,80 @@
+---
+interface Props {
+  missionHref: string;
+  aboutHref: string;
+  contactHref: string;
+}
+
+const { missionHref, aboutHref, contactHref } = Astro.props;
+---
+
+<header class="landing-navbar" data-testid="landing-navbar">
+  <div class="landing-navbar__logo" data-testid="landing-navbar-logo">
+    <img
+      src="/assets/brand/logo-horizontal.png"
+      alt="Misión 1-99"
+      data-testid="landing-navbar-logo-image"
+    />
+  </div>
+  <button
+    class="landing-navbar__menu-toggle"
+    type="button"
+    aria-expanded="false"
+    aria-controls="landing-navbar-menu"
+    aria-label="Abrir menú"
+    data-testid="landing-navbar-menu-toggle"
+  >
+    <span aria-hidden="true">☰</span>
+  </button>
+  <nav
+    id="landing-navbar-menu"
+    aria-label="Navegación principal"
+    data-testid="landing-navbar-menu"
+  >
+    <ul class="landing-navbar__links">
+      <li><a class="landing-navbar__link" href="#inicio">Inicio</a></li>
+      <li><a class="landing-navbar__link" href={missionHref}>Misiones</a></li>
+      <li><a class="landing-navbar__link" href={aboutHref}>Nosotros</a></li>
+      <li>
+        <a
+          class="landing-navbar__link landing-navbar__link--cta"
+          href={contactHref}
+        >Contacto</a>
+      </li>
+    </ul>
+  </nav>
+  <script is:inline>
+    const script = document.currentScript;
+    const navbar = script?.closest(".landing-navbar");
+
+    if (navbar instanceof HTMLElement) {
+      const button = navbar.querySelector(".landing-navbar__menu-toggle");
+      const menu = navbar.querySelector("#landing-navbar-menu");
+
+      if (button instanceof HTMLButtonElement && menu instanceof HTMLElement) {
+        const setMenuOpen = (open, returnFocus = false) => {
+          navbar.classList.toggle("landing-navbar--open", open);
+          button.setAttribute("aria-expanded", String(open));
+          button.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
+
+          if (returnFocus) button.focus();
+        };
+
+        navbar.classList.add("landing-navbar--enhanced");
+        button.addEventListener("click", () => {
+          setMenuOpen(button.getAttribute("aria-expanded") !== "true");
+        });
+        menu.querySelectorAll("a").forEach((link) => {
+          link.addEventListener("click", () => setMenuOpen(false));
+        });
+        navbar.addEventListener("keydown", (event) => {
+          if (event.key !== "Escape") return;
+          if (!navbar.classList.contains("landing-navbar--open")) return;
+
+          event.preventDefault();
+          setMenuOpen(false, true);
+        });
+      }
+    }
+  </script>
+</header>

@@ -6,6 +6,7 @@ export default defineConfig(
     test: {
       environment: "jsdom",
       forbidOnly: true,
+      exclude: ["**/node_modules/**", "src/**/*.browser.test.ts"],
       // Server-side env/port/Astro-config tests are pure Node and must run
       // without the jsdom DOM globals. The matching test files also declare
       // `// @vitest-environment node` at the top, but this glob keeps the

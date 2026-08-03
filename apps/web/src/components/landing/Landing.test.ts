@@ -75,6 +75,24 @@ async function render(
   });
 }
 
+function navbarMarkup(html: string): string {
+  const navbar = html.match(
+    /<header\b[^>]*data-testid="landing-navbar"[^>]*>[\s\S]*?<\/header>/,
+  );
+  if (!navbar) throw new Error("Landing navbar was not rendered");
+  return navbar[0];
+}
+
+function navbarHrefs(html: string): string[] {
+  return [...navbarMarkup(html).matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/g)].map(
+    (match) => match[1]!,
+  );
+}
+
+function ids(html: string): string[] {
+  return [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]!);
+}
+
 describe("Landing.astro — successful markup", () => {
   it("renders the full landing root with the .public-ui public-page scope", async () => {
     const html = await render(fullPayload());
@@ -123,6 +141,33 @@ describe("Landing.astro — successful markup", () => {
       expect(html).not.toContain(`data-testid="${id}"`);
     }
   });
+
+  it.each([
+    ["full", fullPayload(), ["#inicio", "#misiones", "#nosotros", "#contacto"]],
+    [
+      "optional",
+      {
+        ...minimalPayload(),
+        mission: "Alcanzar a cada persona",
+        description: "Una comunidad de fe",
+        contactEmail: "contacto@m199.org",
+      },
+      ["#inicio", "#misiones", "#nosotros", "#contacto"],
+    ],
+    ["minimal", minimalPayload(), ["#inicio", "#inicio", "#inicio", "#inicio"]],
+  ] as const)(
+    "renders four navigable destinations with unique target ownership for the %s branch",
+    async (_branch, payload, expectedHrefs) => {
+      const html = await render(payload);
+      const hrefs = navbarHrefs(html);
+
+      expect(hrefs).toEqual(expectedHrefs);
+      for (const href of new Set(hrefs)) {
+        expect(ids(html).filter((id) => `#${id}` === href)).toHaveLength(1);
+      }
+      expect(new Set(ids(html)).size).toBe(ids(html).length);
+    },
+  );
 });
 
 describe("Landing.astro — failure markup", () => {
@@ -172,6 +217,34 @@ describe("Landing.astro — failure markup", () => {
     expect(html).toContain('data-testid="landing-error"');
     expect(html).not.toContain('data-testid="landing-page"');
     expect(html).not.toContain('data-testid="hero-section"');
+  });
+
+  it("keeps all failure-branch destinations valid on the error root", async () => {
+    const html = await render(null, { reason: "timeout" });
+    const hrefs = navbarHrefs(html);
+
+    expect(hrefs).toEqual(["#inicio", "#inicio", "#inicio", "#inicio"]);
+    expect(ids(html).filter((id) => id === "inicio")).toHaveLength(1);
+    expect(new Set(ids(html)).size).toBe(ids(html).length);
+  });
+});
+
+describe("Landing.astro — navbar SSR contract", () => {
+  it("keeps the semantic navigation, exact Spanish destinations, CTA, and logo", async () => {
+    const html = await render(fullPayload());
+    const navbar = navbarMarkup(html);
+
+    expect(navbar).toMatch(/^<header\b/);
+    expect(navbar).toMatch(/<nav\b[^>]*aria-label="Navegación principal"/);
+    expect(navbar).toContain('src="/assets/brand/logo-horizontal.png"');
+    expect(navbar).toContain('alt="Misión 1-99"');
+    expect(navbar).toContain("Inicio");
+    expect(navbar).toContain("Misiones");
+    expect(navbar).toContain("Nosotros");
+    expect(navbar).toContain("Contacto");
+    expect(navbar).not.toContain("Publicaciones");
+    expect(navbar.match(/landing-navbar__link--cta/g)).toHaveLength(1);
+    expect(navbar.match(/<a\b/g)).toHaveLength(4);
   });
 });
 

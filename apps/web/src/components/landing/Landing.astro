@@ -21,6 +21,7 @@ import type {
   LandingFailure,
   LandingPayloadShape,
 } from "./landing-shape.js";
+import LandingNavbar from "./LandingNavbar.astro";
 
 interface Props {
   payload: LandingPayloadShape | null;
@@ -28,14 +29,31 @@ interface Props {
 }
 
 const { payload, failure } = Astro.props;
+
+const missionHref =
+  payload && (payload.featuredOuting || payload.mission)
+    ? "#misiones"
+    : "#inicio";
+const aboutHref =
+  payload && (payload.vision || payload.description) ? "#nosotros" : "#inicio";
+const contactHref =
+  payload && (payload.contactEmail || payload.contactPhone)
+    ? "#contacto"
+    : "#inicio";
 ---
 
 {failure ? (
   <main
     class="public-ui public-page"
+    id="inicio"
     data-testid="landing-error"
     aria-live="polite"
   >
+    <LandingNavbar
+      missionHref={missionHref}
+      aboutHref={aboutHref}
+      contactHref={contactHref}
+    />
     <section
       class="public-state public-state--error"
       data-testid="landing-error-section"
@@ -44,7 +62,12 @@ const { payload, failure } = Astro.props;
     </section>
   </main>
 ) : payload ? (
-  <main class="public-ui public-page" data-testid="landing-page">
+  <main class="public-ui public-page" id="inicio" data-testid="landing-page">
+    <LandingNavbar
+      missionHref={missionHref}
+      aboutHref={aboutHref}
+      contactHref={contactHref}
+    />
     {payload.heroImageUrl && (
       <section class="public-hero" data-testid="hero-section">
         <img
@@ -65,6 +88,7 @@ const { payload, failure } = Astro.props;
     {payload.featuredOuting && (
       <section
         class="public-section"
+        id="misiones"
         data-testid="featured-outing-section"
       >
         <article
@@ -89,19 +113,31 @@ const { payload, failure } = Astro.props;
     )}
 
     {payload.mission && (
-      <section class="public-section" data-testid="mission-section">
+      <section
+        class="public-section"
+        id={payload.featuredOuting ? undefined : "misiones"}
+        data-testid="mission-section"
+      >
         <p data-testid="mission-text">{payload.mission}</p>
       </section>
     )}
 
     {payload.vision && (
-      <section class="public-section" data-testid="vision-section">
+      <section
+        class="public-section"
+        id="nosotros"
+        data-testid="vision-section"
+      >
         <p data-testid="vision-text">{payload.vision}</p>
       </section>
     )}
 
     {payload.description && (
-      <section class="public-section" data-testid="description-section">
+      <section
+        class="public-section"
+        id={payload.vision ? undefined : "nosotros"}
+        data-testid="description-section"
+      >
         <p data-testid="description-text">{payload.description}</p>
       </section>
     )}
@@ -120,7 +156,7 @@ const { payload, failure } = Astro.props;
     )}
 
     {(payload.contactEmail || payload.contactPhone) && (
-      <section class="public-section" data-testid="contact-section">
+      <section class="public-section" id="contacto" data-testid="contact-section">
         {payload.contactEmail && (
           <p data-testid="contact-email">{payload.contactEmail}</p>
         )}

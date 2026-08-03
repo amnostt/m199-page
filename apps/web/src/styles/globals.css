@@ -132,6 +132,103 @@
     outline: none;
   }
 
+  .public-ui .landing-navbar {
+    display: flex;
+    min-height: 92px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 15px 120px;
+    color: var(--foreground);
+  }
+
+  .public-ui.public-page > .landing-navbar {
+    width: 100vw;
+    margin: -32px calc(50% - 50vw) 0;
+  }
+
+  .public-ui .landing-navbar__logo {
+    flex: 0 0 auto;
+  }
+
+  .public-ui .landing-navbar__logo img {
+    display: block;
+    width: 244px;
+    height: 62px;
+    object-fit: cover;
+  }
+
+  .public-ui .landing-navbar > nav {
+    min-width: 0;
+  }
+
+  .public-ui .landing-navbar__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .public-ui .landing-navbar__link,
+  .public-ui .landing-navbar__menu-toggle {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    color: var(--foreground);
+    font-family: var(--font-interface);
+    font-weight: 600;
+    line-height: 1.25;
+    text-decoration: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+
+  .public-ui .landing-navbar__link:hover {
+    color: var(--primary-foreground);
+    background: var(--primary-hover);
+  }
+
+  .public-ui .landing-navbar__link--cta {
+    color: var(--primary-foreground);
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .public-ui .landing-navbar__link--cta:hover {
+    color: var(--primary-foreground);
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+  }
+
+  .public-ui .landing-navbar__menu-toggle {
+    display: none;
+    min-width: 44px;
+    padding-inline: 0.75rem;
+    color: var(--foreground);
+    background: transparent;
+    border-color: var(--border);
+  }
+
+  .public-ui
+    .landing-navbar
+    :is(.landing-navbar__link, .landing-navbar__menu-toggle):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  .public-ui.public-page#inicio,
+  .public-ui.public-page#inicio > :is(#misiones, #nosotros, #contacto) {
+    scroll-margin-block-start: 92px;
+  }
+
   .public-ui.public-page {
     width: 100%;
     max-width: 75rem;
@@ -484,6 +581,79 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
+
+  @media (max-width: 767px) {
+    .public-ui .landing-navbar {
+      min-height: 76px;
+      gap: 1rem;
+      padding-inline: 24px;
+    }
+
+    .public-ui .landing-navbar__logo img {
+      width: 176px;
+      height: 45px;
+    }
+
+    .public-ui .landing-navbar__menu-toggle {
+      display: none;
+    }
+
+    .public-ui .landing-navbar--enhanced .landing-navbar__menu-toggle {
+      display: inline-flex;
+    }
+
+    .public-ui .landing-navbar > nav {
+      flex-basis: 100%;
+      width: 100%;
+    }
+
+    .public-ui .landing-navbar__links {
+      justify-content: stretch;
+    }
+
+    .public-ui .landing-navbar__links > li {
+      flex: 1 1 10rem;
+    }
+
+    .public-ui .landing-navbar__link {
+      width: 100%;
+    }
+
+    .public-ui .landing-navbar--enhanced .landing-navbar__links {
+      visibility: hidden;
+      max-height: 0;
+      opacity: 0;
+      pointer-events: none;
+      overflow: hidden;
+      transition:
+        max-height 150ms ease-out,
+        opacity 150ms ease-out,
+        visibility 150ms ease-out;
+    }
+
+    .public-ui .landing-navbar--enhanced:not(.landing-navbar--open) > nav {
+      height: 0;
+      overflow: hidden;
+    }
+
+    .public-ui .landing-navbar--enhanced:not(.landing-navbar--open) {
+      row-gap: 0;
+    }
+
+    .public-ui
+      .landing-navbar--enhanced.landing-navbar--open
+      .landing-navbar__links {
+      visibility: visible;
+      max-height: 24rem;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .public-ui.public-page#inicio,
+    .public-ui.public-page#inicio > :is(#misiones, #nosotros, #contacto) {
+      scroll-margin-block-start: 76px;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -493,5 +663,9 @@
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .public-ui .landing-navbar__links {
+    transition: none !important;
   }
 }

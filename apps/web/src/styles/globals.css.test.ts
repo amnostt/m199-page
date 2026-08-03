@@ -161,3 +161,50 @@ describe("shadcn globals preflight isolation", () => {
     expect(css).toContain("--color-accent-hover: var(--accent-hover);");
   });
 });
+
+describe("landing navbar CSS contract", () => {
+  it("keeps navbar rules scoped to the public landing surface", () => {
+    expect(css).toMatch(/\.public-ui \.landing-navbar\s*\{/);
+    expect(css).toMatch(/\.public-ui \.landing-navbar__links\s*\{/);
+    expect(css).not.toMatch(/^\s*\.landing-navbar\s*\{/m);
+    expect(css).toMatch(
+      /\.public-ui\.public-page#inicio\s*,[\s\S]*scroll-margin-block-start:\s*92px;/,
+    );
+    expect(css).not.toMatch(
+      /\.landing-navbar[^{}]*\{[^}]*scroll-margin-block-start/s,
+    );
+  });
+
+  it("defines desktop and compact-mobile framing with usable controls", () => {
+    expect(css).toMatch(
+      /\.public-ui \.landing-navbar\s*\{[^}]*min-height:\s*92px;[^}]*padding:\s*15px 120px;/s,
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*\.public-ui \.landing-navbar\s*\{[^}]*min-height:\s*76px;[^}]*padding-inline:\s*24px;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui \.landing-navbar__link,[\s\S]*\.public-ui \.landing-navbar__menu-toggle\s*\{[^}]*min-height:\s*44px;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui \.landing-navbar__menu-toggle\s*\{[^}]*min-width:\s*44px;/s,
+    );
+  });
+
+  it("defines enhanced menu state, focus-visible styling, and reduced motion", () => {
+    expect(css).toMatch(
+      /\.public-ui \.landing-navbar--enhanced \.landing-navbar__links\s*\{/,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-navbar--enhanced\.landing-navbar--open\s+\.landing-navbar__links\s*\{/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui[\s\S]*?landing-navbar__menu-toggle\):focus-visible\s*\{/,
+    );
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.public-ui \.landing-navbar__links\s*\{/,
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*scroll-margin-block-start:\s*76px;/s,
+    );
+  });
+});
