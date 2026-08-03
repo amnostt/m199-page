@@ -5,35 +5,26 @@ interface Props extends Pick<LandingPayloadShape, "heroTitle" | "heroSubtitle" |
 
 const { heroTitle, heroSubtitle, heroImageUrl } = Astro.props;
 const hasTitle = Boolean(heroTitle);
+const imageUrl = heroImageUrl || "/assets/template-picture.jpg";
 ---
 
-{heroImageUrl && (
-  <section
-    class="public-hero"
-    data-testid="hero-section"
-    aria-labelledby={hasTitle ? "hero-title" : undefined}
-    aria-label={hasTitle ? undefined : "Presentación"}
-  >
-    <div class="public-hero__copy">
-      {heroTitle && <h1 id="hero-title" data-testid="hero-title">{heroTitle}</h1>}
-      {heroSubtitle && <p data-testid="hero-subtitle">{heroSubtitle}</p>}
-    </div>
-    <div class="public-hero__visual" data-testid="hero-visual">
-      <img
-        src={heroImageUrl}
-        alt={heroTitle ?? ""}
-        class="public-hero__image"
-        data-testid="hero-image"
-        aria-hidden={hasTitle ? undefined : "true"}
-      />
-      <div class="public-hero__accent" aria-hidden="true" data-testid="hero-accent"></div>
-      <img
-        src="/assets/brand/isotipo-white.png"
-        alt=""
-        aria-hidden="true"
-        class="public-hero__isotipo"
-        data-testid="hero-isotipo"
-      />
-    </div>
-  </section>
-)}
+<section
+  class="public-hero"
+  data-testid="hero-section"
+  aria-labelledby={hasTitle ? "hero-title" : undefined}
+  aria-label={hasTitle ? undefined : "Presentación"}
+>
+  <div class="public-hero__copy">
+    {heroTitle && <h1 id="hero-title" data-testid="hero-title">{heroTitle}</h1>}
+    {heroSubtitle && <p data-testid="hero-subtitle">{heroSubtitle}</p>}
+  </div>
+  <div class="public-hero__visual" data-testid="hero-visual">
+    <img
+      src={imageUrl}
+      alt={heroTitle ?? ""}
+      class="public-hero__image"
+      data-testid="hero-image"
+      aria-hidden={hasTitle ? undefined : "true"}
+    />
+  </div>
+</section>

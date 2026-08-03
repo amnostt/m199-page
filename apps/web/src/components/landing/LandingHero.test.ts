@@ -28,18 +28,14 @@ async function render(
 
 describe("LandingHero.astro", () => {
   it.each([null, ""])(
-    "omits the hero when the image URL is %j",
+    "renders the fallback hero when the image URL is %j",
     async (heroImageUrl) => {
       const html = await render({ heroImageUrl });
 
-      for (const testId of [
-        "hero-section",
-        "hero-image",
-        "hero-title",
-        "hero-subtitle",
-      ]) {
-        expect(html).not.toContain(`data-testid="${testId}"`);
-      }
+      expect(html).toContain('data-testid="hero-section"');
+      expect(html).toMatch(
+        /<img[^>]*src="\/assets\/template-picture\.jpg"[^>]*data-testid="hero-image"/,
+      );
     },
   );
 
@@ -48,6 +44,7 @@ describe("LandingHero.astro", () => {
 
     expect(html.match(/data-testid="hero-section"/g)).toHaveLength(1);
     expect(html).toContain('src="/files/hero"');
+    expect(html).not.toContain('src="/assets/template-picture.jpg"');
     expect(html).toMatch(/data-testid="hero-title"[^>]*>Misión 1-99<\/h1>/);
     expect(html).toMatch(
       /data-testid="hero-subtitle"[^>]*>Transformamos vidas<\/p>/,
@@ -76,16 +73,11 @@ describe("LandingHero.astro", () => {
     );
   });
 
-  it("renders the image, accent, and decorative isotipo in layer order", async () => {
+  it("renders the hero image without decorative layers", async () => {
     const html = await render();
-    const image = html.indexOf('data-testid="hero-image"');
-    const accent = html.indexOf('data-testid="hero-accent"');
-    const isotipo = html.indexOf('data-testid="hero-isotipo"');
 
-    expect(image).toBeGreaterThan(-1);
-    expect(accent).toBeGreaterThan(image);
-    expect(isotipo).toBeGreaterThan(accent);
-    expect(html).toMatch(/data-testid="hero-isotipo"[^>]*>/);
-    expect(html).toContain('src="/assets/brand/isotipo-white.png"');
+    expect(html).toContain('data-testid="hero-image"');
+    expect(html).not.toContain('data-testid="hero-accent"');
+    expect(html).not.toContain('data-testid="hero-isotipo"');
   });
 });

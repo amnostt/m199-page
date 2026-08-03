@@ -131,11 +131,12 @@ describe("Landing.astro — successful markup", () => {
     expect(html).toContain("Marcos 16:15");
   });
 
-  it("omits every section that is null/empty in the payload", async () => {
+  it("renders the fallback hero and omits empty optional sections", async () => {
     const html = await render(minimalPayload());
     expect(html).toContain('data-testid="landing-page"');
+    expect(html).toContain('data-testid="hero-section"');
+    expect(html).toContain('src="/assets/template-picture.jpg"');
     const sections = [
-      "hero-section",
       "mission-section",
       "video-section",
       "contact-section",
