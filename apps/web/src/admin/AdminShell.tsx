@@ -48,8 +48,8 @@ const sections: AdminNavItem[] = [
     label: "Configuración de la página de inicio",
     icon: Settings2,
   },
-  { section: "verses", label: "Versículos", icon: BookOpenText },
   { section: "responsibles", label: "Responsables", icon: UsersRound },
+  { section: "verses", label: "Versículos", icon: BookOpenText },
   { section: "posts", label: "Publicaciones", icon: Newspaper },
   { section: "outings", label: "Salidas", icon: CalendarDays },
 ];
