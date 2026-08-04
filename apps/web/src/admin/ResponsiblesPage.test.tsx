@@ -86,6 +86,14 @@ describe("ResponsiblesPage", () => {
       screen.getByText("El correo electrónico es obligatorio."),
     ).toBeTruthy();
     expect(screen.getByText("El nombre visible es obligatorio.")).toBeTruthy();
+    expect(
+      screen.getByLabelText("Correo electrónico").getAttribute("aria-invalid"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByLabelText("Correo electrónico")
+        .getAttribute("aria-describedby"),
+    ).toBe("responsible-email-error");
     expect(createResponsible).not.toHaveBeenCalled();
   });
 
@@ -247,7 +255,7 @@ describe("ResponsiblesPage", () => {
       expect(screen.getByText("No se pudo cambiar el estado.")).toBeTruthy(),
     );
     expect(screen.getByTestId("responsible-row-other").textContent).toContain(
-      "INACTIVE",
+      "Inactivo",
     );
   });
 
@@ -270,7 +278,7 @@ describe("ResponsiblesPage", () => {
       ),
     );
     expect(screen.getByTestId("responsible-row-other").textContent).toContain(
-      "ACTIVE",
+      "Activo",
     );
     expect(
       screen.getByTestId("responsible-row-other").querySelector("button"),
@@ -322,7 +330,7 @@ describe("ResponsiblesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Activar" }));
     await waitFor(() =>
       expect(screen.getByTestId("responsible-row-other").textContent).toContain(
-        "ACTIVE",
+        "Activo",
       ),
     );
     fireEvent.click(
@@ -330,7 +338,7 @@ describe("ResponsiblesPage", () => {
     );
     await waitFor(() =>
       expect(screen.getByTestId("responsible-row-other").textContent).toContain(
-        "INACTIVE",
+        "Inactivo",
       ),
     );
     expect(updateResponsibleStatus).toHaveBeenNthCalledWith(
