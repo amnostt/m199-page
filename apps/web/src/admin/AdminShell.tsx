@@ -22,6 +22,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from "../components/ui/sidebar.js";
 import { TooltipProvider } from "../components/ui/tooltip.js";
@@ -140,8 +141,9 @@ export function AdminShell({
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       type="button"
-                      render={<button disabled />}
+                      render={<button disabled aria-disabled="true" />}
                       disabled
+                      aria-disabled="true"
                       data-testid="nav-placeholder-files"
                       tooltip="Files (coming soon)"
                     >
@@ -158,8 +160,33 @@ export function AdminShell({
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  size="lg"
+                  tooltip={user.displayName}
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  render={<div aria-label={user.displayName} />}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground"
+                  >
+                    1-99
+                  </span>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span
+                      data-testid="admin-user-name"
+                      className="truncate font-medium"
+                    >
+                      {user.displayName}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {user.email}
+                    </span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
                   type="button"
-                  variant="outline"
                   tooltip="Logout"
                   data-testid="admin-logout"
                   onClick={onLogout}
@@ -179,28 +206,23 @@ export function AdminShell({
               </span>
             )}
           </SidebarFooter>
+          <SidebarRail />
         </Sidebar>
 
         <SidebarInset>
-          <header className="flex min-h-16 shrink-0 items-center gap-3 border-b border-border px-4 sm:px-6">
-            <SidebarTrigger aria-label="Toggle admin sidebar" />
-            <Separator orientation="vertical" className="h-5" />
-            <div className="min-w-0">
-              <p className="truncate text-xs text-muted-foreground">
-                Administration
-              </p>
-              <h1 className="truncate text-sm font-semibold">{label}</h1>
-            </div>
-            <div className="ml-auto min-w-0 text-right">
-              <strong
-                className="block truncate text-sm"
-                data-testid="admin-user-name"
-              >
-                {user.displayName}
-              </strong>
-              <span className="block truncate text-xs text-muted-foreground">
-                {user.email}
-              </span>
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+            <div className="flex items-center gap-2 px-4">
+              <SidebarTrigger
+                className="-ml-1"
+                aria-label="Toggle admin sidebar"
+              />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              <div className="min-w-0">
+                <p className="truncate text-xs text-muted-foreground">
+                  Administration
+                </p>
+                <h1 className="truncate text-sm font-semibold">{label}</h1>
+              </div>
             </div>
           </header>
 

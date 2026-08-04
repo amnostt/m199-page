@@ -3,10 +3,11 @@
 //
 // Enforces that the Astro web app's public and admin routes own
 // different stylesheets, that the shared globals.css is gone, and that
-// the admin route carries the portal host markup Phase 2 will resolve
-// against. The AdminLogin/AdminShell test IDs and content are already
-// covered by AdminApp.test.tsx and AdminShell.test.tsx — this file
-// focuses on the file-system and Astro route boundary only.
+// the admin route is server-side rendered without a custom portal host
+// (Base UI portals portal to document.body by default). The
+// AdminLogin/AdminShell test IDs and content are already covered by
+// AdminApp.test.tsx and AdminShell.test.tsx — this file focuses on the
+// file-system and Astro route boundary only.
 // ---------------------------------------------------------------------------
 
 import { describe, expect, it } from "vitest";
@@ -71,7 +72,7 @@ describe("route boundary: PublicLayout imports public.css only", () => {
   });
 });
 
-describe("route boundary: admin.astro imports admin.css and emits the portal host", () => {
+describe("route boundary: admin.astro imports admin.css and does not emit a custom portal host", () => {
   const adminPath = resolve(pagesDir, "admin.astro");
   const admin = readIfExists(adminPath) ?? "";
 
@@ -95,8 +96,8 @@ describe("route boundary: admin.astro imports admin.css and emits the portal hos
     expect(admin).toMatch(/data-theme="admin"/);
   });
 
-  it("emits the admin portal host markup Phase 2 will resolve", () => {
-    expect(admin).toMatch(/id="admin-portal-root"/);
+  it("does not emit a custom portal host (Base UI portals to document.body)", () => {
+    expect(admin).not.toMatch(/id="admin-portal-root"/);
   });
 
   it("still mounts AdminApp via client:load", () => {
