@@ -95,15 +95,17 @@ function AdminLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
               <div className="flex flex-col gap-6">
                 <div className="flex flex-col items-center gap-2 text-center">
                   <h1 className="text-2xl font-bold">
-                    Misión 1-99 administration
+                    Administración de Misión 1-99
                   </h1>
                   <FieldDescription>
-                    Sign in to manage Misión 1-99 content.
+                    Inicia sesión para administrar el contenido de Misión 1-99.
                   </FieldDescription>
                 </div>
                 <FieldGroup>
                   <Field>
-                    <FieldLabel htmlFor="admin-email">Email</FieldLabel>
+                    <FieldLabel htmlFor="admin-email">
+                      Correo electrónico
+                    </FieldLabel>
                     <Input
                       id="admin-email"
                       type="email"
@@ -115,7 +117,7 @@ function AdminLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="admin-password">Password</FieldLabel>
+                    <FieldLabel htmlFor="admin-password">Contraseña</FieldLabel>
                     <Input
                       id="admin-password"
                       type="password"
@@ -128,7 +130,7 @@ function AdminLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
                   </Field>
                   <Field>
                     <Button type="submit" disabled={submitting}>
-                      Sign In
+                      Ingresar
                     </Button>
                   </Field>
                 </FieldGroup>
@@ -139,7 +141,7 @@ function AdminLogin({ onLogin }: { onLogin: (user: AuthUser) => void }) {
                     aria-live="polite"
                     data-testid="admin-login-error"
                   >
-                    Invalid credentials. Try again.
+                    Las credenciales no son válidas. Intenta de nuevo.
                   </div>
                 )}
               </div>
@@ -221,7 +223,7 @@ export function AdminApp() {
         className="admin-ui grid min-h-screen place-items-center bg-background text-muted-foreground"
         data-testid="admin-loading"
       >
-        <p>Loading…</p>
+        <p>Cargando…</p>
       </div>
     );
   }

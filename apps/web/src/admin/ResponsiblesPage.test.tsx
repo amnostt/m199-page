@@ -60,11 +60,11 @@ describe("ResponsiblesPage", () => {
     vi.mocked(listResponsibles).mockReturnValueOnce(new Promise(() => {}));
     render(<ResponsiblesPage currentUserId="self" />);
 
-    expect(screen.getByText(/loading responsible users/i)).toBeTruthy();
+    expect(screen.getByText(/cargando personas responsables/i)).toBeTruthy();
     expect(
       (
         screen.getByRole("button", {
-          name: /create responsible/i,
+          name: /crear responsable/i,
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(false);
@@ -77,15 +77,15 @@ describe("ResponsiblesPage", () => {
       expect(screen.getByTestId("responsibles-table")).toBeTruthy(),
     );
 
-    fireEvent.change(screen.getByLabelText("Initial password"), {
+    fireEvent.change(screen.getByLabelText("Contraseña inicial"), {
       target: { value: "password" },
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: /create responsible/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /crear responsable/i }));
 
-    expect(screen.getByText("Email is required.")).toBeTruthy();
-    expect(screen.getByText("Display name is required.")).toBeTruthy();
+    expect(
+      screen.getByText("El correo electrónico es obligatorio."),
+    ).toBeTruthy();
+    expect(screen.getByText("El nombre visible es obligatorio.")).toBeTruthy();
     expect(createResponsible).not.toHaveBeenCalled();
   });
 
@@ -99,10 +99,10 @@ describe("ResponsiblesPage", () => {
     expect(rows[1]!.textContent).toContain("self@example.com");
     expect(rows[2]!.textContent).toContain("other@example.com");
     expect(
-      screen.getByText(/cannot deactivate your own account/i),
+      screen.getByText(/no puedes desactivar tu propia cuenta/i),
     ).toBeTruthy();
 
-    const selfButton = screen.getByRole("button", { name: "Deactivate" });
+    const selfButton = screen.getByRole("button", { name: "Desactivar" });
     expect((selfButton as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(selfButton);
     expect(updateResponsibleStatus).not.toHaveBeenCalled();
@@ -113,27 +113,23 @@ describe("ResponsiblesPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("responsibles-table")).toBeTruthy(),
     );
-    fireEvent.click(
-      screen.getByRole("button", { name: /create responsible/i }),
-    );
-    expect(screen.getByText(/password must be at least/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /crear responsable/i }));
+    expect(screen.getByText(/contraseña debe tener al menos/i)).toBeTruthy();
     expect(createResponsible).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText("Email"), {
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), {
       target: { value: "new@example.com" },
     });
-    fireEvent.change(screen.getByLabelText("Display name"), {
+    fireEvent.change(screen.getByLabelText("Nombre visible"), {
       target: { value: "New" },
     });
-    fireEvent.change(screen.getByLabelText("Initial password"), {
+    fireEvent.change(screen.getByLabelText("Contraseña inicial"), {
       target: { value: "password" },
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: /create responsible/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /crear responsable/i }));
     await waitFor(() => expect(createResponsible).toHaveBeenCalled());
     expect(
-      (screen.getByLabelText("Initial password") as HTMLInputElement).value,
+      (screen.getByLabelText("Contraseña inicial") as HTMLInputElement).value,
     ).toBe("");
     expect(screen.queryByText("password")).toBeNull();
   });
@@ -150,21 +146,24 @@ describe("ResponsiblesPage", () => {
       expect(screen.getByTestId("responsibles-table")).toBeTruthy(),
     );
 
-    fireEvent.change(screen.getByLabelText("Email"), {
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), {
       target: { value: "new@example.com" },
     });
-    fireEvent.change(screen.getByLabelText("Display name"), {
+    fireEvent.change(screen.getByLabelText("Nombre visible"), {
       target: { value: "New" },
     });
-    fireEvent.change(screen.getByLabelText("Initial password"), {
+    fireEvent.change(screen.getByLabelText("Contraseña inicial"), {
       target: { value: "password" },
     });
-    const submit = screen.getByRole("button", { name: /create responsible/i });
+    const submit = screen.getByRole("button", { name: /crear responsable/i });
     fireEvent.click(submit);
 
     await waitFor(() => expect(createResponsible).toHaveBeenCalledTimes(1));
     expect((submit as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByLabelText("Email")).toHaveProperty("disabled", true);
+    expect(screen.getByLabelText("Correo electrónico")).toHaveProperty(
+      "disabled",
+      true,
+    );
 
     resolveCreate({
       id: "new",
@@ -186,31 +185,29 @@ describe("ResponsiblesPage", () => {
       expect(screen.getByTestId("responsibles-table")).toBeTruthy(),
     );
 
-    fireEvent.change(screen.getByLabelText("Email"), {
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), {
       target: { value: "duplicate@example.com" },
     });
-    fireEvent.change(screen.getByLabelText("Display name"), {
+    fireEvent.change(screen.getByLabelText("Nombre visible"), {
       target: { value: "Duplicate" },
     });
-    fireEvent.change(screen.getByLabelText("Initial password"), {
+    fireEvent.change(screen.getByLabelText("Contraseña inicial"), {
       target: { value: "password" },
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: /create responsible/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /crear responsable/i }));
 
     await waitFor(() =>
-      expect(screen.getByText("Email already exists")).toBeTruthy(),
+      expect(screen.getByText("El correo electrónico ya existe.")).toBeTruthy(),
     );
-    expect(screen.getByLabelText("Email")).toHaveProperty(
+    expect(screen.getByLabelText("Correo electrónico")).toHaveProperty(
       "value",
       "duplicate@example.com",
     );
-    expect(screen.getByLabelText("Display name")).toHaveProperty(
+    expect(screen.getByLabelText("Nombre visible")).toHaveProperty(
       "value",
       "Duplicate",
     );
-    expect(screen.getByLabelText("Initial password")).toHaveProperty(
+    expect(screen.getByLabelText("Contraseña inicial")).toHaveProperty(
       "value",
       "",
     );
@@ -223,11 +220,17 @@ describe("ResponsiblesPage", () => {
       .mockResolvedValueOnce([]);
     render(<ResponsiblesPage currentUserId="self" />);
     await waitFor(() =>
-      expect(screen.getByText("Unable to load")).toBeTruthy(),
+      expect(
+        screen.getByText(
+          "No se pudo completar la solicitud. Intenta de nuevo.",
+        ),
+      ).toBeTruthy(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     await waitFor(() =>
-      expect(screen.getByText(/no responsible users yet/i)).toBeTruthy(),
+      expect(
+        screen.getByText(/todavía no hay personas responsables/i),
+      ).toBeTruthy(),
     );
   });
 
@@ -239,8 +242,10 @@ describe("ResponsiblesPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("responsibles-table")).toBeTruthy(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Activate" }));
-    await waitFor(() => expect(screen.getByText("Cannot change")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Activar" }));
+    await waitFor(() =>
+      expect(screen.getByText("No se pudo cambiar el estado.")).toBeTruthy(),
+    );
     expect(screen.getByTestId("responsible-row-other").textContent).toContain(
       "INACTIVE",
     );
@@ -258,7 +263,7 @@ describe("ResponsiblesPage", () => {
       expect(screen.getByTestId("responsibles-table")).toBeTruthy(),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+    fireEvent.click(screen.getByRole("button", { name: "Activar" }));
     await waitFor(() =>
       expect(screen.getByTestId("responsible-row-other").textContent).toContain(
         "Renamed by server",
@@ -269,7 +274,7 @@ describe("ResponsiblesPage", () => {
     );
     expect(
       screen.getByTestId("responsible-row-other").querySelector("button"),
-    ).toHaveProperty("textContent", "Deactivate");
+    ).toHaveProperty("textContent", "Desactivar");
   });
 
   it("keeps pending status isolated to the selected row", async () => {
@@ -285,9 +290,9 @@ describe("ResponsiblesPage", () => {
       expect(screen.getByTestId("responsibles-table")).toBeTruthy(),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+    fireEvent.click(screen.getByRole("button", { name: "Activar" }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Saving…" })).toBeTruthy(),
+      expect(screen.getByRole("button", { name: "Guardando…" })).toBeTruthy(),
     );
     expect(
       (
@@ -301,7 +306,7 @@ describe("ResponsiblesPage", () => {
     await waitFor(() =>
       expect(
         screen.getByTestId("responsible-row-other").querySelector("button"),
-      ).toHaveProperty("textContent", "Deactivate"),
+      ).toHaveProperty("textContent", "Desactivar"),
     );
   });
 
@@ -314,7 +319,7 @@ describe("ResponsiblesPage", () => {
       expect(screen.getByTestId("responsibles-table")).toBeTruthy(),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+    fireEvent.click(screen.getByRole("button", { name: "Activar" }));
     await waitFor(() =>
       expect(screen.getByTestId("responsible-row-other").textContent).toContain(
         "ACTIVE",
@@ -347,8 +352,10 @@ describe("ResponsiblesPage", () => {
     render(<ResponsiblesPage currentUserId="self" />);
 
     await waitFor(() =>
-      expect(screen.getByText("Session expired")).toBeTruthy(),
+      expect(
+        screen.getByText("La sesión expiró. Inicia sesión nuevamente."),
+      ).toBeTruthy(),
     );
-    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reintentar" })).toBeTruthy();
   });
 });

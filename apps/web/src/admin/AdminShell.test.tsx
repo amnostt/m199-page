@@ -89,7 +89,7 @@ describe("AdminShell", () => {
       (screen.getByTestId("nav-placeholder-files") as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    expect(screen.getByText("Files (coming soon)")).toBeTruthy();
+    expect(screen.getByText("Archivos (próximamente)")).toBeTruthy();
   });
 
   it("uses navigation and logout callbacks without changing shell ownership", () => {
@@ -118,12 +118,16 @@ describe("AdminShell", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /toggle admin sidebar/i }),
+        screen.getByRole("button", {
+          name: /alternar barra lateral de administración/i,
+        }),
       ).toBeTruthy();
     });
 
     fireEvent.click(
-      screen.getByRole("button", { name: /toggle admin sidebar/i }),
+      screen.getByRole("button", {
+        name: /alternar barra lateral de administración/i,
+      }),
     );
 
     await waitFor(() => {
@@ -211,7 +215,9 @@ describe("AdminShell", () => {
     renderShell("landing");
 
     const trigger = await waitFor(() =>
-      screen.getByRole("button", { name: /toggle admin sidebar/i }),
+      screen.getByRole("button", {
+        name: /alternar barra lateral de administración/i,
+      }),
     );
     (trigger as HTMLButtonElement).focus();
     expect(document.activeElement).toBe(trigger);

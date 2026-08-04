@@ -32,22 +32,22 @@ describe("admin foundation", () => {
     }
     // prettier-ignore
     render(<AdminProviders><Broken /></AdminProviders>);
-    expect(screen.getByText(/something went wrong/i)).toBeTruthy();
+    expect(screen.getByText(/algo salió mal/i)).toBeTruthy();
   });
   it("renders ConfirmDialog during SSR without document", () => {
     vi.stubGlobal("document", undefined);
     // prettier-ignore
-    expect(() => renderToString(<ConfirmDialog open title="Delete" description="Sure?" confirmLabel="Delete" onConfirm={() => {}} onCancel={() => {}} />)).not.toThrow();
+    expect(() => renderToString(<ConfirmDialog open title="Eliminar" description="¿Seguro?" confirmLabel="Eliminar" onConfirm={() => {}} onCancel={() => {}} />)).not.toThrow();
     vi.unstubAllGlobals();
   });
   it("supports Escape cancellation and one acceptance", () => {
     const onCancel = vi.fn();
     const onConfirm = vi.fn();
     // prettier-ignore
-    render(<ConfirmDialog open title="Delete" description="Sure?" confirmLabel="Delete" onConfirm={onConfirm} onCancel={onCancel} />);
+    render(<ConfirmDialog open title="Eliminar" description="¿Seguro?" confirmLabel="Eliminar" onConfirm={onConfirm} onCancel={onCancel} />);
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onCancel).toHaveBeenCalledTimes(1);
-    const confirm = screen.getByRole("button", { name: "Delete" });
+    const confirm = screen.getByRole("button", { name: "Eliminar" });
     fireEvent.click(confirm);
     fireEvent.click(confirm);
     expect(onConfirm).toHaveBeenCalledTimes(1);

@@ -123,7 +123,7 @@ describe("OutingsListPage loading", () => {
     render(<OutingsListPage />);
 
     expect(screen.getByTestId("outings-list-loading")).toBeTruthy();
-    expect(screen.getByText(/loading/i)).toBeTruthy();
+    expect(screen.getByText(/cargando/i)).toBeTruthy();
   });
 });
 
@@ -184,9 +184,9 @@ describe("OutingsListPage status filter", () => {
       expect(screen.getByTestId("outings-list-table")).toBeTruthy();
     });
 
-    const select = screen.getByLabelText(/status/i);
+    const select = screen.getByLabelText(/estado/i);
     expect(select).toBeTruthy();
-    expect(screen.getByRole("option", { name: /all/i })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /todas/i })).toBeTruthy();
     expect(screen.getByRole("option", { name: "DRAFT" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "PUBLISHED" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "ARCHIVED" })).toBeTruthy();
@@ -225,7 +225,7 @@ describe("OutingsListPage status filter", () => {
     });
 
     // Change filter to DRAFT
-    const select = screen.getByLabelText(/status/i);
+    const select = screen.getByLabelText(/estado/i);
     fireEvent.change(select, { target: { value: "DRAFT" } });
 
     await waitFor(() => {
@@ -257,7 +257,7 @@ describe("OutingsListPage status filter", () => {
       expect(screen.getByTestId("outings-list-table")).toBeTruthy();
     });
 
-    const select = screen.getByLabelText(/status/i);
+    const select = screen.getByLabelText(/estado/i);
     fireEvent.change(select, { target: { value: "PUBLISHED" } });
 
     await waitFor(() => {
@@ -288,7 +288,7 @@ describe("OutingsListPage status filter", () => {
 
     // Re-query the select on each change because the component re-renders
     // (and replaces the <select> element) on every status-filter change.
-    fireEvent.change(screen.getByLabelText(/status/i), {
+    fireEvent.change(screen.getByLabelText(/estado/i), {
       target: { value: "DRAFT" },
     });
 
@@ -301,7 +301,7 @@ describe("OutingsListPage status filter", () => {
       ).toBeTruthy();
     });
 
-    fireEvent.change(screen.getByLabelText(/status/i), {
+    fireEvent.change(screen.getByLabelText(/estado/i), {
       target: { value: "" },
     });
 
@@ -333,7 +333,7 @@ describe("OutingsListPage empty state", () => {
       expect(screen.getByTestId("outings-list-empty")).toBeTruthy();
     });
 
-    expect(screen.getByText(/no outings/i)).toBeTruthy();
+    expect(screen.getByText(/no se encontraron salidas/i)).toBeTruthy();
   });
 });
 
@@ -351,7 +351,7 @@ describe("OutingsListPage error", () => {
       expect(screen.getByTestId("outings-list-load-error")).toBeTruthy();
     });
 
-    expect(screen.getByText(/failed to load/i)).toBeTruthy();
+    expect(screen.getByText(/no se pudieron cargar las salidas/i)).toBeTruthy();
     expect(screen.queryByTestId("outings-list-table")).toBeNull();
   });
 
@@ -391,7 +391,7 @@ describe("OutingsListPage archive action", () => {
     // o1 is DRAFT — Archive button should be visible
     const archiveBtn = screen.getByTestId("lifecycle-archive-o1");
     expect(archiveBtn).toBeTruthy();
-    expect(archiveBtn.textContent).toMatch(/archive/i);
+    expect(archiveBtn.textContent).toMatch(/archivar/i);
   });
 
   it("shows an Archive button for a PUBLISHED outing", async () => {
@@ -433,7 +433,7 @@ describe("OutingsListPage archive action", () => {
     fireEvent.click(screen.getByTestId("lifecycle-archive-o1"));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/archive/i));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/archivar/i));
 
     await waitFor(() => {
       const postCall = (
@@ -535,7 +535,7 @@ describe("OutingsListPage archive action", () => {
     });
 
     // Switch filter to DRAFT (triggers a refetch).
-    fireEvent.change(screen.getByLabelText(/status/i), {
+    fireEvent.change(screen.getByLabelText(/estado/i), {
       target: { value: "DRAFT" },
     });
 
@@ -591,7 +591,7 @@ describe("OutingsListPage archive action", () => {
     });
 
     // Switch filter to PUBLISHED.
-    fireEvent.change(screen.getByLabelText(/status/i), {
+    fireEvent.change(screen.getByLabelText(/estado/i), {
       target: { value: "PUBLISHED" },
     });
 
@@ -638,7 +638,7 @@ describe("OutingsListPage archive action", () => {
     });
 
     // Filter is the default "All" (no status query).
-    const select = screen.getByLabelText(/status/i) as HTMLSelectElement;
+    const select = screen.getByLabelText(/estado/i) as HTMLSelectElement;
     expect(select.value).toBe("");
 
     // Archive the DRAFT row.
@@ -775,7 +775,7 @@ describe("OutingsListPage archive action", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          /cannot archive an outing that has dependent content/i,
+          /no se puede archivar una salida que tiene contenido dependiente/i,
         ),
       ).toBeTruthy();
     });
@@ -800,7 +800,7 @@ describe("OutingsListPage entry points", () => {
       expect(screen.getByTestId("outings-list-table")).toBeTruthy();
     });
 
-    const newBtn = screen.getByRole("button", { name: /new outing/i });
+    const newBtn = screen.getByRole("button", { name: /nueva salida/i });
     fireEvent.click(newBtn);
 
     expect(onCreate).toHaveBeenCalledTimes(1);
@@ -820,7 +820,7 @@ describe("OutingsListPage entry points", () => {
     });
 
     // Click Edit for o1 (slug: camp-day)
-    const editButtons = screen.getAllByRole("button", { name: /^edit$/i });
+    const editButtons = screen.getAllByRole("button", { name: /^editar$/i });
     fireEvent.click(editButtons[0]!);
 
     expect(onEdit).toHaveBeenCalledTimes(1);
@@ -873,7 +873,7 @@ describe("OutingsListPage featured selection", () => {
       ),
     );
     expect(window.confirm).toHaveBeenCalledWith(
-      expect.stringMatching(/replace/i),
+      expect.stringMatching(/reemplazar/i),
     );
   });
 

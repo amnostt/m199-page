@@ -19,6 +19,20 @@ import {
   listOutings,
 } from "./outingsApi.js";
 import type { OutingAdmin } from "./adminTypes.js";
+import { Alert, AlertDescription } from "../components/ui/alert.js";
+import { Button } from "../components/ui/button.js";
+import { Card, CardContent } from "../components/ui/card.js";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+  FieldTitle,
+} from "../components/ui/field.js";
+import { Input } from "../components/ui/input.js";
+import { Textarea } from "../components/ui/textarea.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -75,6 +89,10 @@ export function LandingSettingsPage() {
   const [publishedOutings, setPublishedOutings] = useState<OutingAdmin[]>([]);
   const [selectedOutingId, setSelectedOutingId] = useState("");
   const [featuredError, setFeaturedError] = useState(false);
+  const [featuredSuccess, setFeaturedSuccess] = useState(false);
+  const [featuredSaving, setFeaturedSaving] = useState<
+    "feature" | "clear" | null
+  >(null);
 
   // Load on mount
   useEffect(() => {
@@ -110,29 +128,40 @@ export function LandingSettingsPage() {
   };
 
   const handleFeatureOuting = async () => {
-    if (!selectedOutingId) return;
+    if (!selectedOutingId || featuredSaving) return;
     if (
       featuredOutingId &&
       featuredOutingId !== selectedOutingId &&
-      !window.confirm("Replace the featured outing?")
+      !window.confirm("¿Reemplazar la salida destacada?")
     )
       return;
     setFeaturedError(false);
+    setFeaturedSuccess(false);
+    setFeaturedSaving("feature");
     try {
       await featureOuting(selectedOutingId);
       await refreshFeaturedState();
+      setFeaturedSuccess(true);
     } catch {
       setFeaturedError(true);
+    } finally {
+      setFeaturedSaving(null);
     }
   };
 
   const handleClearFeatured = async () => {
+    if (featuredSaving) return;
     setFeaturedError(false);
+    setFeaturedSuccess(false);
+    setFeaturedSaving("clear");
     try {
       await clearFeaturedOuting();
       await refreshFeaturedState();
+      setFeaturedSuccess(true);
     } catch {
       setFeaturedError(true);
+    } finally {
+      setFeaturedSaving(null);
     }
   };
 
@@ -157,7 +186,12 @@ export function LandingSettingsPage() {
 
   const handleSave = async () => {
     if (!settings || saving) return;
-    if (!window.confirm("Save Landing Settings changes?")) return;
+    if (
+      !window.confirm(
+        "¿Guardar los cambios de la configuración de la página de inicio?",
+      )
+    )
+      return;
 
     setSaving(true);
     setSaveError(false);
@@ -188,8 +222,15 @@ export function LandingSettingsPage() {
   // Load error
   if (loadError) {
     return (
-      <div data-testid="landing-settings-load-error">
-        <p>Failed to load landing settings.</p>
+      <div
+        className="mx-auto w-full max-w-3xl"
+        data-testid="landing-settings-load-error"
+      >
+        <Alert variant="destructive">
+          <AlertDescription>
+            No se pudo cargar la configuración de la página de inicio.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -197,156 +238,342 @@ export function LandingSettingsPage() {
   // Loading (settings not yet available)
   if (!settings) {
     return (
-      <div data-testid="landing-settings-loading">
-        <p>Loading…</p>
+      <div
+        className="mx-auto w-full max-w-3xl"
+        data-testid="landing-settings-loading"
+        role="status"
+        aria-live="polite"
+      >
+        Cargando…
       </div>
     );
   }
 
   // Loaded — render editable form
   return (
-    <div data-testid="landing-settings-form">
-      <h2>Landing Settings</h2>
+    <div
+      className="mx-auto flex w-full max-w-3xl flex-col gap-6"
+      data-testid="landing-settings-form"
+    >
+      <header className="space-y-1">
+        <h2 className="text-2xl font-semibold tracking-tight">
+          Configuración de la página de inicio
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Editá el contenido que se muestra en la landing pública.
+        </p>
+      </header>
 
-      <fieldset>
-        <legend>Featured outing</legend>
-        <select
-          data-testid="featured-outing-select"
-          value={selectedOutingId}
-          onChange={(event) => setSelectedOutingId(event.target.value)}
-        >
-          <option value="">No featured outing</option>
-          {publishedOutings.map((outing) => (
-            <option key={outing.id} value={outing.id}>
-              {outing.title}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={() => void handleFeatureOuting()}
-          disabled={!selectedOutingId}
-        >
-          Feature outing
-        </button>
-        {featuredOutingId && (
-          <button type="button" onClick={() => void handleClearFeatured()}>
-            Clear featured outing
-          </button>
-        )}
-        {featuredError && (
-          <p data-testid="featured-outing-error">
-            Failed to update featured outing.
-          </p>
-        )}
-      </fieldset>
+      <Card className="shadow-none">
+        <CardContent className="pt-6">
+          <FieldSet>
+            <FieldLegend>Salida destacada</FieldLegend>
+            <FieldDescription>
+              Seleccioná una salida publicada para mostrarla en la página de
+              inicio.
+            </FieldDescription>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="featured-outing-select">
+                  Salida publicada
+                </FieldLabel>
+                <select
+                  id="featured-outing-select"
+                  className="min-h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid="featured-outing-select"
+                  value={selectedOutingId}
+                  onChange={(event) => {
+                    setSelectedOutingId(event.target.value);
+                    setFeaturedError(false);
+                    setFeaturedSuccess(false);
+                  }}
+                  disabled={featuredSaving !== null}
+                >
+                  <option value="">Sin salida destacada</option>
+                  {publishedOutings.map((outing) => (
+                    <option key={outing.id} value={outing.id}>
+                      {outing.title}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  type="button"
+                  className="min-h-11"
+                  onClick={() => void handleFeatureOuting()}
+                  disabled={!selectedOutingId || featuredSaving !== null}
+                  aria-busy={featuredSaving === "feature"}
+                >
+                  Destacar salida
+                </Button>
+                {featuredOutingId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11"
+                    onClick={() => void handleClearFeatured()}
+                    disabled={featuredSaving !== null}
+                    aria-busy={featuredSaving === "clear"}
+                  >
+                    Quitar salida destacada
+                  </Button>
+                )}
+              </div>
+            </FieldGroup>
+            {featuredSaving && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="text-sm text-muted-foreground"
+              >
+                Actualizando la salida destacada…
+              </p>
+            )}
+            {featuredSuccess && (
+              <p
+                className="text-sm text-foreground"
+                data-testid="featured-outing-success"
+                role="status"
+              >
+                Salida destacada actualizada correctamente.
+              </p>
+            )}
+            {featuredError && (
+              <p
+                className="text-sm text-destructive"
+                data-testid="featured-outing-error"
+                role="alert"
+              >
+                No se pudo actualizar la salida destacada.
+              </p>
+            )}
+          </FieldSet>
+        </CardContent>
+      </Card>
 
-      <fieldset>
-        <legend>Hero</legend>
-        <label htmlFor="ls-hero-title">Hero Title</label>
-        <input
-          id="ls-hero-title"
-          type="text"
-          value={settings.heroTitle}
-          onChange={(e) => handleChange("heroTitle", e.target.value)}
-          disabled={saving}
-        />
+      <form
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSave();
+        }}
+        aria-busy={saving}
+      >
+        <div className="flex flex-col gap-6">
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <FieldSet>
+                <FieldLegend>Encabezado principal</FieldLegend>
+                <FieldDescription>
+                  Presentá la misión desde el primer vistazo de la landing.
+                </FieldDescription>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="ls-hero-title">
+                      Título principal
+                    </FieldLabel>
+                    <Input
+                      id="ls-hero-title"
+                      type="text"
+                      className="min-h-10"
+                      value={settings.heroTitle}
+                      onChange={(e) =>
+                        handleChange("heroTitle", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="ls-hero-subtitle">
+                      Subtítulo principal
+                    </FieldLabel>
+                    <Textarea
+                      id="ls-hero-subtitle"
+                      value={settings.heroSubtitle}
+                      onChange={(e) =>
+                        handleChange("heroSubtitle", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldTitle>Imagen principal</FieldTitle>
+                    {settings.heroImageId && (
+                      <FieldDescription>
+                        Archivo actual:{" "}
+                        <a
+                          className="underline underline-offset-4 hover:text-primary"
+                          href={`/files/${settings.heroImageId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-testid="landing-hero-asset-link"
+                        >
+                          {settings.heroImageId}
+                        </a>
+                      </FieldDescription>
+                    )}
+                    <FileUploadWidget
+                      category="LANDING_HERO"
+                      fileId={null}
+                      onUploaded={handleHeroUploaded}
+                      onRemove={() => {
+                        /* disassociation is out of scope */
+                      }}
+                      data-testid="landing-hero-upload-widget"
+                    />
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
 
-        <label htmlFor="ls-hero-subtitle">Hero Subtitle</label>
-        <textarea
-          id="ls-hero-subtitle"
-          value={settings.heroSubtitle}
-          onChange={(e) => handleChange("heroSubtitle", e.target.value)}
-          disabled={saving}
-        />
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <FieldSet>
+                <FieldLegend>Contenido institucional</FieldLegend>
+                <FieldDescription>
+                  Estos textos alimentan las secciones institucionales de la
+                  landing.
+                </FieldDescription>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="ls-mission">Misión</FieldLabel>
+                    <Textarea
+                      id="ls-mission"
+                      value={settings.mission}
+                      onChange={(e) => handleChange("mission", e.target.value)}
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="ls-vision">Visión</FieldLabel>
+                    <Textarea
+                      id="ls-vision"
+                      value={settings.vision}
+                      onChange={(e) => handleChange("vision", e.target.value)}
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="ls-description">
+                      Descripción
+                    </FieldLabel>
+                    <Textarea
+                      id="ls-description"
+                      value={settings.description}
+                      onChange={(e) =>
+                        handleChange("description", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="ls-video">
+                      URL del video destacado
+                    </FieldLabel>
+                    <Input
+                      id="ls-video"
+                      type="url"
+                      className="min-h-10"
+                      value={settings.featuredVideoUrl}
+                      onChange={(e) =>
+                        handleChange("featuredVideoUrl", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
 
-        {settings.heroImageId && (
-          <a
-            href={`/files/${settings.heroImageId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid="landing-hero-asset-link"
-          >
-            {settings.heroImageId}
-          </a>
-        )}
-        <FileUploadWidget
-          category="LANDING_HERO"
-          fileId={null}
-          onUploaded={handleHeroUploaded}
-          onRemove={() => {
-            /* no removal control — disassociation is out of scope */
-          }}
-          data-testid="landing-hero-upload-widget"
-        />
-      </fieldset>
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <FieldSet>
+                <FieldLegend>Contacto</FieldLegend>
+                <FieldDescription>
+                  Estos datos se muestran como acciones de contacto en la
+                  landing pública.
+                </FieldDescription>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="ls-email">
+                      Correo electrónico de contacto
+                    </FieldLabel>
+                    <Input
+                      id="ls-email"
+                      type="email"
+                      autoComplete="email"
+                      className="min-h-10"
+                      value={settings.contactEmail}
+                      onChange={(e) =>
+                        handleChange("contactEmail", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="ls-phone">
+                      Teléfono de contacto
+                    </FieldLabel>
+                    <Input
+                      id="ls-phone"
+                      type="tel"
+                      autoComplete="tel"
+                      className="min-h-10"
+                      value={settings.contactPhone}
+                      onChange={(e) =>
+                        handleChange("contactPhone", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
 
-      <label htmlFor="ls-mission">Mission</label>
-      <textarea
-        id="ls-mission"
-        value={settings.mission}
-        onChange={(e) => handleChange("mission", e.target.value)}
-        disabled={saving}
-      />
-
-      <label htmlFor="ls-vision">Vision</label>
-      <textarea
-        id="ls-vision"
-        value={settings.vision}
-        onChange={(e) => handleChange("vision", e.target.value)}
-        disabled={saving}
-      />
-
-      <label htmlFor="ls-description">Description</label>
-      <textarea
-        id="ls-description"
-        value={settings.description}
-        onChange={(e) => handleChange("description", e.target.value)}
-        disabled={saving}
-      />
-
-      <label htmlFor="ls-video">Featured Video URL</label>
-      <input
-        id="ls-video"
-        type="url"
-        value={settings.featuredVideoUrl}
-        onChange={(e) => handleChange("featuredVideoUrl", e.target.value)}
-        disabled={saving}
-      />
-
-      <label htmlFor="ls-email">Contact Email</label>
-      <input
-        id="ls-email"
-        type="email"
-        value={settings.contactEmail}
-        onChange={(e) => handleChange("contactEmail", e.target.value)}
-        disabled={saving}
-      />
-
-      <label htmlFor="ls-phone">Contact Phone</label>
-      <input
-        id="ls-phone"
-        type="tel"
-        value={settings.contactPhone}
-        onChange={(e) => handleChange("contactPhone", e.target.value)}
-        disabled={saving}
-      />
-
-      <button type="button" onClick={handleSave} disabled={saving}>
-        Save Settings
-      </button>
-
-      {saveSuccess && (
-        <div data-testid="landing-settings-save-success">
-          Settings saved successfully.
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button
+              type="submit"
+              className="min-h-11"
+              disabled={saving}
+              aria-busy={saving}
+            >
+              Guardar configuración
+            </Button>
+            {saving && (
+              <span
+                role="status"
+                aria-live="polite"
+                className="text-sm text-muted-foreground"
+              >
+                Guardando cambios…
+              </span>
+            )}
+          </div>
+          {saveSuccess && (
+            <p
+              className="text-sm text-foreground"
+              data-testid="landing-settings-save-success"
+              role="status"
+            >
+              Configuración guardada correctamente.
+            </p>
+          )}
+          {saveError && (
+            <Alert
+              data-testid="landing-settings-save-error"
+              variant="destructive"
+            >
+              <AlertDescription>
+                No se pudo guardar la configuración. Intenta de nuevo.
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
-      )}
-
-      {saveError && (
-        <div data-testid="landing-settings-save-error">
-          Failed to save settings. Please try again.
-        </div>
-      )}
+      </form>
     </div>
   );
 }

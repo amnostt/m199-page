@@ -63,7 +63,7 @@ describe("AdminApp bootstrap", () => {
     render(<AdminApp />);
 
     expect(screen.getByTestId("admin-loading")).toBeTruthy();
-    expect(screen.getByText(/loading/i)).toBeTruthy();
+    expect(screen.getByText(/cargando/i)).toBeTruthy();
 
     resolveRefresh();
   });
@@ -97,7 +97,7 @@ describe("AdminApp bootstrap", () => {
     });
 
     expect(
-      screen.getByRole("heading", { name: "Misión 1-99 administration" }),
+      screen.getByRole("heading", { name: "Administración de Misión 1-99" }),
     ).toBeTruthy();
     expect(screen.getByRole("img", { name: "Misión 1-99" })).toBeTruthy();
   });
@@ -234,13 +234,13 @@ describe("AdminApp login", () => {
     });
 
     // Fill in the form
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
+    const emailInput = screen.getByLabelText(/correo electrónico/i);
+    const passwordInput = screen.getByLabelText(/contraseña/i);
     fireEvent.change(emailInput, { target: { value: "editor@m199.org" } });
     fireEvent.change(passwordInput, { target: { value: "pass123" } });
 
     // Submit
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ingresar/i }));
 
     // Should now show the shell
     await waitFor(() => {
@@ -272,13 +272,13 @@ describe("AdminApp login", () => {
     });
 
     // Submit without filling (or fill and submit)
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/correo electrónico/i), {
       target: { value: "bad@m199.org" },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText(/contraseña/i), {
       target: { value: "wrong" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ingresar/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId("admin-login-error")).toBeTruthy();
@@ -432,7 +432,7 @@ describe("AdminApp shell navigation", () => {
     // Shell should still be intact
     expect(screen.getByTestId("admin-shell")).toBeTruthy();
     expect(screen.getByTestId("admin-user-name")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /logout/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /cerrar sesión/i })).toBeTruthy();
   });
 
   it("clicking Outings nav shows OutingsPage (list) and hides LandingSettings", async () => {
@@ -514,7 +514,7 @@ describe("AdminApp shell navigation", () => {
     // Shell should still be intact
     expect(screen.getByTestId("admin-shell")).toBeTruthy();
     expect(screen.getByTestId("admin-user-name")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /logout/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /cerrar sesión/i })).toBeTruthy();
   });
 
   it("switching between Outings and Posts preserves the shell", async () => {
@@ -618,17 +618,17 @@ describe("AdminApp shell navigation", () => {
 
     // Outings and Responsibles are active nav sections; only Verses and Files
     // remain as placeholders.
-    const placeholders = ["Files"];
+    const placeholders = [{ label: "Archivos", testId: "files" }];
 
-    for (const label of placeholders) {
-      const testId = `nav-placeholder-${label.toLowerCase()}`;
+    for (const { label, testId: placeholderId } of placeholders) {
+      const testId = `nav-placeholder-${placeholderId}`;
       const el = screen.getByTestId(testId);
 
       // Assert it is a button (not a link — these sections are unavailable)
       expect(el.tagName).toBe("BUTTON");
 
       // Assert text includes label + "(coming soon)" marker
-      expect(el.textContent).toMatch(new RegExp(`${label}.*coming soon`, "i"));
+      expect(el.textContent).toMatch(new RegExp(`${label}.*próximamente`, "i"));
 
       // Assert it is disabled (unavailable, not just unselected)
       expect((el as HTMLButtonElement).disabled).toBe(true);
@@ -653,7 +653,9 @@ describe("AdminApp shell navigation", () => {
     await waitFor(() => {
       expect(screen.getByTestId("responsibles-page")).toBeTruthy();
     });
-    expect(screen.getByText(/manage the responsible users/i)).toBeTruthy();
+    expect(
+      screen.getByText(/administra las personas responsables/i),
+    ).toBeTruthy();
     expect(
       (screen.getByTestId("nav-responsibles") as HTMLButtonElement).disabled,
     ).toBe(true);
@@ -663,7 +665,7 @@ describe("AdminApp shell navigation", () => {
     await renderShell();
     fireEvent.click(screen.getByTestId("nav-verses"));
     await waitFor(() => expect(screen.getByTestId("verses-page")).toBeTruthy());
-    expect(screen.getByText(/all verses/i)).toBeTruthy();
+    expect(screen.getByText(/todos los versículos/i)).toBeTruthy();
     expect(
       (screen.getByTestId("nav-verses") as HTMLButtonElement).disabled,
     ).toBe(true);
@@ -680,7 +682,7 @@ describe("AdminApp shell navigation", () => {
 
   it("renders logout button", async () => {
     await renderShell();
-    const logoutButton = screen.getByRole("button", { name: /logout/i });
+    const logoutButton = screen.getByRole("button", { name: /cerrar sesión/i });
     expect(logoutButton).toBeTruthy();
     expect((logoutButton as HTMLButtonElement).disabled).toBe(false);
   });
@@ -707,7 +709,7 @@ describe("AdminApp shell navigation", () => {
       expect(screen.getByTestId("admin-shell")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /logout/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cerrar sesión/i }));
 
     await waitFor(() => {
       expect(logoutCalled).toBe(true);
@@ -805,25 +807,26 @@ describe("AdminApp triangulation", () => {
     });
 
     // Fill form
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/correo electrónico/i), {
       target: { value: "a@b.com" },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText(/contraseña/i), {
       target: { value: "pw" },
     });
 
     // Submit
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ingresar/i }));
 
     // Button and inputs should be disabled during submission
     await waitFor(() => {
-      const btn = screen.getByRole("button", { name: /sign in/i });
+      const btn = screen.getByRole("button", { name: /ingresar/i });
       expect((btn as HTMLButtonElement).disabled).toBe(true);
     });
 
-    expect((screen.getByLabelText(/email/i) as HTMLInputElement).disabled).toBe(
-      true,
-    );
+    expect(
+      (screen.getByLabelText(/correo electrónico/i) as HTMLInputElement)
+        .disabled,
+    ).toBe(true);
   });
 
   // -----------------------------------------------------------------------
@@ -853,13 +856,13 @@ describe("AdminApp triangulation", () => {
     });
 
     // Fill and submit
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(screen.getByLabelText(/correo electrónico/i), {
       target: { value: "a@b.com" },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText(/contraseña/i), {
       target: { value: "pw" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ingresar/i }));
 
     // The zero-delay timeout fires: error shown, submitting cleared
     await waitFor(() => {
@@ -867,7 +870,7 @@ describe("AdminApp triangulation", () => {
     });
 
     // Sign In button should be re-enabled
-    const btn = screen.getByRole("button", { name: /sign in/i });
+    const btn = screen.getByRole("button", { name: /ingresar/i });
     expect((btn as HTMLButtonElement).disabled).toBe(false);
 
     // Restore
@@ -899,7 +902,7 @@ describe("AdminApp triangulation", () => {
     });
 
     // Click logout
-    fireEvent.click(screen.getByRole("button", { name: /logout/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cerrar sesión/i }));
 
     // Shell should still be visible (user not cleared)
     await waitFor(() => {

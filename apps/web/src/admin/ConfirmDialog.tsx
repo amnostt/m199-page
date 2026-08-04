@@ -71,7 +71,7 @@ export function ConfirmDialog({
             onClick={onCancel}
             disabled={busy}
           >
-            Cancel
+            Cancelar
           </Button>
           <Button
             type="button"
@@ -79,7 +79,7 @@ export function ConfirmDialog({
             onClick={() => void confirm()}
             disabled={busy}
           >
-            {busy ? "Working…" : confirmLabel}
+            {busy ? "Procesando…" : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

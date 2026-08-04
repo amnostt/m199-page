@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CreateVerseInput, VerseAdmin } from "./adminTypes.js";
 import { createVerse, deleteVerse, listVerses } from "./versesApi.js";
+import { mapAdminError } from "./adminErrors.js";
 
 type FormErrors = Partial<Record<keyof CreateVerseInput, string>>;
 
 const EMPTY_FORM: CreateVerseInput = { text: "", reference: "" };
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message
-    ? error.message
-    : "The request failed. Please try again.";
-}
 
 function formatBusinessDate(value: string): string {
   const dateOnly = value.slice(0, 10);
@@ -36,7 +31,7 @@ export function VersesPage() {
     try {
       setRows(await listVerses());
     } catch (error) {
-      setLoadError(errorMessage(error));
+      setLoadError(mapAdminError(error).root);
     }
   }, []);
 
@@ -46,8 +41,9 @@ export function VersesPage() {
 
   const validate = (): FormErrors => {
     const errors: FormErrors = {};
-    if (!form.text.trim()) errors.text = "Text is required.";
-    if (!form.reference.trim()) errors.reference = "Reference is required.";
+    if (!form.text.trim()) errors.text = "El texto es obligatorio.";
+    if (!form.reference.trim())
+      errors.reference = "La referencia es obligatoria.";
     return errors;
   };
 
@@ -69,7 +65,7 @@ export function VersesPage() {
       setForm(EMPTY_FORM);
       setFieldErrors({});
     } catch (error) {
-      setCreateError(errorMessage(error));
+      setCreateError(mapAdminError(error).root);
     } finally {
       setCreatePending(false);
     }
@@ -77,7 +73,11 @@ export function VersesPage() {
 
   const handleDelete = async (row: VerseAdmin) => {
     if (deletePending.has(row.id)) return;
-    if (!window.confirm(`Delete this verse permanently?\n\n${row.reference}`)) {
+    if (
+      !window.confirm(
+        `¿Eliminar este versículo de forma permanente?\n\n${row.reference}`,
+      )
+    ) {
       return;
     }
 
@@ -95,7 +95,7 @@ export function VersesPage() {
     } catch (error) {
       setDeleteErrors((current) => ({
         ...current,
-        [row.id]: errorMessage(error),
+        [row.id]: mapAdminError(error).root,
       }));
     } finally {
       setDeletePending((current) => {
@@ -108,13 +108,13 @@ export function VersesPage() {
 
   return (
     <section data-testid="verses-page">
-      <h1>Verses</h1>
-      <p>Review and maintain the verses available to the ministry.</p>
+      <h1>Versículos</h1>
+      <p>Revisa y administra los versículos disponibles para el ministerio.</p>
 
       <section aria-labelledby="create-verse-heading">
-        <h2 id="create-verse-heading">Create verse</h2>
+        <h2 id="create-verse-heading">Crear versículo</h2>
         <form onSubmit={handleCreate} noValidate>
-          <label htmlFor="verse-text">Text</label>
+          <label htmlFor="verse-text">Texto</label>
           <textarea
             id="verse-text"
             name="text"
@@ -126,7 +126,7 @@ export function VersesPage() {
           />
           {fieldErrors.text && <p role="alert">{fieldErrors.text}</p>}
 
-          <label htmlFor="verse-reference">Reference</label>
+          <label htmlFor="verse-reference">Referencia</label>
           <input
             id="verse-reference"
             name="reference"
@@ -141,35 +141,38 @@ export function VersesPage() {
           {fieldErrors.reference && <p role="alert">{fieldErrors.reference}</p>}
 
           <button type="submit" disabled={createPending}>
-            {createPending ? "Creating…" : "Create verse"}
+            {createPending ? "Creando…" : "Crear versículo"}
           </button>
           {createError && <p role="alert">{createError}</p>}
         </form>
       </section>
 
       <section aria-labelledby="verses-list-heading">
-        <h2 id="verses-list-heading">All verses</h2>
-        {rows === null && !loadError && <p>Loading verses…</p>}
+        <h2 id="verses-list-heading">Todos los versículos</h2>
+        {rows === null && !loadError && <p>Cargando versículos…</p>}
         {loadError && (
           <div role="alert">
             <p>{loadError}</p>
             <button type="button" onClick={() => void load()}>
-              Retry
+              Reintentar
             </button>
           </div>
         )}
         {rows !== null && rows.length === 0 && (
-          <p>No verses yet. Use the form above to create one.</p>
+          <p>
+            Todavía no hay versículos. Usa el formulario de arriba para crear
+            uno.
+          </p>
         )}
         {rows !== null && rows.length > 0 && (
           <table data-testid="verses-table">
             <thead>
               <tr>
-                <th>Text</th>
-                <th>Reference</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Action</th>
+                <th>Texto</th>
+                <th>Referencia</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -187,7 +190,7 @@ export function VersesPage() {
                         disabled={pending}
                         onClick={() => void handleDelete(row)}
                       >
-                        {pending ? "Deleting…" : "Delete"}
+                        {pending ? "Eliminando…" : "Eliminar"}
                       </button>
                       {deleteErrors[row.id] && (
                         <p role="alert">{deleteErrors[row.id]}</p>

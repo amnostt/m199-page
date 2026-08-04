@@ -77,9 +77,9 @@ export function OutingFormPage(props: OutingFormPageProps) {
   if (loadError) {
     return (
       <div data-testid="outing-form-load-error">
-        <p>Failed to load outing. Please try again.</p>
+        <p>No se pudo cargar la salida. Intenta de nuevo.</p>
         <button type="button" onClick={onCancel}>
-          Back to Outings
+          Volver a salidas
         </button>
       </div>
     );
@@ -89,7 +89,7 @@ export function OutingFormPage(props: OutingFormPageProps) {
   if (form === null) {
     return (
       <div data-testid="outing-form-loading">
-        <p>Loading…</p>
+        <p>Cargando…</p>
       </div>
     );
   }
@@ -100,9 +100,9 @@ export function OutingFormPage(props: OutingFormPageProps) {
 
   return (
     <div data-testid="outing-form">
-      <h2>{mode === "create" ? "New Outing" : "Edit Outing"}</h2>
+      <h2>{mode === "create" ? "Nueva salida" : "Editar salida"}</h2>
 
-      <label htmlFor="of-title">Title</label>
+      <label htmlFor="of-title">Título</label>
       <input
         id="of-title"
         type="text"
@@ -120,7 +120,7 @@ export function OutingFormPage(props: OutingFormPageProps) {
         disabled={saving}
       />
 
-      <label htmlFor="of-dateTime">Date & time</label>
+      <label htmlFor="of-dateTime">Fecha y hora</label>
       <input
         id="of-dateTime"
         type="datetime-local"
@@ -129,7 +129,7 @@ export function OutingFormPage(props: OutingFormPageProps) {
         disabled={saving}
       />
 
-      <label htmlFor="of-location">Location</label>
+      <label htmlFor="of-location">Ubicación</label>
       <input
         id="of-location"
         type="text"
@@ -138,7 +138,7 @@ export function OutingFormPage(props: OutingFormPageProps) {
         disabled={saving}
       />
 
-      <label htmlFor="of-description">Description</label>
+      <label htmlFor="of-description">Descripción</label>
       <textarea
         id="of-description"
         value={form.description}
@@ -146,7 +146,7 @@ export function OutingFormPage(props: OutingFormPageProps) {
         disabled={saving}
       />
 
-      <label htmlFor="of-status">Status</label>
+      <label htmlFor="of-status">Estado</label>
       <select
         id="of-status"
         value={form.status}
@@ -159,7 +159,7 @@ export function OutingFormPage(props: OutingFormPageProps) {
 
       {/* Main image — existing asset shown as a link, no clearing control. */}
       <fieldset>
-        <legend>Main image</legend>
+        <legend>Imagen principal</legend>
         {form.mainImageId && (
           <a
             href={`/files/${form.mainImageId}`}
@@ -237,24 +237,26 @@ export function OutingFormPage(props: OutingFormPageProps) {
               onClick={() => handleSave("DRAFT")}
               disabled={saving}
             >
-              Save Draft
+              Guardar borrador
             </button>
             <button
               type="button"
               onClick={() => handleSave("PUBLISHED")}
               disabled={saving}
             >
-              Save Publish
+              Guardar como publicada
             </button>
           </>
         )}
         <button type="button" onClick={onCancel} disabled={saving}>
-          Cancel
+          Cancelar
         </button>
       </div>
 
       {validationError && (
-        <div data-testid="outing-form-validation-error">Title is required.</div>
+        <div data-testid="outing-form-validation-error">
+          El título es obligatorio.
+        </div>
       )}
 
       {saveError && <div data-testid="outing-form-save-error">{saveError}</div>}

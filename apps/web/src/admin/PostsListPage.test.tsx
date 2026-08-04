@@ -67,21 +67,21 @@ afterEach(() => {
 });
 
 async function selectStatus(
-  status: "All" | "DRAFT" | "PUBLISHED" | "ARCHIVED",
+  status: "Todos" | "DRAFT" | "PUBLISHED" | "ARCHIVED",
 ) {
-  const trigger = screen.getByRole("combobox", { name: "Status" });
+  const trigger = screen.getByRole("combobox", { name: "Estado" });
   fireEvent.click(trigger);
   const option = await screen.findByRole("option", { name: status });
   fireEvent.mouseMove(option);
   fireEvent.click(option);
   await waitFor(() =>
     expect(
-      screen.getByRole("combobox", { name: "Status" }).textContent,
+      screen.getByRole("combobox", { name: "Estado" }).textContent,
     ).toContain(status),
   );
 }
 
-async function acceptDialog(label = /continue/i) {
+async function acceptDialog(label = /continuar/i) {
   await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
   // prettier-ignore
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: label }));
@@ -90,7 +90,7 @@ async function acceptDialog(label = /continue/i) {
 async function cancelDialog() {
   await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
   // prettier-ignore
-  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /cancel/i }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /cancelar/i }));
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ describe("PostsListPage loading", () => {
     render(<PostsListPage />);
 
     expect(screen.getByTestId("posts-list-loading")).toBeTruthy();
-    expect(screen.getByText(/loading/i)).toBeTruthy();
+    expect(screen.getByText(/cargando/i)).toBeTruthy();
   });
 });
 
@@ -181,12 +181,12 @@ describe("PostsListPage status filter", () => {
   it("renders the canonical accessible status filter with all lifecycle values", async () => {
     await renderWithPosts();
 
-    const trigger = screen.getByRole("combobox", { name: "Status" });
+    const trigger = screen.getByRole("combobox", { name: "Estado" });
     expect(trigger.id).toBe("posts-filter-status");
     expect(trigger.getAttribute("data-slot")).toBe("select-trigger");
 
     fireEvent.click(trigger);
-    expect(await screen.findByRole("option", { name: "All" })).toBeTruthy();
+    expect(await screen.findByRole("option", { name: "Todos" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "DRAFT" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "PUBLISHED" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "ARCHIVED" })).toBeTruthy();
@@ -223,7 +223,7 @@ describe("PostsListPage status filter", () => {
 
     // Select PUBLISHED then back to All
     await selectStatus("PUBLISHED");
-    await selectStatus("All");
+    await selectStatus("Todos");
 
     expect(screen.getByText("Hello World")).toBeTruthy();
     expect(screen.getByText("Draft Post")).toBeTruthy();
@@ -248,13 +248,13 @@ describe("PostsListPage empty state", () => {
       expect(screen.getByTestId("posts-list-empty")).toBeTruthy();
     });
 
-    expect(screen.getByText(/no posts/i)).toBeTruthy();
-    const trigger = screen.getByRole("combobox", { name: "Status" });
+    expect(screen.getByText(/no se encontraron publicaciones/i)).toBeTruthy();
+    const trigger = screen.getByRole("combobox", { name: "Estado" });
     expect(trigger.id).toBe("posts-filter-status");
     expect(trigger.getAttribute("data-slot")).toBe("select-trigger");
 
     fireEvent.click(trigger);
-    expect(await screen.findByRole("option", { name: "All" })).toBeTruthy();
+    expect(await screen.findByRole("option", { name: "Todos" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "DRAFT" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "PUBLISHED" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "ARCHIVED" })).toBeTruthy();
@@ -296,7 +296,7 @@ describe("PostsListPage empty state", () => {
       expect(screen.getByTestId("posts-list-empty")).toBeTruthy();
     });
 
-    expect(screen.getByText(/no posts/i)).toBeTruthy();
+    expect(screen.getByText(/no se encontraron publicaciones/i)).toBeTruthy();
   });
 });
 
@@ -314,7 +314,9 @@ describe("PostsListPage error", () => {
       expect(screen.getByTestId("posts-list-load-error")).toBeTruthy();
     });
 
-    expect(screen.getByText(/failed to load/i)).toBeTruthy();
+    expect(
+      screen.getByText(/no se pudieron cargar las publicaciones/i),
+    ).toBeTruthy();
     expect(screen.queryByTestId("posts-list-table")).toBeNull();
   });
 
@@ -371,7 +373,7 @@ describe("PostsListPage lifecycle actions", () => {
     // p2 is DRAFT — the Publish button should be in its row
     const publishBtn = screen.getByTestId("lifecycle-publish-p2");
     expect(publishBtn).toBeTruthy();
-    expect(publishBtn.textContent).toMatch(/publish/i);
+    expect(publishBtn.textContent).toMatch(/publicar/i);
   });
 
   it("publishes a DRAFT post: confirm accepted → POST /publish request sent", async () => {
@@ -417,7 +419,7 @@ describe("PostsListPage lifecycle actions", () => {
       expect((postCall![1] as RequestInit).body).toBeUndefined();
     });
     // prettier-ignore
-    expect(successToast).toHaveBeenCalledWith("Publish completed.", expect.anything());
+    expect(successToast).toHaveBeenCalledWith("Publicación realizada correctamente.", expect.anything());
   });
 
   // ------------------------------------------------------------------
@@ -430,7 +432,7 @@ describe("PostsListPage lifecycle actions", () => {
     // p1 is PUBLISHED — the Archive button should be in its row
     const archiveBtn = screen.getByTestId("lifecycle-archive-p1");
     expect(archiveBtn).toBeTruthy();
-    expect(archiveBtn.textContent).toMatch(/archive/i);
+    expect(archiveBtn.textContent).toMatch(/archivar/i);
   });
 
   it("archives a PUBLISHED post: confirm accepted → POST /archive request sent", async () => {
@@ -556,7 +558,7 @@ describe("PostsListPage lifecycle actions", () => {
     });
 
     fireEvent.click(screen.getByTestId("lifecycle-delete-p3"));
-    await acceptDialog(/delete/i);
+    await acceptDialog(/eliminar/i);
 
     await waitFor(() => {
       const deleteCall = (
@@ -694,7 +696,7 @@ describe("PostsListPage lifecycle actions", () => {
     expect(publishBtn.disabled).toBe(false);
 
     // prettier-ignore
-    expect(errorToast).toHaveBeenCalledWith("Publish failed.", expect.objectContaining({ description: "Network error" }));
+    expect(errorToast).toHaveBeenCalledWith("No se pudo publicar.", expect.objectContaining({ description: "Error de red." }));
     vi.restoreAllMocks();
   });
 });
@@ -737,7 +739,7 @@ describe("PostsListPage feature toggle", () => {
     // p1 is PUBLISHED — a Feature button should be visible
     const featureBtn = screen.getByTestId("feature-p1");
     expect(featureBtn).toBeTruthy();
-    expect(featureBtn.textContent).toMatch(/feature/i);
+    expect(featureBtn.textContent).toMatch(/destacar/i);
   });
 
   it("does NOT show Feature button for DRAFT or ARCHIVED posts", async () => {
@@ -820,7 +822,7 @@ describe("PostsListPage feature toggle", () => {
     await waitFor(() => {
       expect(screen.getByTestId("unfeature-p1")).toBeTruthy();
       expect(screen.getByTestId("unfeature-p1").textContent).toMatch(
-        /unfeature|featured/i,
+        /destacada/i,
       );
     });
   });
@@ -1080,7 +1082,9 @@ describe("PostsListPage feature toggle", () => {
 
     // p1 should show "Featured ★" (unfeature button) since it's pre-featured
     expect(screen.getByTestId("unfeature-p1")).toBeTruthy();
-    expect(screen.getByTestId("unfeature-p1").textContent).toMatch(/featured/i);
+    expect(screen.getByTestId("unfeature-p1").textContent).toMatch(
+      /destacada/i,
+    );
 
     // Feature button should NOT appear for p1
     expect(screen.queryByTestId("feature-p1")).toBeNull();
@@ -1295,7 +1299,7 @@ describe("PostsListPage featured endpoint failure", () => {
     });
 
     const capDisplay = screen.getByTestId("featured-cap");
-    expect(capDisplay.textContent).toMatch(/unavailable/i);
+    expect(capDisplay.textContent).toMatch(/no disponible/i);
   });
 
   it("disables Feature buttons when featured endpoint fails (cap state unknown)", async () => {
@@ -1368,6 +1372,6 @@ describe("PostsListPage featured endpoint failure", () => {
 
     // Cap display shows unavailable
     const capDisplay = screen.getByTestId("featured-cap");
-    expect(capDisplay.textContent).toMatch(/unavailable/i);
+    expect(capDisplay.textContent).toMatch(/no disponible/i);
   });
 });

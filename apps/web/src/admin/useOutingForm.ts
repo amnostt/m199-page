@@ -37,6 +37,7 @@ import {
   updateOuting,
 } from "./outingsApi.js";
 import { AdminRequestError } from "./session.js";
+import { mapAdminError } from "./adminErrors.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -199,7 +200,7 @@ export function useOutingForm({
     }
 
     // General save confirmation (create + edit, both DRAFT and PUBLISHED).
-    if (!window.confirm("Save changes to this outing?")) {
+    if (!window.confirm("¿Guardar los cambios de esta salida?")) {
       return;
     }
 
@@ -220,9 +221,9 @@ export function useOutingForm({
       onSaved();
     } catch (err) {
       if (err instanceof AdminRequestError) {
-        setSaveError(err.message);
+        setSaveError(mapAdminError(err).root);
       } else {
-        setSaveError("Save failed. Please try again.");
+        setSaveError("No se pudo guardar la salida. Intenta de nuevo.");
       }
     } finally {
       setSaving(false);

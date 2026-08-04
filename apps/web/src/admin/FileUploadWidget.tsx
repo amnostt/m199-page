@@ -19,6 +19,7 @@ import { useState, type ChangeEvent } from "react";
 import { adminFetch } from "./session.js";
 import type { FileAssetResponse } from "./adminTypes.js";
 import { useAdminToast } from "./AdminProviders.js";
+import { mapAdminError } from "./adminErrors.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -63,13 +64,13 @@ export function FileUploadWidget({
       });
       setState("idle");
       setLastFile(null);
-      toast.success("File uploaded.");
+      toast.success("Archivo cargado correctamente.");
       onUploaded(asset);
     } catch (error) {
       setState("error");
       // prettier-ignore
-      const description = error instanceof Error ? error.message : "Please try again.";
-      toast.error("Upload failed.", {
+      const description = mapAdminError(error).root;
+      toast.error("No se pudo cargar el archivo.", {
         description,
         retry: () => void upload(file),
       });
@@ -91,21 +92,21 @@ export function FileUploadWidget({
       <Input
         type="file"
         data-testid="file-upload-input"
-        aria-label={`Upload ${category.toLowerCase().replaceAll("_", " ")}`}
+         aria-label="Subir archivo"
         onChange={handleFileChange}
         disabled={state === "uploading"}
       />
 
       {state === "uploading" && (
-        <span data-testid="file-upload-uploading" role="status" aria-live="polite">Uploading…</span>
+         <span data-testid="file-upload-uploading" role="status" aria-live="polite">Cargando…</span>
       )}
 
       {state === "error" && (
-        <span data-testid="file-upload-error" role="alert">Upload failed</span>
+         <span data-testid="file-upload-error" role="alert">No se pudo cargar el archivo.</span>
       )}
 
       {state === "error" && lastFile && (
-        <Button type="button" onClick={() => void upload(lastFile)}>Retry upload</Button>
+         <Button type="button" onClick={() => void upload(lastFile)}>Reintentar carga</Button>
       )}
 
       {fileId && (
@@ -115,7 +116,7 @@ export function FileUploadWidget({
           onClick={onRemove}
           disabled={state === "uploading"}
         >
-          Remove
+          Quitar
         </Button>
       )}
     </div>

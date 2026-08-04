@@ -42,7 +42,7 @@ import {
 import { Input } from "../components/ui/input.js";
 import { Textarea } from "../components/ui/textarea.js";
 // prettier-ignore
-const postSchema = z.object({ title: z.string().refine((value) => value.trim().length > 0, "Title is required."), slug: z.string(), content: z.string(), description: z.string(), tagsInput: z.string(), coverImageId: z.string().nullable(), downloadIds: z.array(z.string()), downloads: z.array(z.object({ entryId: z.string(), fileId: z.string(), label: z.string() })) });
+const postSchema = z.object({ title: z.string().refine((value) => value.trim().length > 0, "El título es obligatorio."), slug: z.string(), content: z.string(), description: z.string(), tagsInput: z.string(), coverImageId: z.string().nullable(), downloadIds: z.array(z.string()), downloads: z.array(z.object({ entryId: z.string(), fileId: z.string(), label: z.string() })) });
 type EditorDownload = { entryId: string; fileId: string; label: string };
 type EditorValues = PostForm & { downloads: EditorDownload[] };
 type Confirmation = { kind: "slug" | "save"; values: EditorValues };
@@ -142,13 +142,13 @@ export function PostFormPage({
       if (mode === "edit" && postId) await updatePost(postId, form, downloadLabels);
       else await createPost(form, downloadLabels);
       setSaveSuccess(true);
-      toast.success("Post saved successfully.");
+      toast.success("Publicación guardada correctamente.");
       onSaved();
     } catch (error) {
       const message = mapAdminError(error).root;
       setError("root.server", { type: "server", message });
       // prettier-ignore
-      toast.error("Failed to save post.", { description: message, retry: () => void saveValues(values) });
+      toast.error("No se pudo guardar la publicación.", { description: message, retry: () => void saveValues(values) });
     } finally {
       setSaving(false);
     }
@@ -172,17 +172,17 @@ export function PostFormPage({
       <div data-testid="post-form-load-error">
         <Alert variant="destructive">
           <AlertDescription>
-            Failed to load post. Please try again.
+            No se pudo cargar la publicación. Intenta de nuevo.
           </AlertDescription>
         </Alert>
-        {/* prettier-ignore */}<Button type="button" onClick={onCancel}>Back to Posts</Button>
+        {/* prettier-ignore */}<Button type="button" onClick={onCancel}>Volver a publicaciones</Button>
       </div>
     );
   }
   if (loading) {
     return (
       <div data-testid="post-form-loading" role="status" aria-live="polite">
-        Loading…
+        Cargando…
       </div>
     );
   }
@@ -203,12 +203,12 @@ export function PostFormPage({
 
   return (
     <div data-testid="post-form">
-      <h2>{mode === "create" ? "New Post" : "Edit Post"}</h2>
+      <h2>{mode === "create" ? "Nueva publicación" : "Editar publicación"}</h2>
       <form onSubmit={handleSubmit(onValid)} noValidate>
         <FieldGroup>
           {renderField(
             "title",
-            "Title",
+            "Título",
             <Input
               id="pf-title"
               type="text"
@@ -234,7 +234,7 @@ export function PostFormPage({
           )}
           {renderField(
             "content",
-            "Content",
+            "Contenido",
             <Textarea
               id="pf-content"
               disabled={saving}
@@ -246,7 +246,7 @@ export function PostFormPage({
           )}
           {renderField(
             "description",
-            "Description",
+            "Descripción",
             <Input
               id="pf-description"
               type="text"
@@ -259,11 +259,11 @@ export function PostFormPage({
           )}
           {renderField(
             "tagsInput",
-            "Tags (comma-separated)",
+            "Etiquetas (separadas por comas)",
             <Input
               id="pf-tags"
               type="text"
-              placeholder="e.g. react, typescript"
+              placeholder="p. ej., react, typescript"
               disabled={saving}
               aria-invalid={Boolean(fieldError("tagsInput"))}
               {...register("tagsInput", {
@@ -273,13 +273,13 @@ export function PostFormPage({
             "pf-tags",
           )}
         </FieldGroup>
-        {mode === "edit" && <p>Status: {loadedStatus}</p>}
+        {mode === "edit" && <p>Estado: {loadedStatus}</p>}
         <FieldSet>
-          <FieldLegend>Cover Image</FieldLegend>
+          <FieldLegend>Imagen de portada</FieldLegend>
           {coverImageId && (
             <img
               src={thumbUrl(coverImageId)!}
-              alt="Cover preview"
+              alt="Vista previa de portada"
               data-testid="post-form-cover-preview"
             />
           )}
@@ -296,7 +296,7 @@ export function PostFormPage({
           />
         </FieldSet>
         <FieldSet>
-          <FieldLegend>Downloads</FieldLegend>
+          <FieldLegend>Descargas</FieldLegend>
           {fields.map((download, index) => {
             const fieldName = `downloads.${index}.label` as const;
             const error = errors.downloads?.[index]?.label?.message;
@@ -312,11 +312,11 @@ export function PostFormPage({
                   {download.fileId}
                 </a>
                 <Field data-invalid={Boolean(error)}>
-                  <FieldLabel htmlFor={inputId}>File label</FieldLabel>
+                  <FieldLabel htmlFor={inputId}>Etiqueta del archivo</FieldLabel>
                   <Input
                     id={inputId}
                     type="text"
-                    placeholder="File label"
+                    placeholder="Etiqueta del archivo"
                     data-testid={`post-form-download-label-${download.fileId}`}
                     aria-invalid={Boolean(error)}
                     {...register(fieldName, {
@@ -353,7 +353,7 @@ export function PostFormPage({
         </FieldSet>
         <div>
           <Button type="submit" disabled={saving}>
-            Save Post
+            Guardar publicación
           </Button>
           <Button
             type="button"
@@ -361,7 +361,7 @@ export function PostFormPage({
             onClick={onCancel}
             disabled={saving}
           >
-            Cancel
+            Cancelar
           </Button>
         </div>
         {errors.title?.message && (
@@ -373,28 +373,28 @@ export function PostFormPage({
             variant="destructive"
           >
             <AlertDescription>
-              <p>Failed to save post. Please try again.</p>
+              <p>No se pudo guardar la publicación. Intenta de nuevo.</p>
               <p>{errors.root.server.message}</p>
             </AlertDescription>
           </Alert>
         )}
         {saveSuccess && (
           <div data-testid="post-form-save-success" role="status">
-            Post saved successfully.
+            Publicación guardada correctamente.
           </div>
         )}
       </form>
       <ConfirmDialog
         open={confirmation !== null}
         title={
-          confirmation?.kind === "slug" ? "Change published URL?" : "Save post?"
+          confirmation?.kind === "slug" ? "¿Cambiar la URL publicada?" : "¿Guardar publicación?"
         }
         description={
           confirmation?.kind === "slug"
-            ? "You are changing the URL of a published post. Existing links to this post will break. Continue?"
-            : "Save changes to this post?"
+            ? "Estás cambiando la URL de una publicación publicada. Los enlaces existentes dejarán de funcionar. ¿Continuar?"
+            : "¿Guardar los cambios de esta publicación?"
         }
-        confirmLabel={confirmation?.kind === "slug" ? "Continue" : "Confirm"}
+        confirmLabel={confirmation?.kind === "slug" ? "Continuar" : "Confirmar"}
         onCancel={() => setConfirmation(null)}
         onConfirm={async () => {
           if (!confirmation) return;

@@ -43,11 +43,15 @@ type AdminNavItem = {
 };
 
 const sections: AdminNavItem[] = [
-  { section: "landing", label: "Landing Settings", icon: Settings2 },
-  { section: "verses", label: "Verses", icon: BookOpenText },
-  { section: "responsibles", label: "Responsibles", icon: UsersRound },
-  { section: "posts", label: "Posts", icon: Newspaper },
-  { section: "outings", label: "Outings", icon: CalendarDays },
+  {
+    section: "landing",
+    label: "Configuración de la página de inicio",
+    icon: Settings2,
+  },
+  { section: "verses", label: "Versículos", icon: BookOpenText },
+  { section: "responsibles", label: "Responsables", icon: UsersRound },
+  { section: "posts", label: "Publicaciones", icon: Newspaper },
+  { section: "outings", label: "Salidas", icon: CalendarDays },
 ];
 
 export interface AdminShellProps {
@@ -111,7 +115,7 @@ export function AdminShell({
 
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarGroupLabel>Administración</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {sections.map(
@@ -145,10 +149,10 @@ export function AdminShell({
                       disabled
                       aria-disabled="true"
                       data-testid="nav-placeholder-files"
-                      tooltip="Files (coming soon)"
+                      tooltip="Archivos (próximamente)"
                     >
                       <Files aria-hidden="true" />
-                      <span>Files (coming soon)</span>
+                      <span>Archivos (próximamente)</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -187,12 +191,12 @@ export function AdminShell({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   type="button"
-                  tooltip="Logout"
+                  tooltip="Cerrar sesión"
                   data-testid="admin-logout"
                   onClick={onLogout}
                 >
                   <LogOut aria-hidden="true" />
-                  <span>Logout</span>
+                  <span>Cerrar sesión</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -202,7 +206,7 @@ export function AdminShell({
                 role="alert"
                 data-testid="admin-logout-error"
               >
-                Logout failed. Please try again.
+                No se pudo cerrar sesión. Intenta de nuevo.
               </span>
             )}
           </SidebarFooter>
@@ -214,12 +218,12 @@ export function AdminShell({
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger
                 className="-ml-1"
-                aria-label="Toggle admin sidebar"
+                aria-label="Alternar barra lateral de administración"
               />
-              <Separator orientation="vertical" className="mr-2 h-4" />
+              <Separator orientation="vertical" className="mr-2 h-12" />
               <div className="min-w-0">
                 <p className="truncate text-xs text-muted-foreground">
-                  Administration
+                  Administración
                 </p>
                 <h1 className="truncate text-sm font-semibold">{label}</h1>
               </div>

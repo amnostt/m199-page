@@ -61,7 +61,7 @@ afterEach(() => {
   cleanup();
 });
 
-async function acceptPostDialog(label = /confirm|continue/i) {
+async function acceptPostDialog(label = /confirmar|continuar/i) {
   await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
   // prettier-ignore
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: label }));
@@ -70,7 +70,7 @@ async function acceptPostDialog(label = /confirm|continue/i) {
 async function cancelPostDialog() {
   await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
   // prettier-ignore
-  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /cancel/i }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /cancelar/i }));
 }
 
 // =========================================================================
@@ -81,15 +81,15 @@ describe("PostFormPage create mode", () => {
   it("renders content-only fields without an editable lifecycle status", () => {
     render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
-    expect(screen.getByLabelText(/title/i)).toBeTruthy();
+    expect(screen.getByLabelText(/título/i)).toBeTruthy();
     expect(screen.getByLabelText(/slug/i)).toBeTruthy();
-    expect(screen.getByLabelText(/content/i)).toBeTruthy();
-    expect(screen.getByLabelText(/description/i)).toBeTruthy();
-    expect(screen.getByLabelText(/tags/i)).toBeTruthy();
+    expect(screen.getByLabelText(/contenido/i)).toBeTruthy();
+    expect(screen.getByLabelText(/descripción/i)).toBeTruthy();
+    expect(screen.getByLabelText(/etiquetas/i)).toBeTruthy();
     expect(screen.queryByLabelText(/status/i)).toBeNull();
 
     // Content field should be a textarea per spec
-    const contentField = screen.getByLabelText(/content/i);
+    const contentField = screen.getByLabelText(/contenido/i);
     expect(contentField.tagName).toBe("TEXTAREA");
   });
 
@@ -102,14 +102,16 @@ describe("PostFormPage create mode", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
 
     // Fields start empty
-    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+    expect((screen.getByLabelText(/título/i) as HTMLInputElement).value).toBe(
       "",
     );
     expect((screen.getByLabelText(/slug/i) as HTMLInputElement).value).toBe("");
     expect(
-      (screen.getByLabelText(/description/i) as HTMLInputElement).value,
+      (screen.getByLabelText(/descripción/i) as HTMLInputElement).value,
     ).toBe("");
-    expect((screen.getByLabelText(/tags/i) as HTMLInputElement).value).toBe("");
+    expect(
+      (screen.getByLabelText(/etiquetas/i) as HTMLInputElement).value,
+    ).toBe("");
 
     expect(screen.queryByLabelText(/status/i)).toBeNull();
   });
@@ -124,24 +126,24 @@ describe("PostFormPage create mode", () => {
     render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
     // Fill the form
-    fireEvent.change(screen.getByLabelText(/^title/i), {
+    fireEvent.change(screen.getByLabelText(/^título/i), {
       target: { value: title },
     });
     fireEvent.change(screen.getByLabelText(/^slug/i), {
       target: { value: "new-post" },
     });
-    fireEvent.change(screen.getByLabelText(/^content/i), {
+    fireEvent.change(screen.getByLabelText(/^contenido/i), {
       target: { value: "Some content here" },
     });
-    fireEvent.change(screen.getByLabelText(/^description/i), {
+    fireEvent.change(screen.getByLabelText(/^descripción/i), {
       target: { value: "A short description" },
     });
-    fireEvent.change(screen.getByLabelText(/tags/i), {
+    fireEvent.change(screen.getByLabelText(/etiquetas/i), {
       target: { value: "react, typescript, ssr" },
     });
 
     // Submit
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
@@ -181,17 +183,17 @@ describe("PostFormPage create mode", () => {
 
     render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText(/^title/i), {
+    fireEvent.change(screen.getByLabelText(/^título/i), {
       target: { value: "T" },
     });
     fireEvent.change(screen.getByLabelText(/^slug/i), {
       target: { value: "t" },
     });
-    fireEvent.change(screen.getByLabelText(/tags/i), {
+    fireEvent.change(screen.getByLabelText(/etiquetas/i), {
       target: { value: "a, b, ,c" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
@@ -219,14 +221,14 @@ describe("PostFormPage create mode", () => {
 
     render(<PostFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText(/^title/i), {
+    fireEvent.change(screen.getByLabelText(/^título/i), {
       target: { value: "T" },
     });
     fireEvent.change(screen.getByLabelText(/^slug/i), {
       target: { value: "t" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
@@ -241,7 +243,7 @@ describe("PostFormPage create mode", () => {
       <PostFormPage mode="create" onSaved={vi.fn()} onCancel={onCancel} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cancelar/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });
@@ -267,7 +269,7 @@ describe("PostFormPage edit mode", () => {
     );
 
     expect(screen.getByTestId("post-form-loading")).toBeTruthy();
-    expect(screen.getByText(/loading/i)).toBeTruthy();
+    expect(screen.getByText(/cargando/i)).toBeTruthy();
   });
 
   it("fetches GET /posts/admin/slug/:slug on mount", async () => {
@@ -314,22 +316,22 @@ describe("PostFormPage edit mode", () => {
       expect(screen.getByTestId("post-form")).toBeTruthy();
     });
 
-    expect((screen.getByLabelText(/^title/i) as HTMLInputElement).value).toBe(
+    expect((screen.getByLabelText(/^título/i) as HTMLInputElement).value).toBe(
       "Hello World",
     );
     expect((screen.getByLabelText(/^slug/i) as HTMLInputElement).value).toBe(
       "hello-world",
     );
     expect(
-      (screen.getByLabelText(/^content/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/^contenido/i) as HTMLTextAreaElement).value,
     ).toBe("Post body content");
     expect(
-      (screen.getByLabelText(/^description/i) as HTMLInputElement).value,
+      (screen.getByLabelText(/^descripción/i) as HTMLInputElement).value,
     ).toBe("A test post");
-    expect((screen.getByLabelText(/tags/i) as HTMLInputElement).value).toBe(
-      "react, typescript",
-    );
-    expect(screen.getByText("Status: PUBLISHED")).toBeTruthy();
+    expect(
+      (screen.getByLabelText(/etiquetas/i) as HTMLInputElement).value,
+    ).toBe("react, typescript");
+    expect(screen.getByText("Estado: PUBLISHED")).toBeTruthy();
   });
 
   it("joins tags array to comma-separated string for the input", async () => {
@@ -357,9 +359,9 @@ describe("PostFormPage edit mode", () => {
       expect(screen.getByTestId("post-form")).toBeTruthy();
     });
 
-    expect((screen.getByLabelText(/tags/i) as HTMLInputElement).value).toBe(
-      "nodejs, backend api",
-    );
+    expect(
+      (screen.getByLabelText(/etiquetas/i) as HTMLInputElement).value,
+    ).toBe("nodejs, backend api");
   });
 
   it("submits PATCH /posts/admin/:id with form data", async () => {
@@ -390,12 +392,12 @@ describe("PostFormPage edit mode", () => {
     });
 
     // Edit title
-    fireEvent.change(screen.getByLabelText(/^title/i), {
+    fireEvent.change(screen.getByLabelText(/^título/i), {
       target: { value: "Updated Title" },
     });
 
     // Submit
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
@@ -445,7 +447,7 @@ describe("PostFormPage edit mode", () => {
       expect(screen.getByTestId("post-form")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
@@ -484,7 +486,7 @@ describe("PostFormPage states", () => {
       expect(screen.getByTestId("post-form-load-error")).toBeTruthy();
     });
 
-    expect(screen.getByText(/failed to load/i)).toBeTruthy();
+    expect(screen.getByText(/no se pudo cargar/i)).toBeTruthy();
     expect(screen.queryByTestId("post-form")).toBeNull();
   });
 
@@ -497,23 +499,25 @@ describe("PostFormPage states", () => {
 
     render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText(/^title/i), {
+    fireEvent.change(screen.getByLabelText(/^título/i), {
       target: { value: "T" },
     });
     fireEvent.change(screen.getByLabelText(/^slug/i), {
       target: { value: "t" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
       expect(screen.getByTestId("post-form-save-success")).toBeTruthy();
     });
 
-    expect(screen.getByText(/saved successfully|post saved/i)).toBeTruthy();
+    expect(
+      screen.getByText(/publicación guardada|guardada correctamente/i),
+    ).toBeTruthy();
     // prettier-ignore
-    expect(successToast).toHaveBeenCalledWith("Post saved successfully.", expect.anything());
+    expect(successToast).toHaveBeenCalledWith("Publicación guardada correctamente.", expect.anything());
   });
 
   it("shows save error message on POST failure", async () => {
@@ -522,27 +526,27 @@ describe("PostFormPage states", () => {
 
     render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText(/^title/i), {
+    fireEvent.change(screen.getByLabelText(/^título/i), {
       target: { value: "T" },
     });
     fireEvent.change(screen.getByLabelText(/^slug/i), {
       target: { value: "t" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
       expect(screen.getByTestId("post-form-save-error")).toBeTruthy();
     });
 
-    expect(screen.getByText(/failed to save/i)).toBeTruthy();
+    expect(screen.getByText(/no se pudo guardar/i)).toBeTruthy();
     // prettier-ignore
-    expect(errorToast).toHaveBeenCalledWith("Failed to save post.", expect.objectContaining({ description: "Network error" }));
+    expect(errorToast).toHaveBeenCalledWith("No se pudo guardar la publicación.", expect.objectContaining({ description: "Error de red." }));
   });
 
   // prettier-ignore
-  it("invokes save toast retry with the original form payload", async () => { const errorToast = vi.spyOn(toast, "error"); globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error")).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_CREATED_POST) }); render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />); fireEvent.change(screen.getByLabelText(/^title/i), { target: { value: "Retry title" } }); fireEvent.change(screen.getByLabelText(/^slug/i), { target: { value: "retry-slug" } }); fireEvent.click(screen.getByRole("button", { name: /save/i })); await acceptPostDialog(); await waitFor(() => expect(errorToast).toHaveBeenCalled()); const retry = (errorToast.mock.calls[0]![1] as unknown as { action: { onClick(): void } }).action.onClick; retry(); await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2)); const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>; expect(fetchMock).toHaveBeenNthCalledWith(2, "/posts/admin", expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" } })); expect(JSON.parse((fetchMock.mock.calls[1]![1] as RequestInit).body as string)).toEqual({ title: "Retry title", slug: "retry-slug", content: "", description: "", tags: [], coverImageId: null, downloadIds: [] }); });
+  it("invokes save toast retry with the original form payload", async () => { const errorToast = vi.spyOn(toast, "error"); globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error")).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_CREATED_POST) }); render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />); fireEvent.change(screen.getByLabelText(/^título/i), { target: { value: "Retry title" } }); fireEvent.change(screen.getByLabelText(/^slug/i), { target: { value: "retry-slug" } }); fireEvent.click(screen.getByRole("button", { name: /guardar/i })); await acceptPostDialog(); await waitFor(() => expect(errorToast).toHaveBeenCalled()); const retry = (errorToast.mock.calls[0]![1] as unknown as { action: { onClick(): void } }).action.onClick; retry(); await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2)); const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>; expect(fetchMock).toHaveBeenNthCalledWith(2, "/posts/admin", expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" } })); expect(JSON.parse((fetchMock.mock.calls[1]![1] as RequestInit).body as string)).toEqual({ title: "Retry title", slug: "retry-slug", content: "", description: "", tags: [], coverImageId: null, downloadIds: [] }); });
 
   it("disables save button while submitting", async () => {
     // POST never resolves — save stays "submitting"
@@ -552,18 +556,20 @@ describe("PostFormPage states", () => {
 
     render(<PostFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText(/^title/i), {
+    fireEvent.change(screen.getByLabelText(/^título/i), {
       target: { value: "T" },
     });
     fireEvent.change(screen.getByLabelText(/^slug/i), {
       target: { value: "t" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
-      const saveButton = screen.getByRole("button", { name: "Save Post" });
+      const saveButton = screen.getByRole("button", {
+        name: "Guardar publicación",
+      });
       expect((saveButton as HTMLButtonElement).disabled).toBe(true);
     });
   });
@@ -578,12 +584,12 @@ describe("PostFormPage states", () => {
       target: { value: "some-slug" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
 
     // Should show validation error and not call fetch
     await waitFor(() => {
       expect(screen.getByTestId("post-form-validation-error")).toBeTruthy();
-      expect(screen.getByText(/title is required/i)).toBeTruthy();
+      expect(screen.getByText(/el título es obligatorio/i)).toBeTruthy();
     });
 
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -612,7 +618,7 @@ describe("PostFormPage states", () => {
     });
 
     // First save attempt fails
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
@@ -620,7 +626,7 @@ describe("PostFormPage states", () => {
     });
 
     // Editing a field clears the error
-    fireEvent.change(screen.getByLabelText(/^title/i), {
+    fireEvent.change(screen.getByLabelText(/^título/i), {
       target: { value: "Changed" },
     });
 
@@ -662,7 +668,9 @@ describe("PostFormPage triangulation", () => {
       expect(screen.getByTestId("post-form")).toBeTruthy();
     });
 
-    expect((screen.getByLabelText(/tags/i) as HTMLInputElement).value).toBe("");
+    expect(
+      (screen.getByLabelText(/etiquetas/i) as HTMLInputElement).value,
+    ).toBe("");
   });
 
   it("edit mode: error on non-ok GET response shows load error", async () => {
@@ -749,10 +757,12 @@ describe("PostFormPage P-07 slug-change gate", () => {
     });
 
     // Submit
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-    await acceptPostDialog(/continue/i);
-    expect(screen.getByRole("dialog").textContent).toMatch(/save changes/i);
-    await acceptPostDialog(/confirm/i);
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    await acceptPostDialog(/continuar/i);
+    expect(screen.getByRole("dialog").textContent).toMatch(
+      /guardar los cambios/i,
+    );
+    await acceptPostDialog(/confirmar/i);
 
     // PATCH was sent (both confirms accepted)
     await waitFor(() => {
@@ -792,7 +802,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
       target: { value: "new-slug" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await cancelPostDialog();
 
     // No PATCH — only the initial GET was called
@@ -831,8 +841,8 @@ describe("PostFormPage P-07 slug-change gate", () => {
       target: { value: "new-slug" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-    await acceptPostDialog(/continue/i);
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    await acceptPostDialog(/continuar/i);
     await cancelPostDialog();
 
     // No PATCH sent
@@ -877,7 +887,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
       target: { value: "changed-draft-slug" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     // Wait for PATCH to be sent (save still happens)
@@ -920,7 +930,7 @@ describe("PostFormPage P-07 slug-change gate", () => {
       target: { value: "changed-slug" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
@@ -959,11 +969,11 @@ describe("PostFormPage P-07 slug-change gate", () => {
     });
 
     // Slug unchanged — only change title
-    fireEvent.change(screen.getByLabelText(/^title/i), {
+    fireEvent.change(screen.getByLabelText(/^título/i), {
       target: { value: "Updated Title" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
@@ -1164,12 +1174,12 @@ describe("PostFormPage downloads", () => {
     await waitFor(() => expect(screen.getByTestId("post-form")).toBeTruthy());
     const first = screen.getByTestId("post-form-download-widget-file-1");
     const second = screen.getByTestId("post-form-download-widget-file-2");
-    fireEvent.change(within(first).getByLabelText(/upload post download/i), { target: { files: [new File(["x"], "new.pdf")] } });
-    fireEvent.click(within(second).getByRole("button", { name: /remove/i }));
+    fireEvent.change(within(first).getByTestId("file-upload-input"), { target: { files: [new File(["x"], "new.pdf")] } });
+    fireEvent.click(within(second).getByRole("button", { name: /quitar/i }));
     expect(screen.queryByTestId("post-form-download-link-file-2")).toBeNull();
     finishUpload({ ok: true, json: () => Promise.resolve({ id: "file-new" }) } as Response);
     await waitFor(() => expect(screen.getByTestId("post-form-download-link-file-new")).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: /save post/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar publicación/i }));
     await acceptPostDialog();
     await waitFor(() => expect(screen.getByTestId("post-form-save-success")).toBeTruthy());
     const save = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(([, init]) => (init as RequestInit)?.method === "PATCH");
@@ -1241,7 +1251,7 @@ describe("PostFormPage downloads", () => {
     fireEvent.change(labelInput, { target: { value: "Updated Guide" } });
 
     // Submit
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {
@@ -1291,7 +1301,7 @@ describe("PostFormPage downloads", () => {
     ) as HTMLInputElement;
     fireEvent.change(labelInput, { target: { value: "" } });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
     await acceptPostDialog();
 
     await waitFor(() => {

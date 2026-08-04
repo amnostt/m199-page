@@ -104,15 +104,17 @@ describe("OutingFormPage create mode", () => {
       <OutingFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />,
     );
 
-    expect(screen.getByLabelText(/title/i)).toBeTruthy();
+    expect(screen.getByLabelText(/título/i)).toBeTruthy();
     expect(screen.getByLabelText(/slug/i)).toBeTruthy();
-    expect(screen.getByLabelText(/date.*time/i)).toBeTruthy();
-    expect(screen.getByLabelText(/location/i)).toBeTruthy();
-    expect(screen.getByLabelText(/description/i)).toBeTruthy();
-    expect(screen.getByLabelText(/status/i)).toBeTruthy();
+    expect(screen.getByLabelText(/fecha y hora/i)).toBeTruthy();
+    expect(screen.getByLabelText(/ubicación/i)).toBeTruthy();
+    expect(screen.getByLabelText(/descripción/i)).toBeTruthy();
+    expect(screen.getByLabelText(/estado/i)).toBeTruthy();
 
     // dateTime must be a datetime-local input (HTML semantics bind to ISO)
-    const dateField = screen.getByLabelText(/date.*time/i) as HTMLInputElement;
+    const dateField = screen.getByLabelText(
+      /fecha y hora/i,
+    ) as HTMLInputElement;
     expect(dateField.type).toBe("datetime-local");
   });
 
@@ -124,22 +126,22 @@ describe("OutingFormPage create mode", () => {
     );
 
     expect(globalThis.fetch).not.toHaveBeenCalled();
-    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+    expect((screen.getByLabelText(/título/i) as HTMLInputElement).value).toBe(
       "",
     );
     expect((screen.getByLabelText(/slug/i) as HTMLInputElement).value).toBe("");
     expect(
-      (screen.getByLabelText(/date.*time/i) as HTMLInputElement).value,
+      (screen.getByLabelText(/fecha y hora/i) as HTMLInputElement).value,
     ).toBe("");
-    expect((screen.getByLabelText(/location/i) as HTMLInputElement).value).toBe(
-      "",
-    );
     expect(
-      (screen.getByLabelText(/description/i) as HTMLInputElement).value,
+      (screen.getByLabelText(/ubicación/i) as HTMLInputElement).value,
+    ).toBe("");
+    expect(
+      (screen.getByLabelText(/descripción/i) as HTMLInputElement).value,
     ).toBe("");
 
     // Status defaults to DRAFT
-    expect((screen.getByLabelText(/status/i) as HTMLSelectElement).value).toBe(
+    expect((screen.getByLabelText(/estado/i) as HTMLSelectElement).value).toBe(
       "DRAFT",
     );
   });
@@ -168,27 +170,27 @@ describe("OutingFormPage create mode", () => {
       <OutingFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />,
     );
 
-    fireEvent.change(screen.getByLabelText(/title/i), {
+    fireEvent.change(screen.getByLabelText(/título/i), {
       target: { value: "Camp Day" },
     });
     fireEvent.change(screen.getByLabelText(/slug/i), {
       target: { value: "camp-day" },
     });
-    fireEvent.change(screen.getByLabelText(/date.*time/i), {
+    fireEvent.change(screen.getByLabelText(/fecha y hora/i), {
       target: { value: "2026-07-15T10:00" },
     });
-    fireEvent.change(screen.getByLabelText(/location/i), {
+    fireEvent.change(screen.getByLabelText(/ubicación/i), {
       target: { value: "Barrio Norte" },
     });
-    fireEvent.change(screen.getByLabelText(/description/i), {
+    fireEvent.change(screen.getByLabelText(/descripción/i), {
       target: { value: "A great day" },
     });
-    fireEvent.change(screen.getByLabelText(/status/i), {
+    fireEvent.change(screen.getByLabelText(/estado/i), {
       target: { value: "DRAFT" },
     });
 
     // Save Draft
-    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar borrador/i }));
 
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalled();
@@ -238,26 +240,28 @@ describe("OutingFormPage create mode", () => {
       <OutingFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />,
     );
 
-    fireEvent.change(screen.getByLabelText(/title/i), {
+    fireEvent.change(screen.getByLabelText(/título/i), {
       target: { value: "Camp Day" },
     });
     fireEvent.change(screen.getByLabelText(/slug/i), {
       target: { value: "camp-day" },
     });
-    fireEvent.change(screen.getByLabelText(/date.*time/i), {
+    fireEvent.change(screen.getByLabelText(/fecha y hora/i), {
       target: { value: "2026-07-15T10:00" },
     });
-    fireEvent.change(screen.getByLabelText(/location/i), {
+    fireEvent.change(screen.getByLabelText(/ubicación/i), {
       target: { value: "Barrio Norte" },
     });
-    fireEvent.change(screen.getByLabelText(/description/i), {
+    fireEvent.change(screen.getByLabelText(/descripción/i), {
       target: { value: "A great day" },
     });
-    fireEvent.change(screen.getByLabelText(/status/i), {
+    fireEvent.change(screen.getByLabelText(/estado/i), {
       target: { value: "PUBLISHED" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save publish/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /guardar como publicada/i }),
+    );
 
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalled();
@@ -288,20 +292,20 @@ describe("OutingFormPage create mode", () => {
       <OutingFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />,
     );
 
-    fireEvent.change(screen.getByLabelText(/title/i), {
+    fireEvent.change(screen.getByLabelText(/título/i), {
       target: { value: "Camp Day" },
     });
-    fireEvent.change(screen.getByLabelText(/date.*time/i), {
+    fireEvent.change(screen.getByLabelText(/fecha y hora/i), {
       target: { value: "2026-07-15T10:00" },
     });
-    fireEvent.change(screen.getByLabelText(/location/i), {
+    fireEvent.change(screen.getByLabelText(/ubicación/i), {
       target: { value: "Barrio Norte" },
     });
-    fireEvent.change(screen.getByLabelText(/description/i), {
+    fireEvent.change(screen.getByLabelText(/descripción/i), {
       target: { value: "A great day" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar borrador/i }));
 
     expect(confirmSpy).toHaveBeenCalled();
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -318,17 +322,17 @@ describe("OutingFormPage create mode", () => {
       <OutingFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />,
     );
 
-    fireEvent.change(screen.getByLabelText(/date.*time/i), {
+    fireEvent.change(screen.getByLabelText(/fecha y hora/i), {
       target: { value: "2026-07-15T10:00" },
     });
-    fireEvent.change(screen.getByLabelText(/location/i), {
+    fireEvent.change(screen.getByLabelText(/ubicación/i), {
       target: { value: "Barrio Norte" },
     });
-    fireEvent.change(screen.getByLabelText(/description/i), {
+    fireEvent.change(screen.getByLabelText(/descripción/i), {
       target: { value: "A great day" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar borrador/i }));
 
     expect(screen.getByTestId("outing-form-validation-error")).toBeTruthy();
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -360,29 +364,29 @@ describe("OutingFormPage create mode", () => {
       <OutingFormPage mode="create" onSaved={onSaved} onCancel={vi.fn()} />,
     );
 
-    fireEvent.change(screen.getByLabelText(/title/i), {
+    fireEvent.change(screen.getByLabelText(/título/i), {
       target: { value: "Camp Day" },
     });
     fireEvent.change(screen.getByLabelText(/slug/i), {
       target: { value: "duplicate-slug" },
     });
-    fireEvent.change(screen.getByLabelText(/date.*time/i), {
+    fireEvent.change(screen.getByLabelText(/fecha y hora/i), {
       target: { value: "2026-07-15T10:00" },
     });
-    fireEvent.change(screen.getByLabelText(/location/i), {
+    fireEvent.change(screen.getByLabelText(/ubicación/i), {
       target: { value: "Barrio Norte" },
     });
-    fireEvent.change(screen.getByLabelText(/description/i), {
+    fireEvent.change(screen.getByLabelText(/descripción/i), {
       target: { value: "A great day" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar borrador/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId("outing-form-save-error")).toBeTruthy();
     });
 
-    expect(screen.getByText(/slug must be unique/i)).toBeTruthy();
+    expect(screen.getByText(/slug debe ser único/i)).toBeTruthy();
     // onSaved MUST NOT have been called — false success is forbidden.
     expect(onSaved).not.toHaveBeenCalled();
 
@@ -415,8 +419,12 @@ describe("OutingFormPage edit mode", () => {
       expect(screen.getByTestId("outing-form")).toBeTruthy();
     });
 
-    expect(screen.queryByRole("button", { name: /save draft/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /save publish/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /guardar borrador/i }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /guardar como publicada/i }),
+    ).toBeNull();
   });
 
   it("GETs /outings/admin on mount, finds the row by slug, and populates the form (dateTime → datetime-local)", async () => {
@@ -458,7 +466,7 @@ describe("OutingFormPage edit mode", () => {
       expect(screen.getByTestId("outing-form")).toBeTruthy();
     });
 
-    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+    expect((screen.getByLabelText(/título/i) as HTMLInputElement).value).toBe(
       "Camp Day",
     );
     expect((screen.getByLabelText(/slug/i) as HTMLInputElement).value).toBe(
@@ -466,15 +474,15 @@ describe("OutingFormPage edit mode", () => {
     );
     // dateTime is converted from ISO UTC to the HTML datetime-local prefix.
     expect(
-      (screen.getByLabelText(/date.*time/i) as HTMLInputElement).value,
+      (screen.getByLabelText(/fecha y hora/i) as HTMLInputElement).value,
     ).toBe("2026-07-15T10:00");
-    expect((screen.getByLabelText(/location/i) as HTMLInputElement).value).toBe(
-      "Barrio Norte",
-    );
     expect(
-      (screen.getByLabelText(/description/i) as HTMLInputElement).value,
+      (screen.getByLabelText(/ubicación/i) as HTMLInputElement).value,
+    ).toBe("Barrio Norte");
+    expect(
+      (screen.getByLabelText(/descripción/i) as HTMLInputElement).value,
     ).toBe("An existing outing description");
-    expect((screen.getByLabelText(/status/i) as HTMLSelectElement).value).toBe(
+    expect((screen.getByLabelText(/estado/i) as HTMLSelectElement).value).toBe(
       "DRAFT",
     );
 
@@ -508,7 +516,7 @@ describe("OutingFormPage edit mode", () => {
       expect(screen.getByTestId("outing-form-load-error")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /back to outings/i }));
+    fireEvent.click(screen.getByRole("button", { name: /volver a salidas/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
@@ -595,11 +603,13 @@ describe("OutingFormPage edit mode", () => {
     });
 
     // Edit an unrelated field (title).
-    fireEvent.change(screen.getByLabelText(/title/i), {
+    fireEvent.change(screen.getByLabelText(/título/i), {
       target: { value: "Camp Day (edited)" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save publish/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /guardar como publicada/i }),
+    );
 
     await waitFor(() => {
       const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
@@ -663,7 +673,7 @@ describe("OutingFormPage edit mode", () => {
 
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockClear();
 
-    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^cancelar$/i }));
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -695,19 +705,19 @@ describe("OutingFormPage file uploads", () => {
       <OutingFormPage mode="create" onSaved={vi.fn()} onCancel={vi.fn()} />,
     );
 
-    fireEvent.change(screen.getByLabelText(/title/i), {
+    fireEvent.change(screen.getByLabelText(/título/i), {
       target: { value: "Camp Day" },
     });
     fireEvent.change(screen.getByLabelText(/slug/i), {
       target: { value: "camp-day" },
     });
-    fireEvent.change(screen.getByLabelText(/date.*time/i), {
+    fireEvent.change(screen.getByLabelText(/fecha y hora/i), {
       target: { value: "2026-07-15T10:00" },
     });
-    fireEvent.change(screen.getByLabelText(/location/i), {
+    fireEvent.change(screen.getByLabelText(/ubicación/i), {
       target: { value: "Barrio Norte" },
     });
-    fireEvent.change(screen.getByLabelText(/description/i), {
+    fireEvent.change(screen.getByLabelText(/descripción/i), {
       target: { value: "A great day" },
     });
 
@@ -726,7 +736,7 @@ describe("OutingFormPage file uploads", () => {
     });
 
     // Save Draft
-    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar borrador/i }));
 
     await waitFor(() => {
       const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;

@@ -152,7 +152,7 @@ describe("OutingsPage list → create", () => {
     // The list view's "New Outing" button fires onCreateOuting on the
     // owner, which flips the view to "create". The form is rendered with
     // empty fields — no GET is issued in create mode.
-    fireEvent.click(screen.getByRole("button", { name: /new outing/i }));
+    fireEvent.click(screen.getByRole("button", { name: /nueva salida/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId("outing-form")).toBeTruthy();
@@ -165,8 +165,8 @@ describe("OutingsPage list → create", () => {
     // The form surface advertises a New Outing header and shows empty
     // title/slug fields. Create mode does NOT issue a GET — the form
     // opens empty.
-    expect(screen.getByText(/new outing/i)).toBeTruthy();
-    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+    expect(screen.getByText(/nueva salida/i)).toBeTruthy();
+    expect((screen.getByLabelText(/título/i) as HTMLInputElement).value).toBe(
       "",
     );
     expect((screen.getByLabelText(/slug/i) as HTMLInputElement).value).toBe("");
@@ -191,7 +191,7 @@ describe("OutingsPage list → edit(slug)", () => {
     });
 
     // The first Edit button corresponds to the first row (slug: camp-day).
-    const editButtons = screen.getAllByRole("button", { name: /^edit$/i });
+    const editButtons = screen.getAllByRole("button", { name: /^editar$/i });
     fireEvent.click(editButtons[0]!);
 
     // The owner flips to edit mode. The form issues GET /outings/admin
@@ -206,8 +206,8 @@ describe("OutingsPage list → edit(slug)", () => {
     // The form is populated with the row matching the clicked slug —
     // "Camp Day" / "camp-day" comes from MOCK_OUTINGS[0]. The header
     // advertises "Edit Outing" (vs. "New Outing" for create).
-    expect(screen.getByText(/edit outing/i)).toBeTruthy();
-    expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(
+    expect(screen.getByText(/editar salida/i)).toBeTruthy();
+    expect((screen.getByLabelText(/título/i) as HTMLInputElement).value).toBe(
       "Camp Day",
     );
     expect((screen.getByLabelText(/slug/i) as HTMLInputElement).value).toBe(
@@ -233,14 +233,14 @@ describe("OutingsPage back to list", () => {
       expect(screen.getByTestId("outings-list-table")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /new outing/i }));
+    fireEvent.click(screen.getByRole("button", { name: /nueva salida/i }));
     await waitFor(() => {
       expect(screen.getByTestId("outing-form")).toBeTruthy();
     });
 
     // Cancel returns the owner to the list view. The form's onCancel
     // flips the view state back to "list".
-    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^cancelar$/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId("outings-list-table")).toBeTruthy();
@@ -260,13 +260,13 @@ describe("OutingsPage back to list", () => {
       expect(screen.getByTestId("outings-list-table")).toBeTruthy();
     });
 
-    const editButtons = screen.getAllByRole("button", { name: /^edit$/i });
+    const editButtons = screen.getAllByRole("button", { name: /^editar$/i });
     fireEvent.click(editButtons[0]!);
     await waitFor(() => {
       expect(screen.getByTestId("outing-form")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^cancelar$/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId("outings-list-table")).toBeTruthy();

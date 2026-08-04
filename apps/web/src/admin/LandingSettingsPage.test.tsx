@@ -66,7 +66,7 @@ describe("LandingSettingsPage load", () => {
     render(<LandingSettingsPage />);
 
     expect(screen.getByTestId("landing-settings-loading")).toBeTruthy();
-    expect(screen.getByText(/loading/i)).toBeTruthy();
+    expect(screen.getByText(/cargando/i)).toBeTruthy();
   });
 
   it("fetches /landing/admin on mount and displays settings", async () => {
@@ -89,30 +89,31 @@ describe("LandingSettingsPage load", () => {
 
     // All fields are populated with API values
     expect(
-      (screen.getByLabelText(/mission/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/misión/i) as HTMLTextAreaElement).value,
     ).toBe(SAMPLE_SETTINGS.mission);
     expect(
-      (screen.getByLabelText(/hero title/i) as HTMLInputElement).value,
+      (screen.getByLabelText("Título principal") as HTMLInputElement).value,
     ).toBe(SAMPLE_SETTINGS.heroTitle);
     expect(
-      (screen.getByLabelText(/hero subtitle/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText("Subtítulo principal") as HTMLTextAreaElement)
+        .value,
     ).toBe(SAMPLE_SETTINGS.heroSubtitle);
     expect(screen.getByTestId("landing-hero-asset-link").textContent).toBe(
       SAMPLE_SETTINGS.heroImageId,
     );
     expect(
-      (screen.getByLabelText(/vision/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/visión/i) as HTMLTextAreaElement).value,
     ).toBe(SAMPLE_SETTINGS.vision);
     expect(
-      (screen.getByLabelText(/description/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).value,
     ).toBe(SAMPLE_SETTINGS.description);
-    expect((screen.getByLabelText(/video/i) as HTMLInputElement).value).toBe(
-      SAMPLE_SETTINGS.featuredVideoUrl,
-    );
-    expect((screen.getByLabelText(/email/i) as HTMLInputElement).value).toBe(
-      SAMPLE_SETTINGS.contactEmail,
-    );
-    expect((screen.getByLabelText(/phone/i) as HTMLInputElement).value).toBe(
+    expect(
+      (screen.getByLabelText(/video destacado/i) as HTMLInputElement).value,
+    ).toBe(SAMPLE_SETTINGS.featuredVideoUrl);
+    expect(
+      (screen.getByLabelText(/correo electrónico/i) as HTMLInputElement).value,
+    ).toBe(SAMPLE_SETTINGS.contactEmail);
+    expect((screen.getByLabelText(/teléfono/i) as HTMLInputElement).value).toBe(
       SAMPLE_SETTINGS.contactPhone,
     );
   });
@@ -131,21 +132,21 @@ describe("LandingSettingsPage load", () => {
 
     // All fields must be empty strings, never "null"
     expect(
-      (screen.getByLabelText(/mission/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/misión/i) as HTMLTextAreaElement).value,
     ).toBe("");
     expect(
-      (screen.getByLabelText(/vision/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/visión/i) as HTMLTextAreaElement).value,
     ).toBe("");
     expect(
-      (screen.getByLabelText(/description/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).value,
     ).toBe("");
-    expect((screen.getByLabelText(/video/i) as HTMLInputElement).value).toBe(
-      "",
-    );
-    expect((screen.getByLabelText(/email/i) as HTMLInputElement).value).toBe(
-      "",
-    );
-    expect((screen.getByLabelText(/phone/i) as HTMLInputElement).value).toBe(
+    expect(
+      (screen.getByLabelText(/video destacado/i) as HTMLInputElement).value,
+    ).toBe("");
+    expect(
+      (screen.getByLabelText(/correo electrónico/i) as HTMLInputElement).value,
+    ).toBe("");
+    expect((screen.getByLabelText(/teléfono/i) as HTMLInputElement).value).toBe(
       "",
     );
   });
@@ -159,7 +160,7 @@ describe("LandingSettingsPage load", () => {
       expect(screen.getByTestId("landing-settings-load-error")).toBeTruthy();
     });
 
-    expect(screen.getByText(/failed to load/i)).toBeTruthy();
+    expect(screen.getByText(/no se pudo cargar/i)).toBeTruthy();
     // Form should NOT be visible on load failure
     expect(screen.queryByTestId("landing-settings-form")).toBeNull();
   });
@@ -203,10 +204,10 @@ describe("LandingSettingsPage load", () => {
     });
 
     expect(
-      (screen.getByLabelText(/mission/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/misión/i) as HTMLTextAreaElement).value,
     ).toBe("Only mission set");
     expect(
-      (screen.getByLabelText(/vision/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/visión/i) as HTMLTextAreaElement).value,
     ).toBe("");
   });
 });
@@ -233,14 +234,14 @@ describe("LandingSettingsPage edit and save", () => {
     await renderWithSettings();
 
     // Mission field is editable (textarea)
-    const missionField = screen.getByLabelText(/mission/i);
+    const missionField = screen.getByLabelText(/misión/i);
     fireEvent.change(missionField, {
       target: { value: "Updated mission" },
     });
     expect((missionField as HTMLTextAreaElement).value).toBe("Updated mission");
 
     // Video URL field is editable (input)
-    const videoField = screen.getByLabelText(/video/i);
+    const videoField = screen.getByLabelText(/video destacado/i);
     fireEvent.change(videoField, {
       target: { value: "https://new-video.example.com" },
     });
@@ -254,10 +255,10 @@ describe("LandingSettingsPage edit and save", () => {
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/save/i));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/guardar/i));
   });
 
   it("does NOT send PUT when confirm is cancelled", async () => {
@@ -268,7 +269,7 @@ describe("LandingSettingsPage edit and save", () => {
 
     vi.spyOn(window, "confirm").mockReturnValue(false);
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
 
     // No PUT request should have been made after cancel
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -287,11 +288,11 @@ describe("LandingSettingsPage edit and save", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
     // Edit the mission field
-    fireEvent.change(screen.getByLabelText(/mission/i), {
+    fireEvent.change(screen.getByLabelText(/misión/i), {
       target: { value: "Saved mission" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
 
     await waitFor(() => {
       // PUT should have been called with the LP-01 base fields
@@ -346,7 +347,7 @@ describe("LandingSettingsPage edit and save", () => {
         json: () => Promise.resolve({ ...SAMPLE_SETTINGS, ...uploadedAsset }),
       });
 
-    fireEvent.change(screen.getByLabelText(/hero title/i), {
+    fireEvent.change(screen.getByLabelText("Título principal"), {
       target: { value: "Updated hero" },
     });
     fireEvent.change(screen.getByTestId("file-upload-input"), {
@@ -366,7 +367,7 @@ describe("LandingSettingsPage edit and save", () => {
     );
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
 
     await waitFor(() => {
       const putCall = (
@@ -401,11 +402,11 @@ describe("LandingSettingsPage edit and save", () => {
       expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
     });
 
-    fireEvent.change(screen.getByLabelText(/hero subtitle/i), {
+    fireEvent.change(screen.getByLabelText("Subtítulo principal"), {
       target: { value: "Retry this subtitle" },
     });
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId("landing-settings-save-error")).toBeTruthy();
@@ -421,7 +422,7 @@ describe("LandingSettingsPage edit and save", () => {
     expect(body).not.toHaveProperty("heroImageId");
     expect(body.heroSubtitle).toBe("Retry this subtitle");
     expect(
-      (screen.getByLabelText(/hero subtitle/i) as HTMLInputElement).value,
+      (screen.getByLabelText("Subtítulo principal") as HTMLInputElement).value,
     ).toBe("Retry this subtitle");
   });
 
@@ -437,7 +438,7 @@ describe("LandingSettingsPage edit and save", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("file-upload-error").textContent).toBe(
-        "Upload failed",
+        "No se pudo cargar el archivo.",
       );
     });
     expect(screen.getByTestId("landing-hero-asset-link").textContent).toBe(
@@ -455,13 +456,15 @@ describe("LandingSettingsPage edit and save", () => {
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId("landing-settings-save-success")).toBeTruthy();
     });
 
-    expect(screen.getByText(/settings saved|saved successfully/i)).toBeTruthy();
+    expect(
+      screen.getByText(/configuración guardada|guardada correctamente/i),
+    ).toBeTruthy();
   });
 
   it("shows error message on save failure", async () => {
@@ -471,13 +474,13 @@ describe("LandingSettingsPage edit and save", () => {
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId("landing-settings-save-error")).toBeTruthy();
     });
 
-    expect(screen.getByText(/failed to save/i)).toBeTruthy();
+    expect(screen.getByText(/no se pudo guardar/i)).toBeTruthy();
   });
 
   it("disables save button while submitting", async () => {
@@ -492,11 +495,13 @@ describe("LandingSettingsPage edit and save", () => {
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
 
     await waitFor(() => {
-      const saveButton = screen.getByRole("button", { name: /save/i });
+      const saveButton = screen.getByRole("button", { name: /guardar/i });
       expect((saveButton as HTMLButtonElement).disabled).toBe(true);
+      expect(saveButton.getAttribute("aria-busy")).toBe("true");
+      expect(screen.getByText(/guardando cambios/i)).toBeTruthy();
     });
   });
 });
@@ -532,11 +537,12 @@ describe("LandingSettingsPage triangulation", () => {
 
     // After load, fields should be editable (not disabled)
     expect(
-      (screen.getByLabelText(/mission/i) as HTMLTextAreaElement).disabled,
+      (screen.getByLabelText(/misión/i) as HTMLTextAreaElement).disabled,
     ).toBe(false);
-    expect((screen.getByLabelText(/email/i) as HTMLInputElement).disabled).toBe(
-      false,
-    );
+    expect(
+      (screen.getByLabelText(/correo electrónico/i) as HTMLInputElement)
+        .disabled,
+    ).toBe(false);
   });
 });
 
@@ -580,13 +586,18 @@ describe("LandingSettingsPage featured selection", () => {
     fireEvent.change(screen.getByTestId("featured-outing-select"), {
       target: { value: "o2" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /feature outing/i }));
+    fireEvent.click(screen.getByRole("button", { name: /destacar salida/i }));
     await waitFor(() =>
       expect(globalThis.fetch).toHaveBeenCalledWith(
         "/outings/admin/o2/feature",
         expect.objectContaining({ method: "POST" }),
       ),
     );
+    await waitFor(() => {
+      expect(screen.getByTestId("featured-outing-success").textContent).toMatch(
+        /actualizada correctamente/i,
+      );
+    });
   });
 
   it("shows a featured-outing error when mutation or authoritative refresh fails", async () => {
@@ -622,11 +633,11 @@ describe("LandingSettingsPage featured selection", () => {
     fireEvent.change(screen.getByTestId("featured-outing-select"), {
       target: { value: "o2" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /feature outing/i }));
+    fireEvent.click(screen.getByRole("button", { name: /destacar salida/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId("featured-outing-error").textContent).toMatch(
-        /failed to update/i,
+        /no se pudo actualizar/i,
       );
     });
   });
@@ -663,11 +674,11 @@ describe("LandingSettingsPage featured selection", () => {
     render(<LandingSettingsPage />);
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: /clear featured outing/i }),
+        screen.getByRole("button", { name: /quitar salida destacada/i }),
       ).toBeTruthy(),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /clear featured outing/i }),
+      screen.getByRole("button", { name: /quitar salida destacada/i }),
     );
     await waitFor(() =>
       expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -677,7 +688,7 @@ describe("LandingSettingsPage featured selection", () => {
     );
     await waitFor(() =>
       expect(
-        screen.queryByRole("button", { name: /clear featured outing/i }),
+        screen.queryByRole("button", { name: /quitar salida destacada/i }),
       ).toBeNull(),
     );
   });

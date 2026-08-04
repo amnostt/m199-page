@@ -26,6 +26,7 @@ import {
 } from "./outingsApi.js";
 import { adminFetch } from "./session.js";
 import { AdminRequestError } from "./session.js";
+import { mapAdminError } from "./adminErrors.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,7 +97,9 @@ export function OutingsListPage({
       if (
         featuredOutingId &&
         featuredOutingId !== outing.id &&
-        !window.confirm(`Replace the featured outing with "${outing.title}"?`)
+        !window.confirm(
+          `¿Reemplazar la salida destacada por "${outing.title}"?`,
+        )
       )
         return;
       try {
@@ -105,7 +108,7 @@ export function OutingsListPage({
       } catch {
         setActionErrors((prev) => ({
           ...prev,
-          [outing.id]: "Failed to update featured outing.",
+          [outing.id]: "No se pudo actualizar la salida destacada.",
         }));
       }
     },
@@ -119,7 +122,7 @@ export function OutingsListPage({
     } catch {
       setActionErrors((prev) => ({
         ...prev,
-        featured: "Failed to update featured outing.",
+        featured: "No se pudo actualizar la salida destacada.",
       }));
     }
   }, [refreshFeaturedState]);
@@ -130,7 +133,7 @@ export function OutingsListPage({
 
   const handleArchive = useCallback(
     async (outing: OutingAdmin) => {
-      if (!window.confirm(`Archive "${outing.title}"?`)) return;
+      if (!window.confirm(`¿Archivar "${outing.title}"?`)) return;
 
       setActionStates((prev) => ({ ...prev, [outing.id]: "pending" }));
       setActionErrors((prev) => {
@@ -166,7 +169,10 @@ export function OutingsListPage({
       } catch (err) {
         setActionStates((prev) => ({ ...prev, [outing.id]: "error" }));
         if (err instanceof AdminRequestError) {
-          setActionErrors((prev) => ({ ...prev, [outing.id]: err.message }));
+          setActionErrors((prev) => ({
+            ...prev,
+            [outing.id]: mapAdminError(err).root,
+          }));
         }
       }
     },
@@ -181,7 +187,7 @@ export function OutingsListPage({
   if (loadError) {
     return (
       <div data-testid="outings-list-load-error">
-        <p>Failed to load outings. Please try again.</p>
+        <p>No se pudieron cargar las salidas. Intenta de nuevo.</p>
       </div>
     );
   }
@@ -190,7 +196,7 @@ export function OutingsListPage({
   if (outings === null) {
     return (
       <div data-testid="outings-list-loading">
-        <p>Loading…</p>
+        <p>Cargando…</p>
       </div>
     );
   }
@@ -199,19 +205,19 @@ export function OutingsListPage({
   if (outings.length === 0) {
     return (
       <div data-testid="outings-list-empty">
-        <p>No outings found.</p>
+        <p>No se encontraron salidas.</p>
         {onCreateOuting && (
           <button type="button" onClick={onCreateOuting}>
-            New Outing
+            Nueva salida
           </button>
         )}
-        <label htmlFor="outings-filter-status">Status</label>
+        <label htmlFor="outings-filter-status">Estado</label>
         <select
           id="outings-filter-status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as OutingsFilter)}
         >
-          <option value="">All</option>
+          <option value="">Todas</option>
           <option value="DRAFT">DRAFT</option>
           <option value="PUBLISHED">PUBLISHED</option>
           <option value="ARCHIVED">ARCHIVED</option>
@@ -223,28 +229,28 @@ export function OutingsListPage({
   // Loaded — render table
   return (
     <div data-testid="outings-list-table">
-      <h2>Outings</h2>
+      <h2>Salidas</h2>
 
       {featuredOutingId && (
         <button type="button" onClick={handleClearFeatured}>
-          Clear featured outing
+          Quitar salida destacada
         </button>
       )}
       {actionErrors.featured && <p>{actionErrors.featured}</p>}
 
       {onCreateOuting && (
         <button type="button" onClick={onCreateOuting}>
-          New Outing
+          Nueva salida
         </button>
       )}
 
-      <label htmlFor="outings-filter-status">Status</label>
+      <label htmlFor="outings-filter-status">Estado</label>
       <select
         id="outings-filter-status"
         value={statusFilter}
         onChange={(e) => setStatusFilter(e.target.value as OutingsFilter)}
       >
-        <option value="">All</option>
+        <option value="">Todas</option>
         <option value="DRAFT">DRAFT</option>
         <option value="PUBLISHED">PUBLISHED</option>
         <option value="ARCHIVED">ARCHIVED</option>
@@ -253,12 +259,12 @@ export function OutingsListPage({
       <table>
         <thead>
           <tr>
-            <th>Title</th>
+            <th>Título</th>
             <th>Slug</th>
-            <th>Status</th>
-            <th>Location</th>
+            <th>Estado</th>
+            <th>Ubicación</th>
             {onEditOuting && <th />}
-            <th>Actions</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -274,7 +280,7 @@ export function OutingsListPage({
                     type="button"
                     onClick={() => onEditOuting(outing.slug)}
                   >
-                    Edit
+                    Editar
                   </button>
                 </td>
               )}
@@ -283,7 +289,7 @@ export function OutingsListPage({
                   <>
                     {featuredOutingId === outing.id && (
                       <span data-testid={`featured-outing-${outing.id}`}>
-                        Featured
+                        Destacada
                       </span>
                     )}
                     <button
@@ -291,7 +297,7 @@ export function OutingsListPage({
                       data-testid={`feature-outing-${outing.id}`}
                       onClick={() => handleFeature(outing)}
                     >
-                      Feature outing
+                      Destacar salida
                     </button>
                   </>
                 )}
@@ -302,12 +308,12 @@ export function OutingsListPage({
                     disabled={actionStates[outing.id] === "pending"}
                     onClick={() => handleArchive(outing)}
                   >
-                    Archive
+                    Archivar
                   </button>
                 )}
                 {actionStates[outing.id] === "error" && (
                   <span data-testid={`lifecycle-error-${outing.id}`}>
-                    Action failed
+                    Acción fallida
                   </span>
                 )}
                 {actionErrors[outing.id] && (

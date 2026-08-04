@@ -47,7 +47,7 @@ describe("VersesPage list states", () => {
     vi.mocked(listVerses).mockReturnValue(new Promise((r) => (resolve = r)));
     render(<VersesPage />);
 
-    expect(screen.getByText(/loading verses/i)).toBeTruthy();
+    expect(screen.getByText(/cargando versículos/i)).toBeTruthy();
     resolve([
       verse("1", "DRAFT"),
       verse("2", "PUBLISHED"),
@@ -71,14 +71,18 @@ describe("VersesPage list states", () => {
     vi.mocked(listVerses).mockRejectedValueOnce(new Error("Could not load"));
     render(<VersesPage />);
     await waitFor(() =>
-      expect(screen.getByText("Could not load")).toBeTruthy(),
+      expect(
+        screen.getByText(
+          "No se pudo completar la solicitud. Intenta de nuevo.",
+        ),
+      ).toBeTruthy(),
     );
     expect(screen.queryByTestId("verses-table")).toBeNull();
 
     vi.mocked(listVerses).mockResolvedValueOnce([]);
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     await waitFor(() =>
-      expect(screen.getByText(/no verses yet/i)).toBeTruthy(),
+      expect(screen.getByText(/todavía no hay versículos/i)).toBeTruthy(),
     );
   });
 });
@@ -87,11 +91,11 @@ describe("VersesPage creation", () => {
   it("rejects whitespace-only fields without a request", async () => {
     render(<VersesPage />);
     await waitFor(() =>
-      expect(screen.getByText(/no verses yet/i)).toBeTruthy(),
+      expect(screen.getByText(/todavía no hay versículos/i)).toBeTruthy(),
     );
-    fireEvent.click(screen.getByRole("button", { name: /create verse/i }));
-    expect(screen.getByText("Text is required.")).toBeTruthy();
-    expect(screen.getByText("Reference is required.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /crear versículo/i }));
+    expect(screen.getByText("El texto es obligatorio.")).toBeTruthy();
+    expect(screen.getByText("La referencia es obligatoria.")).toBeTruthy();
     expect(createVerse).not.toHaveBeenCalled();
   });
 
@@ -100,15 +104,15 @@ describe("VersesPage creation", () => {
     vi.mocked(createVerse).mockReturnValue(new Promise((r) => (resolve = r)));
     render(<VersesPage />);
     await waitFor(() =>
-      expect(screen.getByText(/no verses yet/i)).toBeTruthy(),
+      expect(screen.getByText(/todavía no hay versículos/i)).toBeTruthy(),
     );
-    fireEvent.change(screen.getByLabelText("Text"), {
+    fireEvent.change(screen.getByLabelText("Texto"), {
       target: { value: "  New text  " },
     });
-    fireEvent.change(screen.getByLabelText("Reference"), {
+    fireEvent.change(screen.getByLabelText("Referencia"), {
       target: { value: "  Ps 1:1  " },
     });
-    const submit = screen.getByRole("button", { name: /create verse/i });
+    const submit = screen.getByRole("button", { name: /crear versículo/i });
     fireEvent.click(submit);
     fireEvent.click(submit);
     expect(createVerse).toHaveBeenCalledTimes(1);
@@ -120,7 +124,7 @@ describe("VersesPage creation", () => {
 
     resolve(verse("new", "DRAFT"));
     await waitFor(() => expect(screen.getByText("Verse new")).toBeTruthy());
-    expect((screen.getByLabelText("Text") as HTMLTextAreaElement).value).toBe(
+    expect((screen.getByLabelText("Texto") as HTMLTextAreaElement).value).toBe(
       "",
     );
   });
@@ -129,17 +133,19 @@ describe("VersesPage creation", () => {
     vi.mocked(createVerse).mockRejectedValueOnce(new Error("Create failed"));
     render(<VersesPage />);
     await waitFor(() =>
-      expect(screen.getByText(/no verses yet/i)).toBeTruthy(),
+      expect(screen.getByText(/todavía no hay versículos/i)).toBeTruthy(),
     );
-    fireEvent.change(screen.getByLabelText("Text"), {
+    fireEvent.change(screen.getByLabelText("Texto"), {
       target: { value: "Text" },
     });
-    fireEvent.change(screen.getByLabelText("Reference"), {
+    fireEvent.change(screen.getByLabelText("Referencia"), {
       target: { value: "Ref" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /create verse/i }));
-    await waitFor(() => expect(screen.getByText("Create failed")).toBeTruthy());
-    expect((screen.getByLabelText("Text") as HTMLTextAreaElement).value).toBe(
+    fireEvent.click(screen.getByRole("button", { name: /crear versículo/i }));
+    await waitFor(() =>
+      expect(screen.getByText("No se pudo crear el versículo.")).toBeTruthy(),
+    );
+    expect((screen.getByLabelText("Texto") as HTMLTextAreaElement).value).toBe(
       "Text",
     );
   });
@@ -154,12 +160,12 @@ describe("VersesPage deletion", () => {
     vi.mocked(deleteVerse).mockResolvedValue(undefined);
     render(<VersesPage />);
     await waitFor(() => expect(screen.getByTestId("verse-row-1")).toBeTruthy());
-    const button = screen.getByRole("button", { name: "Delete" });
+    const button = screen.getByRole("button", { name: "Eliminar" });
     fireEvent.click(button);
     expect(deleteVerse).not.toHaveBeenCalled();
     fireEvent.click(button);
     expect(window.confirm).toHaveBeenLastCalledWith(
-      expect.stringContaining("permanently"),
+      expect.stringContaining("permanente"),
     );
     await waitFor(() => expect(screen.queryByTestId("verse-row-1")).toBeNull());
   });
@@ -176,13 +182,15 @@ describe("VersesPage deletion", () => {
     );
     render(<VersesPage />);
     await waitFor(() => expect(screen.getByTestId("verse-row-1")).toBeTruthy());
-    const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
+    const deleteButtons = screen.getAllByRole("button", { name: "Eliminar" });
     fireEvent.click(deleteButtons[0]!);
     fireEvent.click(deleteButtons[0]!);
     expect(deleteVerse).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("button", { name: "Deleting…" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Eliminando…" })).toBeTruthy();
     reject(new Error("Delete failed"));
-    await waitFor(() => expect(screen.getByText("Delete failed")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("No se pudo eliminar el elemento.")).toBeTruthy(),
+    );
     expect(screen.getByTestId("verse-row-1")).toBeTruthy();
   });
 });

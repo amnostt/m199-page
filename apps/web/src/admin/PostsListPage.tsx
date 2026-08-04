@@ -43,6 +43,16 @@ import {
 
 /** Maximum number of posts that can be featured simultaneously. */
 const MAX_FEATURED_POSTS = 3;
+const ACTION_LABELS = {
+  publish: "Publicar",
+  archive: "Archivar",
+  delete: "Eliminar",
+} as const;
+const ACTION_SUCCESS = {
+  publish: "Publicación realizada correctamente.",
+  archive: "Publicación archivada correctamente.",
+  delete: "Publicación eliminada correctamente.",
+} as const;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -156,11 +166,11 @@ export function PostsListPage({
         }
         setActionStates((prev) => ({ ...prev, [postId]: "idle" }));
         // prettier-ignore
-        toast.success(`${action[0]!.toUpperCase()}${action.slice(1)} completed.`);
+        toast.success(ACTION_SUCCESS[action]);
       } catch (error) {
         setActionStates((prev) => ({ ...prev, [postId]: "error" }));
         const mapped = mapAdminError(error);
-        toast.error(`${action[0]!.toUpperCase()}${action.slice(1)} failed.`, {
+        toast.error(`No se pudo ${ACTION_LABELS[action].toLowerCase()}.`, {
           description: mapped.root,
         });
       }
@@ -170,17 +180,17 @@ export function PostsListPage({
 
   // prettier-ignore
   // prettier-ignore
-  const requestAction = (post: PostListItem, action: Confirmation["action"]) => setConfirmation({ postId: post.id, action, message: action === "delete" ? `Delete "${post.title}"? This cannot be undone.` : `${action[0]!.toUpperCase()}${action.slice(1)} "${post.title}"?` });
+  const requestAction = (post: PostListItem, action: Confirmation["action"]) => setConfirmation({ postId: post.id, action, message: action === "delete" ? `¿Eliminar "${post.title}"? Esta acción no se puede deshacer.` : `${ACTION_LABELS[action]} "${post.title}"?` });
 
   // ------------------------------------------------------------------
   // Feature / unfeature handlers
   // ------------------------------------------------------------------
 
   // prettier-ignore
-  const handleFeature = useCallback(async (postId: string) => { setActionStates((prev) => ({ ...prev, [postId]: "pending" })); try { await featurePost(postId); setFeaturedPostIds((prev) => new Set(prev).add(postId)); setActionStates((prev) => ({ ...prev, [postId]: "idle" })); toast.success("Post featured."); } catch (error) { setActionStates((prev) => ({ ...prev, [postId]: "error" })); toast.error("Feature failed.", { description: mapAdminError(error).root }); } }, [toast]);
+  const handleFeature = useCallback(async (postId: string) => { setActionStates((prev) => ({ ...prev, [postId]: "pending" })); try { await featurePost(postId); setFeaturedPostIds((prev) => new Set(prev).add(postId)); setActionStates((prev) => ({ ...prev, [postId]: "idle" })); toast.success("Publicación destacada correctamente."); } catch (error) { setActionStates((prev) => ({ ...prev, [postId]: "error" })); toast.error("No se pudo destacar la publicación.", { description: mapAdminError(error).root }); } }, [toast]);
 
   // prettier-ignore
-  const handleUnfeature = useCallback(async (postId: string) => { setActionStates((prev) => ({ ...prev, [postId]: "pending" })); try { await unfeaturePost(postId); setFeaturedPostIds((prev) => { const next = new Set(prev); next.delete(postId); return next; }); setActionStates((prev) => ({ ...prev, [postId]: "idle" })); toast.success("Post unfeatured."); } catch (error) { setActionStates((prev) => ({ ...prev, [postId]: "error" })); toast.error("Unfeature failed.", { description: mapAdminError(error).root }); } }, [toast]);
+  const handleUnfeature = useCallback(async (postId: string) => { setActionStates((prev) => ({ ...prev, [postId]: "pending" })); try { await unfeaturePost(postId); setFeaturedPostIds((prev) => { const next = new Set(prev); next.delete(postId); return next; }); setActionStates((prev) => ({ ...prev, [postId]: "idle" })); toast.success("Publicación quitada de destacados."); } catch (error) { setActionStates((prev) => ({ ...prev, [postId]: "error" })); toast.error("No se pudo quitar la publicación de destacados.", { description: mapAdminError(error).root }); } }, [toast]);
 
   const featuredCount = featuredPostIds.size;
 
@@ -197,7 +207,7 @@ export function PostsListPage({
 
   const statusFilterSelect = (
     <>
-      <label htmlFor="posts-filter-status">Status</label>
+      <label htmlFor="posts-filter-status">Estado</label>
       <Select
         value={statusFilter || null}
         onValueChange={(value) =>
@@ -205,10 +215,10 @@ export function PostsListPage({
         }
       >
         <SelectTrigger id="posts-filter-status">
-          <SelectValue placeholder="All" />
+          <SelectValue placeholder="Todos" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={null}>All</SelectItem>
+          <SelectItem value={null}>Todos</SelectItem>
           <SelectItem value="DRAFT">DRAFT</SelectItem>
           <SelectItem value="PUBLISHED">PUBLISHED</SelectItem>
           <SelectItem value="ARCHIVED">ARCHIVED</SelectItem>
@@ -227,7 +237,7 @@ export function PostsListPage({
       <div data-testid="posts-list-load-error">
         <Alert variant="destructive">
           <AlertDescription>
-            Failed to load posts. Please try again.
+            No se pudieron cargar las publicaciones. Intenta de nuevo.
           </AlertDescription>
         </Alert>
       </div>
@@ -239,7 +249,7 @@ export function PostsListPage({
     return (
       <div data-testid="posts-list-loading">
         <div role="status" aria-live="polite">
-          Loading…
+          Cargando…
         </div>
       </div>
     );
@@ -249,10 +259,10 @@ export function PostsListPage({
   if (filteredPosts.length === 0) {
     return (
       <div data-testid="posts-list-empty">
-        <div role="status">No posts found.</div>
+        <div role="status">No se encontraron publicaciones.</div>
         {onCreatePost && (
           <Button type="button" onClick={onCreatePost}>
-            New Post
+            Nueva publicación
           </Button>
         )}
         {statusFilterSelect}
@@ -264,18 +274,18 @@ export function PostsListPage({
   // prettier-ignore
   return (
     <div data-testid="posts-list-table" ref={tableFallbackRef}>
-      <h2>Posts</h2>
+      <h2>Publicaciones</h2>
 
       {/* Featured cap display */}
       <span data-testid="featured-cap" role={featuredLoadError ? "alert" : "status"} aria-live="polite">
         {featuredLoadError
-          ? "Featured: unavailable"
-          : `Featured: ${featuredCount}/${MAX_FEATURED_POSTS}`}
+          ? "Destacadas: no disponible"
+          : `Destacadas: ${featuredCount}/${MAX_FEATURED_POSTS}`}
       </span>
 
       {onCreatePost && (
         <Button type="button" onClick={onCreatePost}>
-          New Post
+          Nueva publicación
         </Button>
       )}
 
@@ -284,12 +294,12 @@ export function PostsListPage({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Title</TableHead>
+            <TableHead>Título</TableHead>
             <TableHead>Slug</TableHead>
-            <TableHead>Status</TableHead>
-            {onEditPost && <TableHead>Manage</TableHead>}
-            <TableHead>Featured</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>Estado</TableHead>
+            {onEditPost && <TableHead>Administrar</TableHead>}
+            <TableHead>Destacada</TableHead>
+            <TableHead>Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -301,7 +311,7 @@ export function PostsListPage({
               {onEditPost && (
                 <TableCell>
                   <Button type="button" variant="outline" size="sm" onClick={() => onEditPost(post.slug)}>
-                    Edit
+                    Editar
                   </Button>
                 </TableCell>
               )}
@@ -318,9 +328,9 @@ export function PostsListPage({
                         actionStates[post.id] === "pending"
                       }
                       onClick={() => handleFeature(post.id)}
-                      aria-label={`Feature ${post.title}`}
+                      aria-label={`Destacar ${post.title}`}
                     >
-                      Feature
+                      Destacar
                     </Button>
                   )}
                 {featuredPostIds.has(post.id) && (
@@ -331,9 +341,9 @@ export function PostsListPage({
                       featuredLoadError || actionStates[post.id] === "pending"
                     }
                     onClick={() => handleUnfeature(post.id)}
-                    aria-label={`Unfeature ${post.title}`}
+                    aria-label={`Quitar ${post.title} de destacados`}
                   >
-                    Featured ★
+                    Destacada ★
                   </Button>
                 )}
               </TableCell>
@@ -345,7 +355,7 @@ export function PostsListPage({
                     disabled={actionStates[post.id] === "pending"}
                     onClick={() => requestAction(post, "publish")}
                   >
-                    Publish
+                    Publicar
                   </Button>
                 )}
                 {post.status === "PUBLISHED" && (
@@ -355,7 +365,7 @@ export function PostsListPage({
                     disabled={actionStates[post.id] === "pending"}
                     onClick={() => requestAction(post, "archive")}
                   >
-                    Archive
+                    Archivar
                   </Button>
                 )}
                 <Button
@@ -365,11 +375,11 @@ export function PostsListPage({
                   onClick={() => requestAction(post, "delete")}
                   variant="destructive"
                 >
-                  Delete
+                  Eliminar
                 </Button>
                 {actionStates[post.id] === "error" && (
                   <span data-testid={`lifecycle-error-${post.id}`} role="alert">
-                    Action failed
+                    Acción fallida
                   </span>
                 )}
               </TableCell>
@@ -379,9 +389,9 @@ export function PostsListPage({
       </Table>
       <ConfirmDialog
         open={confirmation !== null}
-        title={`${confirmation?.action[0]?.toUpperCase()}${confirmation?.action.slice(1)} post`}
+        title={`${ACTION_LABELS[confirmation?.action ?? "publish"]} publicación`}
         description={confirmation?.message ?? ""}
-        confirmLabel={confirmation?.action === "delete" ? "Delete" : "Continue"}
+        confirmLabel={confirmation?.action === "delete" ? "Eliminar" : "Continuar"}
         destructive={confirmation?.action === "delete"}
         fallbackFocusRef={tableFallbackRef}
         onCancel={() => setConfirmation(null)}

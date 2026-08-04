@@ -9,15 +9,10 @@ import {
   listResponsibles,
   updateResponsibleStatus,
 } from "./responsiblesApi.js";
+import { mapAdminError } from "./adminErrors.js";
 
 type FormValues = CreateResponsibleInput;
 type FormErrors = Partial<Record<keyof FormValues, string>>;
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message
-    ? error.message
-    : "The request failed. Please try again.";
-}
 
 const EMPTY_FORM: FormValues = { email: "", displayName: "", password: "" };
 
@@ -36,7 +31,7 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
     try {
       setRows(await listResponsibles());
     } catch (error) {
-      setLoadError(errorMessage(error));
+      setLoadError(mapAdminError(error).root);
     }
   }, []);
 
@@ -46,12 +41,13 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
 
   const validate = (): FormErrors => {
     const errors: FormErrors = {};
-    if (!form.email.trim()) errors.email = "Email is required.";
+    if (!form.email.trim())
+      errors.email = "El correo electrónico es obligatorio.";
     if (!form.displayName.trim()) {
-      errors.displayName = "Display name is required.";
+      errors.displayName = "El nombre visible es obligatorio.";
     }
     if (form.password.length < 8) {
-      errors.password = "Password must be at least 8 characters.";
+      errors.password = "La contraseña debe tener al menos 8 caracteres.";
     }
     return errors;
   };
@@ -75,7 +71,7 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
       setForm(EMPTY_FORM);
       setFieldErrors({});
     } catch (error) {
-      setCreateError(errorMessage(error));
+      setCreateError(mapAdminError(error).root);
       setForm((current) => ({ ...current, password: "" }));
     } finally {
       setCreatePending(false);
@@ -107,7 +103,7 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
     } catch (error) {
       setStatusErrors((current) => ({
         ...current,
-        [row.id]: errorMessage(error),
+        [row.id]: mapAdminError(error).root,
       }));
     } finally {
       setStatusPending((current) => {
@@ -120,13 +116,16 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
 
   return (
     <section data-testid="responsibles-page">
-      <h1>Responsibles</h1>
-      <p>Manage the responsible users who can access administration.</p>
+      <h1>Responsables</h1>
+      <p>
+        Administra las personas responsables que pueden acceder al área de
+        administración.
+      </p>
 
       <section aria-labelledby="create-responsible-heading">
-        <h2 id="create-responsible-heading">Create responsible</h2>
+        <h2 id="create-responsible-heading">Crear responsable</h2>
         <form onSubmit={handleCreate} noValidate>
-          <label htmlFor="responsible-email">Email</label>
+          <label htmlFor="responsible-email">Correo electrónico</label>
           <input
             id="responsible-email"
             name="email"
@@ -141,7 +140,7 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
           />
           {fieldErrors.email && <p role="alert">{fieldErrors.email}</p>}
 
-          <label htmlFor="responsible-display-name">Display name</label>
+          <label htmlFor="responsible-display-name">Nombre visible</label>
           <input
             id="responsible-display-name"
             name="displayName"
@@ -157,7 +156,7 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
             <p role="alert">{fieldErrors.displayName}</p>
           )}
 
-          <label htmlFor="responsible-password">Initial password</label>
+          <label htmlFor="responsible-password">Contraseña inicial</label>
           <input
             id="responsible-password"
             name="password"
@@ -172,34 +171,37 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
           />
           {fieldErrors.password && <p role="alert">{fieldErrors.password}</p>}
           <button type="submit" disabled={createPending}>
-            {createPending ? "Creating…" : "Create responsible"}
+            {createPending ? "Creando…" : "Crear responsable"}
           </button>
           {createError && <p role="alert">{createError}</p>}
         </form>
       </section>
 
       <section aria-labelledby="responsibles-list-heading">
-        <h2 id="responsibles-list-heading">Responsible users</h2>
-        {rows === null && !loadError && <p>Loading responsible users…</p>}
+        <h2 id="responsibles-list-heading">Personas responsables</h2>
+        {rows === null && !loadError && <p>Cargando personas responsables…</p>}
         {loadError && (
           <div role="alert">
             <p>{loadError}</p>
             <button type="button" onClick={() => void load()}>
-              Retry
+              Reintentar
             </button>
           </div>
         )}
         {rows !== null && rows.length === 0 && (
-          <p>No responsible users yet. Use the form above to create one.</p>
+          <p>
+            Todavía no hay personas responsables. Usa el formulario de arriba
+            para crear una.
+          </p>
         )}
         {rows !== null && rows.length > 0 && (
           <table data-testid="responsibles-table">
             <thead>
               <tr>
-                <th>Email</th>
-                <th>Display name</th>
-                <th>Status</th>
-                <th>Action</th>
+                <th>Correo electrónico</th>
+                <th>Nombre visible</th>
+                <th>Estado</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -221,13 +223,13 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
                         onClick={() => void handleStatus(row, nextStatus)}
                       >
                         {pending
-                          ? "Saving…"
+                          ? "Guardando…"
                           : row.status === "ACTIVE"
-                            ? "Deactivate"
-                            : "Activate"}
+                            ? "Desactivar"
+                            : "Activar"}
                       </button>
                       {selfDeactivationBlocked && (
-                        <span> You cannot deactivate your own account.</span>
+                        <span> No puedes desactivar tu propia cuenta.</span>
                       )}
                       {statusErrors[row.id] && (
                         <p role="alert">{statusErrors[row.id]}</p>

@@ -66,7 +66,7 @@ describe("FileUploadWidget — idle state (no file)", () => {
     expect(input).toBeTruthy();
     expect(input.tagName).toBe("INPUT");
     expect((input as HTMLInputElement).type).toBe("file");
-    expect(screen.getByLabelText(/upload post cover image/i)).toBe(input);
+    expect(screen.getByLabelText("Subir archivo")).toBe(input);
   });
 
   it("renders no remove button when fileId is null", () => {
@@ -156,7 +156,7 @@ describe("FileUploadWidget — upload flow", () => {
       expect(onUploaded).toHaveBeenCalledWith(MOCK_ASSET);
     });
     // prettier-ignore
-    expect(successToast).toHaveBeenCalledWith("File uploaded.", expect.anything());
+    expect(successToast).toHaveBeenCalledWith("Archivo cargado correctamente.", expect.anything());
 
     // Uploading state clears after success
     expect(screen.queryByTestId("file-upload-uploading")).toBeNull();
@@ -183,7 +183,7 @@ describe("FileUploadWidget — upload flow", () => {
       expect(screen.getByTestId("file-upload-error")).toBeTruthy();
     });
     // prettier-ignore
-    expect(errorToast).toHaveBeenCalledWith("Upload failed.", expect.objectContaining({ description: "Network error" }));
+    expect(errorToast).toHaveBeenCalledWith("No se pudo cargar el archivo.", expect.objectContaining({ description: "Error de red." }));
 
     // Uploading state clears after error
     expect(screen.queryByTestId("file-upload-uploading")).toBeNull();
@@ -253,7 +253,7 @@ describe("FileUploadWidget — remove button", () => {
 
     const removeBtn = screen.getByTestId("file-upload-remove");
     expect(removeBtn).toBeTruthy();
-    expect(removeBtn.textContent).toMatch(/remove/i);
+    expect(removeBtn.textContent).toMatch(/quitar/i);
   });
 
   it("calls onRemove when remove button is clicked", () => {
@@ -341,9 +341,9 @@ describe("FileUploadWidget — canonical primitives and reset", () => {
       expect(screen.getByTestId("file-upload-error")).toBeTruthy();
     });
 
-    expect(screen.getByText(/retry upload/i).getAttribute("data-slot")).toBe(
-      "button",
-    );
+    expect(
+      screen.getByText(/reintentar carga/i).getAttribute("data-slot"),
+    ).toBe("button");
   });
 });
 

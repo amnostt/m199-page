@@ -2,7 +2,7 @@ import { Component, createContext, useContext, type ReactNode } from "react";
 import { Toaster, toast } from "sonner";
 import { Alert, AlertDescription } from "../components/ui/alert.js";
 // prettier-ignore
-class AdminErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> { state = { failed: false }; static getDerivedStateFromError() { return { failed: true }; } render() { return this.state.failed ? <Alert variant="destructive"><AlertDescription>Something went wrong. Please try again.</AlertDescription></Alert> : this.props.children; } }
+class AdminErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> { state = { failed: false }; static getDerivedStateFromError() { return { failed: true }; } render() { return this.state.failed ? <Alert variant="destructive"><AlertDescription>Algo salió mal. Intenta de nuevo.</AlertDescription></Alert> : this.props.children; } }
 export type ToastApi = {
   success(message: string): void;
   error(
@@ -18,7 +18,7 @@ const adminToast: ToastApi = {
       toasterId: "admin",
       description: options?.description,
       action: options?.retry
-        ? { label: "Retry", onClick: options.retry }
+        ? { label: "Reintentar", onClick: options.retry }
         : undefined,
     }),
 };
