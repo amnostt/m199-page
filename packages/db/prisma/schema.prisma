@@ -35,10 +35,36 @@ enum RefreshOperationStatus {
   INVALIDATED
 }
 
-enum ContentStatus {
+enum MissionStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum PublicationType {
+  POST
+  OUTING
+  EVENT
+}
+
+enum PublicationStatus {
   DRAFT
   PUBLISHED
-  ARCHIVED
+}
+
+enum PublicationScope {
+  GENERAL
+  MISSION
+}
+
+enum ActivityStatus {
+  UPCOMING
+  COMPLETED
+  CANCELLED
+}
+
+enum DocumentationStatus {
+  PENDING_DOCUMENTATION
+  DOCUMENTED
 }
 
 enum FileStorageProvider {
@@ -46,19 +72,11 @@ enum FileStorageProvider {
 }
 
 enum FileCategory {
-  OUTING_MAIN_IMAGE
-  OUTING_CROQUIS
-  OUTING_PLAN
-  POST_COVER_IMAGE
-  POST_DOWNLOAD
+  MISSION_HERO
+  PUBLICATION_FEATURED_IMAGE
+  PUBLICATION_DOWNLOAD
   LANDING_HERO
   OTHER
-}
-
-enum FeaturedPostSlot {
-  SLOT_1
-  SLOT_2
-  SLOT_3
 }
 
 model ResponsibleUser {
@@ -73,13 +91,12 @@ model ResponsibleUser {
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
 
-  refreshSessions RefreshSession[]
-  refreshFamilies RefreshFamily[]
-  authoredOutings Outing[]
-  authoredPosts   Post[]
-  authoredVerses  Verse[]
-  verseRevisions  VerseRevision[]
-  uploadedFiles   FileAsset[]
+  refreshSessions   RefreshSession[]
+  refreshFamilies   RefreshFamily[]
+  authoredPublications Publication[]
+  authoredVerses    Verse[]
+  verseRevisions    VerseRevision[]
+  uploadedFiles     FileAsset[]
 
   @@index([status])
 }
@@ -174,119 +191,74 @@ model FileAsset {
 
   uploadedBy ResponsibleUser? @relation(fields: [uploadedById], references: [id])
 
-  outingMainImages Outing[]          @relation("OutingMainImage")
-  outingCroquis    Outing[]          @relation("OutingCroquis")
-  outingPlans      Outing[]          @relation("OutingPlan")
-  postCoverImages  Post[]            @relation("PostCoverImage")
-  postDownloads    PostDownload[]
-  landingHeroes    LandingSettings[] @relation("LandingHero")
+  missionHeroes          Mission[]          @relation("MissionHeroImage")
+  publicationFeatures    Publication[]      @relation("PublicationFeaturedImage")
+  landingHeroes          LandingSettings[]  @relation("LandingHero")
 
   @@index([category])
   @@index([uploadedById])
   @@index([createdAt])
 }
 
-model Outing {
-  // DB: slug @unique, likesCount field, @@index([status, dateTime]), @@index([createdById])
-  // APP: Outing.likesCount sync requires transactional writes on like/unlike
+model Mission {
+  // APP: Mission is not deletable; archive preserves public visibility; BEFORE DELETE trigger blocks deletion
   id          String        @id @default(uuid())
   slug        String        @unique
   title       String
-  dateTime    DateTime
-  location    String
-  description String
-  status      ContentStatus @default(DRAFT)
-  likesCount  Int           @default(0)
-  mainImageId String?
-  croquisId   String?
-  planId      String?
-  createdById String?
-  publishedAt DateTime?
+  heroImageId String
+  heroPhrase  String
+  status      MissionStatus @default(ACTIVE)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  mainImage FileAsset?       @relation("OutingMainImage", fields: [mainImageId], references: [id])
-  croquis   FileAsset?       @relation("OutingCroquis", fields: [croquisId], references: [id])
-  plan      FileAsset?       @relation("OutingPlan", fields: [planId], references: [id])
-  createdBy ResponsibleUser? @relation(fields: [createdById], references: [id])
-  likes     OutingLike[]
-  landing   LandingSettings?
+  heroImage    FileAsset           @relation("MissionHeroImage", fields: [heroImageId], references: [id], onDelete: Restrict)
+  publications PublicationMission[]
 
-  @@index([status, dateTime])
-  @@index([createdById])
+  @@index([status])
 }
 
-model OutingLike {
-  // DB: @@unique([outingId, visitorHash]) dedupes; no identity columns stored
-  // APP: Privacy-safe visitorHash derivation — salted hash from request/client signals at API layer; never raw IP or public identity
-  id                 String   @id @default(uuid())
-  outingId           String
-  visitorHash        String
-  fingerprintVersion Int      @default(1)
-  createdAt          DateTime @default(now())
+model Publication {
+  // APP: Type-change validation must run transactionally before write;
+  //     scope exclusivity (GENERAL XOR ≥1 Mission link) enforced by trigger.
+  id                   String                 @id @default(uuid())
+  slug                 String                 @unique
+  title                String
+  excerpt              String
+  content              String
+  featuredImageId      String
+  authorId             String?
+  type                 PublicationType
+  status               PublicationStatus      @default(DRAFT)
+  publishedAt          DateTime?
+  scope                PublicationScope       @default(GENERAL)
+  startDate            DateTime?
+  endDate              DateTime?
+  activityStatus       ActivityStatus?
+  documentationStatus DocumentationStatus?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
 
-  outing Outing @relation(fields: [outingId], references: [id])
-
-  @@unique([outingId, visitorHash])
-  @@index([createdAt])
-}
-
-model Post {
-  // DB: slug @unique, tags String[] @@index([tags], type: Gin), @@index([status, publishedAt]), @@index([createdById]); migration-owned CHECK requires publishedAt for PUBLISHED posts
-  // APP: Publish-readiness guard: status transition requires complete public fields
-  id           String        @id @default(uuid())
-  slug         String        @unique
-  title        String
-  description  String
-  coverImageId String?
-  content      String
-  status       ContentStatus @default(DRAFT)
-  tags         String[]      @default([])
-  createdById  String?
-  publishedAt  DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  coverImage   FileAsset?       @relation("PostCoverImage", fields: [coverImageId], references: [id])
-  createdBy    ResponsibleUser? @relation(fields: [createdById], references: [id])
-  downloads    PostDownload[]
-  featuredSlot FeaturedPost?
+  featuredImage FileAsset            @relation("PublicationFeaturedImage", fields: [featuredImageId], references: [id], onDelete: Restrict)
+  author        ResponsibleUser?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  missions      PublicationMission[]
 
   @@index([status, publishedAt])
-  @@index([tags], type: Gin)
-  @@index([createdById])
+  @@index([type])
+  @@index([authorId])
 }
 
-model FeaturedPost {
-  // DB: FeaturedPostSlot enum (3 values) limits max featured posts; slot @unique, postId @unique
-  //     featuredAt records when the post was featured for landing ordering (desc).
-  //     Unfeature/archive/delete removes the row; active feature = row existence.
-  id         String           @id @default(uuid())
-  slot       FeaturedPostSlot @unique
-  postId     String           @unique
-  featuredAt DateTime         @default(now())
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+model PublicationMission {
+  // DB: composite primary key (publicationId, missionId); FK to Publication ON DELETE CASCADE; FK to Mission ON DELETE CASCADE
+  // APP: scope trigger keeps Publication.scope in sync with link count
+  publicationId String
+  missionId     String
+  createdAt     DateTime @default(now())
 
-  post Post @relation(fields: [postId], references: [id])
+  publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  mission     Mission     @relation(fields: [missionId], references: [id], onDelete: Cascade)
 
-  @@index([featuredAt])
-}
-
-model PostDownload {
-  // DB: @@unique([postId, fileId]) — one post per download file
-  id        String   @id @default(uuid())
-  postId    String
-  fileId    String
-  label     String?
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-
-  post Post      @relation(fields: [postId], references: [id])
-  file FileAsset @relation(fields: [fileId], references: [id])
-
-  @@unique([postId, fileId])
-  @@index([postId, sortOrder])
+  @@id([publicationId, missionId])
+  @@index([missionId])
 }
 
 model Verse {
@@ -298,7 +270,7 @@ model Verse {
   reference   String
   date        DateTime
   publishedAt DateTime?
-  status      ContentStatus @default(PUBLISHED)
+  status      PublicationStatus @default(PUBLISHED)
   createdById String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -311,7 +283,6 @@ model Verse {
 }
 
 model VerseRevision {
-  // DB: @@index([verseId, changedAt]) — verse history/revision tracking
   id          String   @id @default(uuid())
   verseId     String
   text        String
@@ -326,13 +297,12 @@ model VerseRevision {
 }
 
 model LandingSettings {
-  // DB: featuredOutingId @unique — one featured outing
-  // APP: Singleton enforcement: service keeps exactly one row with id = 1
+  // DB: Singleton enforcement: service keeps exactly one row with id = 1
+  // APP: featuredOuting payload removed; hero payload preserved
   id               Int      @id @default(1)
   heroTitle        String?
   heroSubtitle     String?
   heroImageId      String?
-  featuredOutingId String?  @unique
   mission          String?
   vision           String?
   description      String?
@@ -341,12 +311,10 @@ model LandingSettings {
   contactPhone     String?
   updatedAt        DateTime @updatedAt
 
-  heroImage      FileAsset? @relation("LandingHero", fields: [heroImageId], references: [id])
-  featuredOuting Outing?    @relation(fields: [featuredOutingId], references: [id])
+  heroImage FileAsset? @relation("LandingHero", fields: [heroImageId], references: [id])
 }
 
-// APP-tier invariants (see per-model // APP: labels for enforcement context):
-// - FileAsset upload validation: allowed MIME types and max file size per FileCategory.
-// - Content publish-readiness: complete public fields required before PUBLISHED status.
-// - Outing.likesCount synchronization: transactional writes on like/unlike.
-// - RefreshSession lifecycle: hash-only storage; rotate/revoke at application layer.
+// APP-tier invariants: FileAsset upload validation per FileCategory; type-change
+// confirmation for Publication; PublicationMission scope trigger keeps scope in
+// sync at commit; Mission deletion is blocked by BEFORE DELETE trigger;
+// RefreshSession lifecycle is hash-only at the application layer.

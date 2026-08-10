@@ -7,7 +7,6 @@ export const DEVELOPMENT_ADMIN_PASSWORD = "qawsedrf";
 export const DEVELOPMENT_ADMIN_PASSWORD_SALT_ROUNDS = 10;
 
 const SEEDED_PUBLISHED_AT = new Date("2026-07-24T12:00:00.000Z");
-const SEEDED_FEATURED_AT = new Date("2026-07-01T12:00:00.000Z");
 
 type SeedRow = { id: string };
 
@@ -29,23 +28,36 @@ export type DevelopmentSeedClient = {
       update: Record<string, unknown>;
     }): Promise<SeedRow>;
   };
-  post: {
+  fileAsset: {
     upsert(args: {
       where: { id: string };
       create: Record<string, unknown>;
       update: Record<string, unknown>;
     }): Promise<SeedRow>;
   };
-  featuredPost: {
+  mission: {
     upsert(args: {
-      where: { postId: string };
+      where: { id: string };
       create: Record<string, unknown>;
       update: Record<string, unknown>;
     }): Promise<SeedRow>;
   };
-  outing: {
+  publication: {
     upsert(args: {
       where: { id: string };
+      create: Record<string, unknown>;
+      update: Record<string, unknown>;
+    }): Promise<SeedRow>;
+    update(args: {
+      where: { id: string };
+      data: Record<string, unknown>;
+    }): Promise<SeedRow>;
+  };
+  publicationMission: {
+    upsert(args: {
+      where: {
+        publicationId_missionId: { publicationId: string; missionId: string };
+      };
       create: Record<string, unknown>;
       update: Record<string, unknown>;
     }): Promise<SeedRow>;
@@ -72,42 +84,104 @@ export type DevelopmentSeedClient = {
   ): Promise<T>;
 };
 
-const PUBLISHED_POST = {
-  id: "seed-post-published",
-  slug: "welcome-to-mision-1-99",
-  title: "Welcome to Misión 1-99",
-  description: "A published demo post for local development.",
-  content:
-    "<p>This published post gives the public site and admin editor a deterministic starting point.</p>",
-  status: "PUBLISHED",
-  tags: ["demo", "welcome"],
-  publishedAt: SEEDED_PUBLISHED_AT,
-};
+const SEED_FILE_ASSETS = {
+  missionHero: {
+    id: "seed-file-asset-mission-hero",
+    category: "MISSION_HERO",
+    originalFilename: "mission-hero.svg",
+    storagePath: "seed/mission-hero.svg",
+    url: "https://placehold.invalid/seed/mission-hero.svg",
+  },
+  publicationPost: {
+    id: "seed-file-asset-publication-post",
+    category: "PUBLICATION_FEATURED_IMAGE",
+    originalFilename: "publication-post.svg",
+    storagePath: "seed/publication-post.svg",
+    url: "https://placehold.invalid/seed/publication-post.svg",
+  },
+  publicationOuting: {
+    id: "seed-file-asset-publication-outing",
+    category: "PUBLICATION_FEATURED_IMAGE",
+    originalFilename: "publication-outing.svg",
+    storagePath: "seed/publication-outing.svg",
+    url: "https://placehold.invalid/seed/publication-outing.svg",
+  },
+  publicationEvent: {
+    id: "seed-file-asset-publication-event",
+    category: "PUBLICATION_FEATURED_IMAGE",
+    originalFilename: "publication-event.svg",
+    storagePath: "seed/publication-event.svg",
+    url: "https://placehold.invalid/seed/publication-event.svg",
+  },
+} as const;
 
-const DRAFT_POST = {
-  id: "seed-post-draft",
-  slug: "draft-community-update",
-  title: "Draft community update",
-  description: "A draft demo post for testing editorial workflows.",
-  content:
-    "<p>This draft is intentionally unpublished so the admin lifecycle can be exercised locally.</p>",
-  status: "DRAFT",
-  tags: ["demo", "draft"],
-  publishedAt: null,
-};
+const SEED_FILE_ASSETS_LIST = Object.values(SEED_FILE_ASSETS).map((asset) => ({
+  ...asset,
+  mimeType: "image/svg+xml" as const,
+  extension: "svg" as const,
+  fileSize: 4096,
+}));
 
-const FEATURED_OUTING = {
-  id: "seed-outing-featured",
-  slug: "community-service-day",
-  title: "Community Service Day",
-  dateTime: new Date("2026-08-15T14:00:00.000Z"),
-  location: "Local community center",
-  description:
-    "A published demo outing connected to the landing page featured outing slot.",
+const SEED_MISSION = {
+  id: "seed-mission-1",
+  slug: "seed-mission-1",
+  title: "Misión 1-99 — Primera comunidad",
+  heroImageId: SEED_FILE_ASSETS.missionHero.id,
+  heroPhrase: "Acompañamos con esperanza, servicio y fe.",
+  status: "ACTIVE",
+} as const;
+
+const SEED_PUBLICATION_POST = {
+  id: "seed-publication-post-1",
+  slug: "seed-publication-post-1",
+  title: "Bienvenidos a Misión 1-99",
+  excerpt: "Una publicación inicial para la portada pública.",
+  content:
+    "<p>Esta publicación publicada aporta un punto de partida determinista al sitio público y al editor administrativo.</p>",
+  featuredImageId: SEED_FILE_ASSETS.publicationPost.id,
+  type: "POST",
   status: "PUBLISHED",
-  likesCount: 0,
+  scope: "GENERAL",
+  startDate: null,
+  endDate: null,
+  activityStatus: null,
+  documentationStatus: null,
   publishedAt: SEEDED_PUBLISHED_AT,
-};
+} as const;
+
+const SEED_PUBLICATION_OUTING = {
+  id: "seed-publication-outing-1",
+  slug: "seed-publication-outing-1",
+  title: "Salida comunitaria de servicio",
+  excerpt: "Una salida publicada vinculada a la primera misión.",
+  content: "<p>Esta salida publicada se enlaza a la misión seed-mission-1.</p>",
+  featuredImageId: SEED_FILE_ASSETS.publicationOuting.id,
+  type: "OUTING",
+  status: "PUBLISHED",
+  scope: "GENERAL",
+  startDate: new Date("2026-09-01T00:00:00.000Z"),
+  endDate: new Date("2026-09-01T00:00:00.000Z"),
+  activityStatus: "UPCOMING",
+  documentationStatus: "PENDING_DOCUMENTATION",
+  publishedAt: SEEDED_PUBLISHED_AT,
+} as const;
+
+const SEED_PUBLICATION_EVENT = {
+  id: "seed-publication-event-1",
+  slug: "seed-publication-event-1",
+  title: "Encuentro mensual de voluntarios",
+  excerpt: "Un evento publicado vinculado a la primera misión.",
+  content: "<p>Este evento publicado se enlaza a la misión seed-mission-1.</p>",
+  featuredImageId: SEED_FILE_ASSETS.publicationEvent.id,
+  type: "EVENT",
+  status: "PUBLISHED",
+  scope: "GENERAL",
+  startDate: new Date("2026-10-15T00:00:00.000Z"),
+  endDate: new Date("2026-10-16T00:00:00.000Z"),
+  activityStatus: "UPCOMING",
+  documentationStatus: "PENDING_DOCUMENTATION",
+  publishedAt: SEEDED_PUBLISHED_AT,
+} as const;
 
 const LATEST_VERSE = {
   id: "seed-verse-latest",
@@ -139,43 +213,52 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
     },
   });
 
-  const publishedPost = await client.post.upsert({
-    where: { id: PUBLISHED_POST.id },
-    create: { ...PUBLISHED_POST, createdById: admin.id },
-    update: { ...PUBLISHED_POST, createdById: admin.id },
+  for (const file of SEED_FILE_ASSETS_LIST) {
+    await client.fileAsset.upsert({
+      where: { id: file.id },
+      create: { ...file, uploadedById: admin.id },
+      update: { ...file, uploadedById: admin.id },
+    });
+  }
+
+  await client.mission.upsert({
+    where: { id: SEED_MISSION.id },
+    create: { ...SEED_MISSION },
+    update: { ...SEED_MISSION },
   });
 
-  await client.post.upsert({
-    where: { id: DRAFT_POST.id },
-    create: { ...DRAFT_POST, createdById: admin.id },
-    update: { ...DRAFT_POST, createdById: admin.id },
+  await client.publication.upsert({
+    where: { id: SEED_PUBLICATION_POST.id },
+    create: { ...SEED_PUBLICATION_POST, authorId: admin.id },
+    update: { ...SEED_PUBLICATION_POST, authorId: admin.id },
   });
 
-  await client.featuredPost.upsert({
-    where: { postId: publishedPost.id },
-    create: {
-      id: "seed-featured-post",
-      postId: publishedPost.id,
-      slot: "SLOT_1",
-      featuredAt: SEEDED_FEATURED_AT,
-    },
-    update: {
-      slot: "SLOT_1",
-      featuredAt: SEEDED_FEATURED_AT,
-    },
-  });
-
-  const outing = await client.outing.upsert({
-    where: { id: FEATURED_OUTING.id },
-    create: { ...FEATURED_OUTING, createdById: admin.id },
-    update: { ...FEATURED_OUTING, createdById: admin.id },
-  });
+  const linkedPublications = [SEED_PUBLICATION_OUTING, SEED_PUBLICATION_EVENT];
+  for (const publication of linkedPublications) {
+    const result = await client.publication.upsert({
+      where: { id: publication.id },
+      create: { ...publication, authorId: admin.id },
+      update: { ...publication, authorId: admin.id },
+    });
+    await client.publicationMission.upsert({
+      where: {
+        publicationId_missionId: {
+          publicationId: result.id,
+          missionId: SEED_MISSION.id,
+        },
+      },
+      create: { publicationId: result.id, missionId: SEED_MISSION.id },
+      update: {},
+    });
+    // The PublicationMission scope-sync trigger promotes each linked
+    // Publication to scope=MISSION after the join row is written.
+    await client.publication.update({
+      where: { id: result.id },
+      data: { scope: "MISSION" },
+    });
+  }
 
   await seedLandingSettings(client);
-  await client.landingSettings.update({
-    where: { id: 1 },
-    data: { featuredOutingId: outing.id },
-  });
 
   await client.verse.upsert({
     where: { id: LATEST_VERSE.id },
@@ -185,8 +268,10 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
 }
 
 /**
- * Seeds one coherent local graph in a transaction. No sessions, likes,
- * revisions, downloads, or orphan FileAsset rows are created.
+ * Seeds one coherent local graph in a transaction. No legacy Post/Outing
+ * rows, featuredOutingId wiring, or sessions/likes/revisions/downloads are
+ * created. FileAsset rows are limited to the deterministic Mission/Publication
+ * featured images.
  */
 export async function seedDevelopmentData(
   client: DevelopmentSeedClient,
