@@ -23,6 +23,28 @@ export interface CreateResponsibleInput {
   password: string;
 }
 
+export type MissionStatus = "ACTIVE" | "ARCHIVED";
+
+export interface MissionAdmin {
+  id: string;
+  slug: string;
+  title: string;
+  heroImageId: string;
+  heroPhrase: string;
+  status: MissionStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMissionInput {
+  title: string;
+  slug: string;
+  heroImageId: string;
+  heroPhrase: string;
+}
+
+export type UpdateMissionInput = Partial<CreateMissionInput>;
+
 export type VerseStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
 export interface VerseAdmin {
