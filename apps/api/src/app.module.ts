@@ -20,6 +20,7 @@ import { FileModule } from "./file-module/file.module.js";
 import { LandingModule } from "./landing/landing.module.js";
 import { VersesModule } from "./verses/verses.module.js";
 import { MissionsModule } from "./missions/missions.module.js";
+import { PublicationsModule } from "./publications/publications.module.js";
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { MissionsModule } from "./missions/missions.module.js";
     LandingModule,
     VersesModule,
     MissionsModule,
+    PublicationsModule,
   ],
   providers: [
     {
