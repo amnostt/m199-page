@@ -198,4 +198,76 @@ describe("development database seed", () => {
     );
     expect(client.$transaction).toHaveBeenCalledTimes(1);
   });
+
+  it("preserves linked publications as scope=MISSION across consecutive runs", async () => {
+    const client = createFakeClient();
+
+    await seedDevelopmentData(client);
+    await seedDevelopmentData(client);
+
+    expect(
+      client.rows.get("publication:seed-publication-post-1"),
+    ).toMatchObject({ scope: "GENERAL" });
+    expect(
+      client.rows.get("publication:seed-publication-outing-1"),
+    ).toMatchObject({ scope: "MISSION" });
+    expect(
+      client.rows.get("publication:seed-publication-event-1"),
+    ).toMatchObject({ scope: "MISSION" });
+  });
+
+  it("never sends scope in the update path of linked publication upserts", async () => {
+    const client = createFakeClient();
+
+    await seedDevelopmentData(client);
+    await seedDevelopmentData(client);
+
+    // Regression guard: the BEFORE UPDATE OF "scope" trigger rejects
+    // scope=GENERAL while a PublicationMission row exists. The upsert
+    // update payload for linked publications must therefore omit scope on
+    // every run, not just the first one.
+    const linkedCalls = (client.calls.publication ?? []).filter((call) => {
+      const create = call.create as Record<string, unknown>;
+      return create.type === "OUTING" || create.type === "EVENT";
+    });
+    expect(linkedCalls).toHaveLength(4); // 2 linked × 2 runs
+    for (const call of linkedCalls) {
+      expect(call.update).not.toHaveProperty("scope");
+    }
+  });
+
+  it("orders upsert / link / non-scope sync / scope=MISSION per linked publication", async () => {
+    const client = createFakeClient();
+
+    await seedDevelopmentData(client);
+    await seedDevelopmentData(client);
+
+    // Each run issues, per linked publication:
+    //   1× publication.upsert (create with scope=GENERAL on first run; no-op
+    //      update on subsequent runs)
+    //   1× publicationMission.upsert (AFTER INSERT scope-sync trigger
+    //      promotes on first run; no-op on subsequent runs)
+    //   1× publication.update for the non-scope fields (scope is omitted so
+    //      the BEFORE UPDATE OF scope trigger never fires here)
+    //   1× publication.update for scope=MISSION (idempotent; trigger accepts
+    //      MISSION when link_count >= 1)
+    // Across 2 linked publications × 2 runs this is 8 publication.update
+    // calls: 4 non-scope sync + 4 scope-only updates.
+    const updateMock = client.publication.update as unknown as {
+      mock: { calls: Array<[{ data: Record<string, unknown> }]> };
+    };
+    const updateCalls = updateMock.mock.calls;
+    expect(updateCalls).toHaveLength(8);
+
+    const nonScopeSyncCalls = updateCalls.filter(
+      (call) => !("scope" in call[0].data),
+    );
+    const scopeOnlyCalls = updateCalls.filter(
+      (call) =>
+        Object.keys(call[0].data).length === 1 &&
+        call[0].data.scope === "MISSION",
+    );
+    expect(nonScopeSyncCalls).toHaveLength(4);
+    expect(scopeOnlyCalls).toHaveLength(4);
+  });
 });

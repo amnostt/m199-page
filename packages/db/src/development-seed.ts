@@ -235,25 +235,58 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
 
   const linkedPublications = [SEED_PUBLICATION_OUTING, SEED_PUBLICATION_EVENT];
   for (const publication of linkedPublications) {
-    const result = await client.publication.upsert({
+    // Create-or-no-op: on the first run this inserts scope=GENERAL while no
+    // PublicationMission row exists yet, which the BEFORE INSERT scope
+    // validation trigger accepts. On subsequent runs the empty update is a
+    // no-op, so the BEFORE UPDATE OF "scope" trigger never receives a
+    // scope=GENERAL payload while a join row already exists.
+    await client.publication.upsert({
       where: { id: publication.id },
       create: { ...publication, authorId: admin.id },
-      update: { ...publication, authorId: admin.id },
+      update: {},
     });
+
+    // Upsert the join row idempotently. On the first run the AFTER INSERT
+    // scope-sync trigger promotes the Publication to scope=MISSION; on
+    // subsequent runs the empty update performs no INSERT or DELETE, so the
+    // trigger does not run and the existing scope=MISSION is preserved.
     await client.publicationMission.upsert({
       where: {
         publicationId_missionId: {
-          publicationId: result.id,
+          publicationId: publication.id,
           missionId: SEED_MISSION.id,
         },
       },
-      create: { publicationId: result.id, missionId: SEED_MISSION.id },
+      create: { publicationId: publication.id, missionId: SEED_MISSION.id },
       update: {},
     });
-    // The PublicationMission scope-sync trigger promotes each linked
-    // Publication to scope=MISSION after the join row is written.
+
+    // Sync every field except scope. Because "scope" is omitted from the
+    // SET clause, the BEFORE UPDATE OF "scope" trigger does not fire and the
+    // linked Publication stays scope=MISSION across reruns.
     await client.publication.update({
-      where: { id: result.id },
+      where: { id: publication.id },
+      data: {
+        slug: publication.slug,
+        title: publication.title,
+        excerpt: publication.excerpt,
+        content: publication.content,
+        featuredImageId: publication.featuredImageId,
+        type: publication.type,
+        status: publication.status,
+        startDate: publication.startDate,
+        endDate: publication.endDate,
+        activityStatus: publication.activityStatus,
+        documentationStatus: publication.documentationStatus,
+        publishedAt: publication.publishedAt,
+        authorId: admin.id,
+      },
+    });
+
+    // Ensure scope=MISSION. Idempotent on reruns: the trigger accepts
+    // scope=MISSION when link_count >= 1.
+    await client.publication.update({
+      where: { id: publication.id },
       data: { scope: "MISSION" },
     });
   }
