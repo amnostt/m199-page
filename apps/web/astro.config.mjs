@@ -123,6 +123,7 @@ export default defineConfig({
         "/landing": { target: API_TARGET, changeOrigin: true },
         "/auth": { target: API_TARGET, changeOrigin: true },
         "/files": { target: API_TARGET, changeOrigin: true },
+        "/missions": { target: API_TARGET, changeOrigin: true },
       },
     },
   },

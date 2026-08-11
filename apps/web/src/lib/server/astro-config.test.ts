@@ -82,6 +82,19 @@ afterEach(() => {
   vi.resetModules();
 });
 
+describe("astro.config.mjs — missions API proxy", () => {
+  it("routes mission requests to the API target with the API host", async () => {
+    const config = await loadAstroConfig();
+    const rule = config.vite?.server?.proxy?.["/missions"] as
+      { target?: string; changeOrigin?: boolean } | undefined;
+
+    expect(rule).toMatchObject({
+      target: "http://localhost:3000",
+      changeOrigin: true,
+    });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // server.port — shared PORT / ASTRO_PORT contract
 // ---------------------------------------------------------------------------
