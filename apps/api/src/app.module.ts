@@ -19,6 +19,7 @@ import { ResponsiblesModule } from "./responsibles/responsibles.module.js";
 import { FileModule } from "./file-module/file.module.js";
 import { LandingModule } from "./landing/landing.module.js";
 import { VersesModule } from "./verses/verses.module.js";
+import { MissionsModule } from "./missions/missions.module.js";
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { VersesModule } from "./verses/verses.module.js";
     FileModule,
     LandingModule,
     VersesModule,
+    MissionsModule,
   ],
   providers: [
     {
