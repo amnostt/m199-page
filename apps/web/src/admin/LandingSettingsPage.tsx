@@ -7,18 +7,18 @@
 //   contactEmail, contactPhone
 // - window.confirm gate before every PUT /landing/admin save
 // - Loading, error, and success states
+//
+// WU3 / Slice 1 — the legacy featured-outing wiring was removed. The
+// admin no longer issues `/outings/admin?status=PUBLISHED` lookups,
+// no longer calls `featureOuting`/`clearFeaturedOuting`, and no longer
+// carries `featuredOutingId` on the editor state. The featured-posts
+// slots were already removed in earlier work.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState } from "react";
 import { FileUploadWidget } from "./FileUploadWidget.js";
 import type { LandingSettings, LandingSettingsForm } from "./adminTypes.js";
 import { adminFetch } from "./session.js";
-import {
-  clearFeaturedOuting,
-  featureOuting,
-  listOutings,
-} from "./outingsApi.js";
-import type { OutingAdmin } from "./adminTypes.js";
 import { Alert, AlertDescription } from "../components/ui/alert.js";
 import { Button } from "../components/ui/button.js";
 import { Card, CardContent } from "../components/ui/card.js";
@@ -85,29 +85,13 @@ export function LandingSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [featuredOutingId, setFeaturedOutingId] = useState<string | null>(null);
-  const [publishedOutings, setPublishedOutings] = useState<OutingAdmin[]>([]);
-  const [selectedOutingId, setSelectedOutingId] = useState("");
-  const [featuredError, setFeaturedError] = useState(false);
-  const [featuredSuccess, setFeaturedSuccess] = useState(false);
-  const [featuredSaving, setFeaturedSaving] = useState<
-    "feature" | "clear" | null
-  >(null);
 
   // Load on mount
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      adminFetch<LandingSettings | null>("/landing/admin"),
-      listOutings("PUBLISHED"),
-    ])
-      .then(([data, outings]) => {
+    adminFetch<LandingSettings | null>("/landing/admin")
+      .then((data) => {
         if (!cancelled) setSettings(normalizeLandingSettings(data));
-        if (!cancelled) {
-          setFeaturedOutingId(data?.featuredOutingId ?? null);
-          setSelectedOutingId(data?.featuredOutingId ?? "");
-          setPublishedOutings(Array.isArray(outings) ? outings : []);
-        }
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -116,54 +100,6 @@ export function LandingSettingsPage() {
       cancelled = true;
     };
   }, []);
-
-  const refreshFeaturedState = async () => {
-    const [data, outings] = await Promise.all([
-      adminFetch<LandingSettings | null>("/landing/admin"),
-      listOutings("PUBLISHED"),
-    ]);
-    setFeaturedOutingId(data?.featuredOutingId ?? null);
-    setSelectedOutingId(data?.featuredOutingId ?? "");
-    setPublishedOutings(outings);
-  };
-
-  const handleFeatureOuting = async () => {
-    if (!selectedOutingId || featuredSaving) return;
-    if (
-      featuredOutingId &&
-      featuredOutingId !== selectedOutingId &&
-      !window.confirm("¿Reemplazar la salida destacada?")
-    )
-      return;
-    setFeaturedError(false);
-    setFeaturedSuccess(false);
-    setFeaturedSaving("feature");
-    try {
-      await featureOuting(selectedOutingId);
-      await refreshFeaturedState();
-      setFeaturedSuccess(true);
-    } catch {
-      setFeaturedError(true);
-    } finally {
-      setFeaturedSaving(null);
-    }
-  };
-
-  const handleClearFeatured = async () => {
-    if (featuredSaving) return;
-    setFeaturedError(false);
-    setFeaturedSuccess(false);
-    setFeaturedSaving("clear");
-    try {
-      await clearFeaturedOuting();
-      await refreshFeaturedState();
-      setFeaturedSuccess(true);
-    } catch {
-      setFeaturedError(true);
-    } finally {
-      setFeaturedSaving(null);
-    }
-  };
 
   // ------------------------------------------------------------------
   // Handlers
@@ -263,94 +199,6 @@ export function LandingSettingsPage() {
           Editá el contenido que se muestra en la landing pública.
         </p>
       </header>
-
-      <Card className="shadow-none">
-        <CardContent className="pt-6">
-          <FieldSet>
-            <FieldLegend>Salida destacada</FieldLegend>
-            <FieldDescription>
-              Seleccioná una salida publicada para mostrarla en la página de
-              inicio.
-            </FieldDescription>
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="featured-outing-select">
-                  Salida publicada
-                </FieldLabel>
-                <select
-                  id="featured-outing-select"
-                  className="min-h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                  data-testid="featured-outing-select"
-                  value={selectedOutingId}
-                  onChange={(event) => {
-                    setSelectedOutingId(event.target.value);
-                    setFeaturedError(false);
-                    setFeaturedSuccess(false);
-                  }}
-                  disabled={featuredSaving !== null}
-                >
-                  <option value="">Sin salida destacada</option>
-                  {publishedOutings.map((outing) => (
-                    <option key={outing.id} value={outing.id}>
-                      {outing.title}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  className="min-h-11"
-                  onClick={() => void handleFeatureOuting()}
-                  disabled={!selectedOutingId || featuredSaving !== null}
-                  aria-busy={featuredSaving === "feature"}
-                >
-                  Destacar salida
-                </Button>
-                {featuredOutingId && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="min-h-11"
-                    onClick={() => void handleClearFeatured()}
-                    disabled={featuredSaving !== null}
-                    aria-busy={featuredSaving === "clear"}
-                  >
-                    Quitar salida destacada
-                  </Button>
-                )}
-              </div>
-            </FieldGroup>
-            {featuredSaving && (
-              <p
-                role="status"
-                aria-live="polite"
-                className="text-sm text-muted-foreground"
-              >
-                Actualizando la salida destacada…
-              </p>
-            )}
-            {featuredSuccess && (
-              <p
-                className="text-sm text-foreground"
-                data-testid="featured-outing-success"
-                role="status"
-              >
-                Salida destacada actualizada correctamente.
-              </p>
-            )}
-            {featuredError && (
-              <p
-                className="text-sm text-destructive"
-                data-testid="featured-outing-error"
-                role="alert"
-              >
-                No se pudo actualizar la salida destacada.
-              </p>
-            )}
-          </FieldSet>
-        </CardContent>
-      </Card>
 
       <form
         noValidate

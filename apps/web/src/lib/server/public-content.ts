@@ -1,37 +1,5 @@
 import { resolveApiBaseUrl, type ApiBaseUrl } from "./env.js";
 
-export interface PostPublicDownload {
-  label: string | null;
-  fileUrl: string;
-}
-
-export interface PostPublicResponse {
-  id: string;
-  slug: string;
-  title: string;
-  description: string;
-  coverImageUrl: string | null;
-  content: string;
-  status: "PUBLISHED";
-  tags: string[];
-  publishedAt: string | null;
-  downloads: PostPublicDownload[];
-}
-
-export interface OutingPublicResponse {
-  id: string;
-  slug: string;
-  title: string;
-  dateTime: string;
-  location: string;
-  description: string;
-  status: "PUBLISHED";
-  likesCount: number;
-  mainImageUrl: string | null;
-  croquisUrl: string | null;
-  planUrl: string | null;
-}
-
 export class PublicContentFetchError extends Error {
   constructor(readonly status: number) {
     super(`Public content request failed with status ${String(status)}`);

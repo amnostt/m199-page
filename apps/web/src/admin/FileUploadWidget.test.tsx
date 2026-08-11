@@ -31,7 +31,7 @@ const MOCK_ASSET = {
   mimeType: "image/png",
   fileSize: 1024,
   originalFilename: "c.png",
-  category: "POST_COVER_IMAGE",
+  category: "PUBLICATION_FEATURED_IMAGE",
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
@@ -55,7 +55,7 @@ describe("FileUploadWidget — idle state (no file)", () => {
   it("renders a file input when fileId is null", () => {
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -72,7 +72,7 @@ describe("FileUploadWidget — idle state (no file)", () => {
   it("renders no remove button when fileId is null", () => {
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -92,7 +92,7 @@ describe("FileUploadWidget — upload flow", () => {
 
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -115,7 +115,7 @@ describe("FileUploadWidget — upload flow", () => {
 
     const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
     const postCall = fetchMock.mock.calls[0]!;
-    expect(postCall[0]).toBe("/files/POST_COVER_IMAGE");
+    expect(postCall[0]).toBe("/files/PUBLICATION_FEATURED_IMAGE");
 
     const init = postCall[1]! as RequestInit;
     expect(init.method).toBe("POST");
@@ -140,7 +140,7 @@ describe("FileUploadWidget — upload flow", () => {
 
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={onUploaded}
         onRemove={vi.fn()}
@@ -168,7 +168,7 @@ describe("FileUploadWidget — upload flow", () => {
 
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -198,7 +198,7 @@ describe("FileUploadWidget — upload flow", () => {
 
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -222,7 +222,7 @@ describe("FileUploadWidget — upload flow", () => {
 
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -244,7 +244,7 @@ describe("FileUploadWidget — remove button", () => {
   it("shows remove button when fileId is set", () => {
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId="existing-file-id"
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -261,7 +261,7 @@ describe("FileUploadWidget — remove button", () => {
 
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId="existing-file-id"
         onUploaded={vi.fn()}
         onRemove={onRemove}
@@ -281,7 +281,7 @@ describe("FileUploadWidget — canonical primitives and reset", () => {
   it("uses canonical Input and Button data-slot markers", () => {
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId="existing-file-id"
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -304,7 +304,7 @@ describe("FileUploadWidget — canonical primitives and reset", () => {
 
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -326,7 +326,7 @@ describe("FileUploadWidget — canonical primitives and reset", () => {
 
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -355,9 +355,9 @@ describe("FileUploadWidget — 401 retry with FormData", () => {
   it("re-sends the File in the retry body after adminFetch 401→refresh→retry", async () => {
     globalThis.fetch = vi
       .fn()
-      // Call 1: POST /files/POST_COVER_IMAGE → 401
+      // Call 1: POST /files/PUBLICATION_FEATURED_IMAGE → 401
       .mockImplementationOnce((url: string) => {
-        if (url === "/files/POST_COVER_IMAGE") {
+        if (url === "/files/PUBLICATION_FEATURED_IMAGE") {
           return Promise.resolve({
             ok: false,
             status: 401,
@@ -381,9 +381,9 @@ describe("FileUploadWidget — 401 retry with FormData", () => {
         }
         return Promise.reject(new Error("Unexpected call"));
       })
-      // Call 3: POST /files/POST_COVER_IMAGE (retry) → 200 with asset
+      // Call 3: POST /files/PUBLICATION_FEATURED_IMAGE (retry) → 200 with asset
       .mockImplementationOnce((url: string) => {
-        if (url === "/files/POST_COVER_IMAGE") {
+        if (url === "/files/PUBLICATION_FEATURED_IMAGE") {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(MOCK_ASSET),
@@ -394,7 +394,7 @@ describe("FileUploadWidget — 401 retry with FormData", () => {
 
     render(
       <FileUploadWidget
-        category="POST_COVER_IMAGE"
+        category="PUBLICATION_FEATURED_IMAGE"
         fileId={null}
         onUploaded={vi.fn()}
         onRemove={vi.fn()}
@@ -416,7 +416,9 @@ describe("FileUploadWidget — 401 retry with FormData", () => {
     const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
 
     // Call 1: initial upload → 401
-    expect(fetchMock.mock.calls[0]![0]).toBe("/files/POST_COVER_IMAGE");
+    expect(fetchMock.mock.calls[0]![0]).toBe(
+      "/files/PUBLICATION_FEATURED_IMAGE",
+    );
     expect((fetchMock.mock.calls[0]![1] as RequestInit).method).toBe("POST");
     const initialBody = (fetchMock.mock.calls[0]![1] as RequestInit)
       .body as FormData;
@@ -428,7 +430,9 @@ describe("FileUploadWidget — 401 retry with FormData", () => {
     expect((fetchMock.mock.calls[1]![1] as RequestInit).method).toBe("POST");
 
     // Call 3: retry — must preserve the same file in FormData body
-    expect(fetchMock.mock.calls[2]![0]).toBe("/files/POST_COVER_IMAGE");
+    expect(fetchMock.mock.calls[2]![0]).toBe(
+      "/files/PUBLICATION_FEATURED_IMAGE",
+    );
     expect((fetchMock.mock.calls[2]![1] as RequestInit).method).toBe("POST");
     const retryBody = (fetchMock.mock.calls[2]![1] as RequestInit)
       .body as FormData;
@@ -442,5 +446,5 @@ describe("FileUploadWidget — 401 retry with FormData", () => {
   });
 
   // prettier-ignore
-  it("invokes toast retry with the original File in a second FormData request", async () => { const errorToast = vi.spyOn(toast, "error"); globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error")).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_ASSET) }); render(<FileUploadWidget category="POST_COVER_IMAGE" fileId={null} onUploaded={vi.fn()} onRemove={vi.fn()} />); const file = new File(["image-data"], "cover.png", { type: "image/png" }); fireEvent.change(screen.getByTestId("file-upload-input"), { target: { files: [file] } }); await waitFor(() => expect(errorToast).toHaveBeenCalled()); const retry = (errorToast.mock.calls[0]![1] as unknown as { action: { onClick(): void } }).action.onClick; retry(); await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2)); const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>; expect(fetchMock).toHaveBeenNthCalledWith(2, "/files/POST_COVER_IMAGE", expect.objectContaining({ method: "POST", body: expect.any(FormData) })); const body = (fetchMock.mock.calls[1]![1] as RequestInit).body; expect(body).toBeInstanceOf(FormData); expect((body as FormData).get("file")).toBe(file); });
+  it("invokes toast retry with the original File in a second FormData request", async () => { const errorToast = vi.spyOn(toast, "error"); globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error")).mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(MOCK_ASSET) }); render(<FileUploadWidget category="PUBLICATION_FEATURED_IMAGE" fileId={null} onUploaded={vi.fn()} onRemove={vi.fn()} />); const file = new File(["image-data"], "cover.png", { type: "image/png" }); fireEvent.change(screen.getByTestId("file-upload-input"), { target: { files: [file] } }); await waitFor(() => expect(errorToast).toHaveBeenCalled()); const retry = (errorToast.mock.calls[0]![1] as unknown as { action: { onClick(): void } }).action.onClick; retry(); await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2)); const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>; expect(fetchMock).toHaveBeenNthCalledWith(2, "/files/PUBLICATION_FEATURED_IMAGE", expect.objectContaining({ method: "POST", body: expect.any(FormData) })); const body = (fetchMock.mock.calls[1]![1] as RequestInit).body; expect(body).toBeInstanceOf(FormData); expect((body as FormData).get("file")).toBe(file); });
 });

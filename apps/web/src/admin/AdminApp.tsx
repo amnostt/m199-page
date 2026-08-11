@@ -7,7 +7,7 @@
 //
 // AdminLogin: email/password form calling login().
 // AdminShell: sidebar with Landing Settings active, placeholder items for
-//   out-of-scope sections, and logout button.
+//   out-of-scope sections (Files), and logout button.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState } from "react";

@@ -81,32 +81,6 @@ const contactHref = hasContact ? "#contacto" : "#inicio";
       heroImageUrl={payload.heroImageUrl}
     />
 
-    {payload.featuredOuting && (
-      <section
-        class="public-section"
-        data-testid="featured-outing-section"
-      >
-        <article
-          class="public-card"
-          data-testid={`outing-${payload.featuredOuting.id}`}
-        >
-          <h3 data-testid="featured-outing-title">
-            {payload.featuredOuting.title}
-          </h3>
-          <p data-testid="outing-location">
-            {payload.featuredOuting.location}
-          </p>
-          <a
-            data-testid="featured-outing-link"
-            href={`/outings/${payload.featuredOuting.slug}`}
-            class="public-action public-action--primary"
-          >
-            Ver salida
-          </a>
-        </article>
-      </section>
-    )}
-
     <LandingMissions />
 
     <LandingAbout
@@ -116,23 +90,6 @@ const contactHref = hasContact ? "#contacto" : "#inicio";
       featuredVideoUrl={payload.featuredVideoUrl}
       hasContact={hasContact}
     />
-
-    {payload.featuredPosts.length > 0 && (
-      <section
-        class="public-section"
-        data-testid="featured-posts-section"
-      >
-        <ul class="public-card-list">
-          {payload.featuredPosts.map((post) => (
-            <li data-testid={`post-${post.id}`}>
-              <article class="public-card">
-                <h3><a href={`/posts/${post.slug}`} class="public-action">{post.title}</a></h3>
-              </article>
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
 
     {payload.currentVerse && (
       <section class="public-section" data-testid="verse-section">

@@ -1,9 +1,7 @@
 import {
   BookOpenText,
-  CalendarDays,
   Files,
   LogOut,
-  Newspaper,
   Settings2,
   UsersRound,
 } from "lucide-react";
@@ -28,13 +26,10 @@ import {
 import { TooltipProvider } from "../components/ui/tooltip.js";
 import type { AuthUser } from "./adminTypes.js";
 import { LandingSettingsPage } from "./LandingSettingsPage.js";
-import { PostsPage } from "./PostsPage.js";
-import { OutingsPage } from "./OutingsPage.js";
 import { ResponsiblesPage } from "./ResponsiblesPage.js";
 import { VersesPage } from "./VersesPage.js";
 
-export type AdminSection =
-  "landing" | "posts" | "outings" | "responsibles" | "verses";
+export type AdminSection = "landing" | "responsibles" | "verses";
 
 type AdminNavItem = {
   section: AdminSection;
@@ -50,8 +45,6 @@ const sections: AdminNavItem[] = [
   },
   { section: "responsibles", label: "Responsables", icon: UsersRound },
   { section: "verses", label: "Versículos", icon: BookOpenText },
-  { section: "posts", label: "Publicaciones", icon: Newspaper },
-  { section: "outings", label: "Salidas", icon: CalendarDays },
 ];
 
 export interface AdminShellProps {
@@ -70,8 +63,6 @@ function SectionContent({
   user: AuthUser;
 }) {
   if (section === "landing") return <LandingSettingsPage />;
-  if (section === "posts") return <PostsPage />;
-  if (section === "outings") return <OutingsPage />;
   if (section === "verses") return <VersesPage />;
   return <ResponsiblesPage currentUserId={user.id} />;
 }

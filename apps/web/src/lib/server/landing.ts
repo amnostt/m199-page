@@ -14,6 +14,11 @@
  *    failures to a single discriminated `LandingFetchError`. PR3 maps
  *    by `reason` to a controlled 503.
  *
+ * WU3 / Slice 1 — the legacy `featuredOuting` and `featuredPosts`
+ * keys were removed from the public payload as part of the legacy
+ * Post/Outing cleanup. The contract no longer carries those keys; the
+ * payload test suite in `landing.test.ts` asserts their absence.
+ *
  * Out of scope (PR3+): Astro root rendering, Caddy docs, SSR proof.
  */
 import { type ApiBaseUrl, resolveLandingPublicEndpoint } from "./env.js";
@@ -21,21 +26,6 @@ import { type ApiBaseUrl, resolveLandingPublicEndpoint } from "./env.js";
 // ---------------------------------------------------------------------------
 // Public payload contract (mirrors apps/api/src/landing/landing.service.ts)
 // ---------------------------------------------------------------------------
-
-export interface FeaturedOutingPayload {
-  id: string;
-  slug: string;
-  title: string;
-  location: string;
-  mainImageUrl: string | null;
-}
-
-export interface FeaturedPostPayload {
-  id: string;
-  slug: string;
-  title: string;
-  coverImageUrl: string | null;
-}
 
 export interface CurrentVersePayload {
   text: string;
@@ -58,8 +48,6 @@ export interface LandingPublicPayload {
   featuredVideoUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
-  featuredOuting: FeaturedOutingPayload | null;
-  featuredPosts: FeaturedPostPayload[];
   currentVerse: CurrentVersePayload | null;
 }
 
@@ -141,41 +129,6 @@ function requireNullableString(
   return obj[key] as string | null;
 }
 
-function validateFeaturedOuting(raw: unknown): FeaturedOutingPayload | null {
-  if (raw === null) return null;
-  if (typeof raw !== "object") {
-    throw new InvalidLandingPayloadError("featuredOuting must be an object");
-  }
-  const c = raw as Record<string, unknown>;
-  return {
-    id: requireString(c, "id"),
-    slug: requireString(c, "slug"),
-    title: requireString(c, "title"),
-    location: requireString(c, "location"),
-    mainImageUrl: requireNullableString(c, "mainImageUrl"),
-  };
-}
-
-function validateFeaturedPosts(raw: unknown): FeaturedPostPayload[] {
-  if (!Array.isArray(raw)) {
-    throw new InvalidLandingPayloadError("featuredPosts must be an array");
-  }
-  return raw.map((entry, index) => {
-    if (typeof entry !== "object" || entry === null) {
-      throw new InvalidLandingPayloadError(
-        `featuredPosts[${index}] must be an object`,
-      );
-    }
-    const c = entry as Record<string, unknown>;
-    return {
-      id: requireString(c, "id"),
-      slug: requireString(c, "slug"),
-      title: requireString(c, "title"),
-      coverImageUrl: requireNullableString(c, "coverImageUrl"),
-    };
-  });
-}
-
 function validateCurrentVerse(raw: unknown): CurrentVersePayload | null {
   if (raw === null) return null;
   if (typeof raw !== "object") {
@@ -216,8 +169,6 @@ export function validateLandingPublicPayload(
     ),
     contactEmail: requireNullableString(c, "contactEmail"),
     contactPhone: requireNullableString(c, "contactPhone"),
-    featuredOuting: validateFeaturedOuting(c.featuredOuting),
-    featuredPosts: validateFeaturedPosts(c.featuredPosts),
     currentVerse: validateCurrentVerse(c.currentVerse),
   };
 }

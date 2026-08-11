@@ -22,21 +22,6 @@ export interface LandingFailure {
   reason: string;
 }
 
-export interface LandingOuting {
-  id: string;
-  slug: string;
-  title: string;
-  location: string;
-  mainImageUrl: string | null;
-}
-
-export interface LandingPost {
-  id: string;
-  slug: string;
-  title: string;
-  coverImageUrl: string | null;
-}
-
 export interface LandingVerse {
   text: string;
   reference: string;
@@ -53,7 +38,5 @@ export interface LandingPayloadShape {
   featuredVideoUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
-  featuredOuting: LandingOuting | null;
-  featuredPosts: LandingPost[];
   currentVerse: LandingVerse | null;
 }

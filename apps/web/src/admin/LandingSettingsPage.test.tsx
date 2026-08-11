@@ -12,6 +12,11 @@
 // - Save error → error message shown
 // - Loading state prevents form interaction during fetch
 // - Form disabled during save submission
+//
+// WU3 / Slice 1 — the legacy featuredOutingId / featured-outing
+// selection block was removed. The test group "featured selection"
+// was deleted in lockstep; surviving tests cover the LP-01 base
+// fields only.
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -385,15 +390,15 @@ describe("LandingSettingsPage edit and save", () => {
 
   it("omits an absent hero image ID while retaining hero copy on save failure", async () => {
     const settingsWithoutHeroImage = { ...SAMPLE_SETTINGS, heroImageId: null };
+    // WU3 — LandingSettingsPage no longer issues the /outings/admin
+    // lookup that was previously chained to the load, so the mock is
+    // reduced to GET /landing/admin (success) + PUT /landing/admin
+    // (rejected with Network error).
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(settingsWithoutHeroImage),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([]),
       })
       .mockRejectedValueOnce(new Error("Network error"));
 
@@ -546,150 +551,45 @@ describe("LandingSettingsPage triangulation", () => {
   });
 });
 
-describe("LandingSettingsPage featured selection", () => {
-  it("selects a published candidate through outings endpoints and clears it", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({ ...SAMPLE_SETTINGS, featuredOutingId: "o1" }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            { id: "o2", title: "Published Outing", status: "PUBLISHED" },
-          ]),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ featuredOutingId: "o2" }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({ ...SAMPLE_SETTINGS, featuredOutingId: "o2" }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            { id: "o2", title: "Published Outing", status: "PUBLISHED" },
-          ]),
-      });
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<LandingSettingsPage />);
-    await waitFor(() =>
-      expect(screen.getByTestId("featured-outing-select")).toBeTruthy(),
-    );
-    fireEvent.change(screen.getByTestId("featured-outing-select"), {
-      target: { value: "o2" },
+describe("LandingSettingsPage — legacy featured-outing removal (WU3)", () => {
+  it("does not render the legacy featured-outing select or controls", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(SAMPLE_SETTINGS),
     });
-    fireEvent.click(screen.getByRole("button", { name: /destacar salida/i }));
-    await waitFor(() =>
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        "/outings/admin/o2/feature",
-        expect.objectContaining({ method: "POST" }),
-      ),
-    );
-    await waitFor(() => {
-      expect(screen.getByTestId("featured-outing-success").textContent).toMatch(
-        /actualizada correctamente/i,
-      );
-    });
-  });
-
-  it("shows a featured-outing error when mutation or authoritative refresh fails", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation((url: string, init?: RequestInit) => {
-        if (url === "/landing/admin") {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({ ...SAMPLE_SETTINGS, featuredOutingId: null }),
-          });
-        }
-        if (url === "/outings/admin?status=PUBLISHED") {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve([
-                { id: "o2", title: "Published Outing", status: "PUBLISHED" },
-              ]),
-          });
-        }
-        if (url === "/outings/admin/o2/feature" && init?.method === "POST") {
-          return Promise.reject(new Error("Network error"));
-        }
-        throw new Error(`Unexpected request: ${url}`);
-      });
 
     render(<LandingSettingsPage />);
-    await waitFor(() =>
-      expect(screen.getByTestId("featured-outing-select")).toBeTruthy(),
-    );
-    fireEvent.change(screen.getByTestId("featured-outing-select"), {
-      target: { value: "o2" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /destacar salida/i }));
 
     await waitFor(() => {
-      expect(screen.getByTestId("featured-outing-error").textContent).toMatch(
-        /no se pudo actualizar/i,
-      );
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
     });
+
+    expect(screen.queryByTestId("featured-outing-select")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /destacar salida/i }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /quitar salida destacada/i }),
+    ).toBeNull();
   });
 
-  it("clears through the outings endpoint and refreshes authoritative state", async () => {
-    let featuredOutingId: string | null = "o2";
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation((url: string, init?: RequestInit) => {
-        if (url === "/landing/admin")
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({ ...SAMPLE_SETTINGS, featuredOutingId }),
-          });
-        if (url === "/outings/admin?status=PUBLISHED")
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve([
-                { id: "o2", title: "Published Outing", status: "PUBLISHED" },
-              ]),
-          });
-        if (url === "/outings/admin/feature" && init?.method === "DELETE") {
-          featuredOutingId = null;
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ featuredOutingId }),
-          });
-        }
-        throw new Error(`Unexpected request: ${url}`);
-      });
+  it("does not call /outings/admin endpoints on mount or save", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(SAMPLE_SETTINGS),
+    });
+    globalThis.fetch = fetchSpy;
 
     render(<LandingSettingsPage />);
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /quitar salida destacada/i }),
-      ).toBeTruthy(),
+
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
+    // No /outings/admin calls — the legacy featuredOutingId wiring is gone.
+    const outingCalls = fetchSpy.mock.calls.filter(
+      ([url]) => typeof url === "string" && url.startsWith("/outings/admin"),
     );
-    fireEvent.click(
-      screen.getByRole("button", { name: /quitar salida destacada/i }),
-    );
-    await waitFor(() =>
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        "/outings/admin/feature",
-        expect.objectContaining({ method: "DELETE" }),
-      ),
-    );
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: /quitar salida destacada/i }),
-      ).toBeNull(),
-    );
+    expect(outingCalls).toHaveLength(0);
   });
 });

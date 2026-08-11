@@ -73,17 +73,17 @@ afterEach(() => {
 
 describe("AdminShell", () => {
   it("renders the canonical navigation with active state, identity, and disabled Files", () => {
-    renderShell("posts");
+    renderShell("verses");
 
     expect(screen.getByTestId("admin-sidebar")).toBeTruthy();
     expect(screen.getByTestId("admin-user-name").textContent).toBe(
       USER.displayName,
     );
-    expect(screen.getByTestId("nav-posts").getAttribute("aria-current")).toBe(
+    expect(screen.getByTestId("nav-verses").getAttribute("aria-current")).toBe(
       "page",
     );
     expect(
-      (screen.getByTestId("nav-posts") as HTMLButtonElement).disabled,
+      (screen.getByTestId("nav-verses") as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(
       (screen.getByTestId("nav-placeholder-files") as HTMLButtonElement)
@@ -105,10 +105,10 @@ describe("AdminShell", () => {
       />,
     );
 
-    fireEvent.click(screen.getByTestId("nav-posts"));
+    fireEvent.click(screen.getByTestId("nav-verses"));
     fireEvent.click(screen.getByTestId("admin-logout"));
 
-    expect(onNavigate).toHaveBeenCalledWith("posts");
+    expect(onNavigate).toHaveBeenCalledWith("verses");
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
 
@@ -189,13 +189,7 @@ describe("AdminShell", () => {
 
   it("only marks the active section as aria-current and disabled", () => {
     renderShell("verses");
-    const allNav = [
-      "nav-landing-settings",
-      "nav-verses",
-      "nav-responsibles",
-      "nav-posts",
-      "nav-outings",
-    ];
+    const allNav = ["nav-landing-settings", "nav-verses", "nav-responsibles"];
     expect(screen.getByTestId("nav-verses").getAttribute("aria-current")).toBe(
       "page",
     );
@@ -208,6 +202,12 @@ describe("AdminShell", () => {
         expect((btn as HTMLButtonElement).disabled).toBe(false);
       }
     }
+  });
+
+  it("does not render the legacy posts or outings nav items (WU3 cleanup)", () => {
+    renderShell("verses");
+    expect(screen.queryByTestId("nav-posts")).toBeNull();
+    expect(screen.queryByTestId("nav-outings")).toBeNull();
   });
 
   it("restores focus to the sidebar trigger after closing the mobile Sheet", async () => {

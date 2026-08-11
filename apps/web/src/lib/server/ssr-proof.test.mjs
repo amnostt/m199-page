@@ -112,21 +112,6 @@ function buildSuccessPayload() {
     featuredVideoUrl: null,
     contactEmail: "contact@pr4.test",
     contactPhone: null,
-    featuredOuting: {
-      id: "out-1",
-      slug: "out-1",
-      title: "PR4 SSR proof — featured outing",
-      location: "PR4 SSR proof — Buenos Aires",
-      mainImageUrl: null,
-    },
-    featuredPosts: [
-      {
-        id: "post-1",
-        slug: "post-1",
-        title: "PR4 SSR proof — featured post",
-        coverImageUrl: null,
-      },
-    ],
     currentVerse: {
       text: "PR4 SSR proof — verse text",
       reference: "PR4 1:1",
@@ -147,69 +132,6 @@ function createStubApi({ port, mode }) {
       res.statusCode = 405;
       res.setHeader("Allow", "GET");
       res.end();
-      return;
-    }
-    const publicContent = {
-      "/posts": [
-        {
-          id: "post-1",
-          slug: "post-1",
-          title: "Public post",
-          description: "Post description",
-          coverImageUrl: null,
-          content: "<p>Post body</p>",
-          status: "PUBLISHED",
-          tags: ["news"],
-          publishedAt: "2026-07-28T00:00:00.000Z",
-          downloads: [],
-        },
-      ],
-      "/posts/post-1": {
-        id: "post-1",
-        slug: "post-1",
-        title: "Public post",
-        description: "Post description",
-        coverImageUrl: null,
-        content: "<p>Post body</p>",
-        status: "PUBLISHED",
-        tags: ["news"],
-        publishedAt: "2026-07-28T00:00:00.000Z",
-        downloads: [{ label: "Guide", fileUrl: "/files/file-1" }],
-      },
-      "/outings": [
-        {
-          id: "outing-1",
-          slug: "outing-1",
-          title: "Public outing",
-          dateTime: "2026-07-28T12:00:00.000Z",
-          location: "Buenos Aires",
-          description: "Outing description",
-          status: "PUBLISHED",
-          likesCount: 4,
-          mainImageUrl: null,
-          croquisUrl: null,
-          planUrl: null,
-        },
-      ],
-      "/outings/outing-1": {
-        id: "outing-1",
-        slug: "outing-1",
-        title: "Public outing",
-        dateTime: "2026-07-28T12:00:00.000Z",
-        location: "Buenos Aires",
-        description: "Outing description",
-        status: "PUBLISHED",
-        likesCount: 4,
-        mainImageUrl: null,
-        croquisUrl: null,
-        planUrl: null,
-      },
-    };
-    if (req.url in publicContent) {
-      mode.requests.push({ method: req.method, url: req.url });
-      res.statusCode = 200;
-      res.setHeader("content-type", "application/json; charset=utf-8");
-      res.end(JSON.stringify(publicContent[req.url]));
       return;
     }
     if (req.url !== "/landing/public") {
@@ -500,9 +422,6 @@ describe("PR4 SSR proof — built Astro standalone server", () => {
     expect(body).toContain('class="public-ui public-page"');
     expect(body).toContain('data-testid="landing-page"');
     // Server-rendered payload — content from the stub is in the body.
-    expect(body).toContain("PR4 SSR proof — featured outing");
-    expect(body).toContain("PR4 SSR proof — Buenos Aires");
-    expect(body).toContain("PR4 SSR proof — featured post");
     expect(body).toContain("PR4 SSR proof — verse text");
     expect(body).toContain("PR4 SSR proof — mission text");
     // The page references a `/_astro/*` CSS file. The exact hash is
@@ -555,7 +474,7 @@ describe("PR4 SSR proof — built Astro standalone server", () => {
       expect(lower).not.toContain(leak);
     }
     // The page must not echo the success content either.
-    expect(body).not.toContain("PR4 SSR proof — featured outing");
+    expect(body).not.toContain("PR4 SSR proof — verse text");
     expect(api.mode.requests).toEqual([
       { method: "GET", url: "/landing/public" },
     ]);
@@ -573,22 +492,8 @@ describe("PR4 SSR proof — built Astro standalone server", () => {
     expect(body).toMatch(/component-url=["']?\/_astro\/[^"']+\.js["']?/);
   });
 
-  it("server-renders explicit post and outing routes and uses the custom 404", async () => {
+  it("serves the custom 404 page", async () => {
     if (setupError) throw setupError;
-    const routes = [
-      ["/posts", "Public post"],
-      ["/posts/post-1", "Guide"],
-      ["/outings", "Public outing"],
-      ["/outings/outing-1", 'data-testid="like-button"'],
-    ];
-    for (const [path, content] of routes) {
-      const response = await fetch(new URL(path, harness.baseUrl), {
-        headers: { accept: "text/html" },
-      });
-      expect(response.status).toBe(200);
-      expect(await response.text()).toContain(content);
-    }
-
     const missing = await fetch(new URL("/missing", harness.baseUrl), {
       headers: { accept: "text/html" },
     });

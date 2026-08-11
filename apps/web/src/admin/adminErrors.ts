@@ -40,14 +40,6 @@ function localizeMessage(message: string): string {
       "No hay un lugar disponible para destacar.",
     ],
     [/^Slug already exists$/i, "El slug ya existe."],
-    [
-      /^Only PUBLISHED posts can be archived$/i,
-      "Sólo se pueden archivar publicaciones publicadas.",
-    ],
-    [
-      /^Only PUBLISHED posts can be featured$/i,
-      "Sólo se pueden destacar publicaciones publicadas.",
-    ],
     [/^title should not be empty$/i, "El título es obligatorio."],
     [/^title is required$/i, "El título es obligatorio."],
     [/^slug must be unique$/i, "El slug debe ser único."],
@@ -71,8 +63,6 @@ function localizeMessage(message: string): string {
   }
 
   for (const [pattern, translation] of [
-    [/^Post "(.+)" not found$/i, 'No se encontró la publicación "$1".'],
-    [/^Outing "(.+)" not found$/i, 'No se encontró la salida "$1".'],
     [/^Verse "(.+)" not found$/i, 'No se encontró el versículo "$1".'],
     [
       /^FileAsset with id "(.+)" not found$/i,

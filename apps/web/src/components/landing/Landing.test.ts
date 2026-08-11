@@ -26,21 +26,6 @@ function fullPayload(): LandingPayloadShape {
     featuredVideoUrl: "https://www.youtube.com/embed/abc",
     contactEmail: "contacto@m199.org",
     contactPhone: "+54 11 1234-5678",
-    featuredOuting: {
-      id: "out-1",
-      slug: "salida-de-prueba",
-      title: "Salida de prueba",
-      location: "Chaco",
-      mainImageUrl: "/files/out",
-    },
-    featuredPosts: [
-      {
-        id: "p-1",
-        slug: "primer-post",
-        title: "Un testimonio",
-        coverImageUrl: "/files/post",
-      },
-    ],
     currentVerse: {
       text: "Id por todo el mundo",
       reference: "Marcos 16:15",
@@ -60,8 +45,6 @@ function minimalPayload(): LandingPayloadShape {
     featuredVideoUrl: null,
     contactEmail: null,
     contactPhone: null,
-    featuredOuting: null,
-    featuredPosts: [],
     currentVerse: null,
   };
 }
@@ -104,11 +87,9 @@ describe("Landing.astro — successful markup", () => {
     const html = await render(fullPayload());
     const sections = [
       "hero-section",
-      "featured-outing-section",
       "missions-section",
       "about-section",
       "video-section",
-      "featured-posts-section",
       "verse-section",
       "contact-section",
       "landing-footer",
@@ -124,9 +105,6 @@ describe("Landing.astro — successful markup", () => {
     // Sanity-check the section content for the most error-prone fields.
     expect(html).toContain("Misión 1-99");
     expect(html).toContain("Transformamos vidas");
-    expect(html).toContain('href="/outings/salida-de-prueba"');
-    expect(html).toContain('class="public-action public-action--primary"');
-    expect(html).toContain("Un testimonio");
     expect(html).toContain("Id por todo el mundo");
     expect(html).toContain("Marcos 16:15");
   });
@@ -141,7 +119,6 @@ describe("Landing.astro — successful markup", () => {
       "about-section",
       "video-section",
       "contact-section",
-      "featured-posts-section",
       "verse-section",
     ];
     for (const id of sections) {
@@ -335,16 +312,21 @@ describe("Landing.astro — CSS scope contract", () => {
 
   it("uses public-section for every block-level section", async () => {
     const html = await render(fullPayload());
+    // After WU3 the legacy featured-outing and featured-posts sections
+    // are gone, so the count drops from 6 to 4 (hero, missions, about,
+    // verse, contact — the contact section is a public-card-list, not
+    // a public-section, so it does not contribute).
     expect(
       html.match(/class="[^"]*\bpublic-section\b[^"]*"/g)?.length,
-    ).toBeGreaterThanOrEqual(6);
+    ).toBeGreaterThanOrEqual(4);
   });
 
-  it("uses public-card for the featured outing and each post", async () => {
+  it("does not render the legacy featured-outing or featured-posts sections", async () => {
     const html = await render(fullPayload());
-    expect(html.match(/class="public-card"/g)?.length).toBeGreaterThanOrEqual(
-      2,
-    );
+    expect(html).not.toContain("featured-outing-section");
+    expect(html).not.toContain("featured-posts-section");
+    expect(html).not.toContain("featured-outing-link");
+    expect(html).not.toContain("featured-outing-title");
   });
 });
 

@@ -112,8 +112,6 @@ const basePayload = () => ({
   featuredVideoUrl: null,
   contactEmail: null,
   contactPhone: null,
-  featuredOuting: null,
-  featuredPosts: [],
   currentVerse: null,
 });
 
@@ -159,21 +157,6 @@ describe("validateLandingPublicPayload — structural validation", () => {
     description: "Somos una comunidad de fe",
     contactEmail: "contacto@m199.org",
     contactPhone: "+54 11 1234-5678",
-    featuredOuting: {
-      id: "out-1",
-      slug: "salida",
-      title: "Salida",
-      location: "Chaco",
-      mainImageUrl: "/files/img-out",
-    },
-    featuredPosts: [
-      {
-        id: "p-1",
-        slug: "primer-post",
-        title: "Un testimonio",
-        coverImageUrl: "/files/img-post",
-      },
-    ],
     currentVerse: {
       text: "Id por todo el mundo",
       reference: "Marcos 16:15",
@@ -183,23 +166,12 @@ describe("validateLandingPublicPayload — structural validation", () => {
 
   it("accepts a fully-populated payload", () => {
     const payload = validateLandingPublicPayload(full());
-    expect(payload.featuredOuting?.id).toBe("out-1");
-    expect(payload.featuredPosts).toHaveLength(1);
     expect(payload.currentVerse?.reference).toBe("Marcos 16:15");
   });
 
   it.each([
     ["non-object root string", "not a payload"],
     ["non-object root null", null],
-    [
-      "featuredOuting missing fields",
-      { ...full(), featuredOuting: { id: "out-1" } },
-    ],
-    ["featuredPosts not array", { ...full(), featuredPosts: "not-an-array" }],
-    [
-      "featuredPosts entry missing fields",
-      { ...full(), featuredPosts: [{ id: "p-1" }] },
-    ],
     [
       "currentVerse missing fields",
       { ...full(), currentVerse: { text: "Id" } },
@@ -226,8 +198,6 @@ const validPayload = {
   featuredVideoUrl: "https://www.youtube.com/embed/abc",
   contactEmail: null,
   contactPhone: null,
-  featuredOuting: null,
-  featuredPosts: [],
   currentVerse: null,
 };
 
@@ -339,7 +309,7 @@ describe("fetchLandingPublicPayload — failure mapping", () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(
-        okJsonResponse({ ...validPayload, featuredOuting: { id: "out-1" } }),
+        okJsonResponse({ ...validPayload, currentVerse: { text: "Id" } }),
       );
     await expect(
       fetchLandingPublicPayload({
