@@ -1,0 +1,141 @@
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from "@nestjs/common";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PublicationsService } from "./publications.service.js";
+import {
+  PublicationScope,
+  PublicationStatus,
+  PublicationType,
+} from "./dto/publication.dto.js";
+
+vi.mock("../file-module/assert-file-category.js", () => ({
+  assertFileCategory: vi.fn(),
+}));
+vi.mock("./sanitizer.js", () => ({
+  sanitizePublicationContent: (value: string) =>
+    value.replace(/<script.*?>.*?<\/script>/gis, ""),
+}));
+
+const base = {
+  slug: "hello",
+  title: "Hello",
+  excerpt: "Excerpt",
+  content: "<p>safe</p><script>alert(1)</script>",
+  featuredImageId: "image",
+  type: PublicationType.POST,
+};
+function fixture() {
+  const row: any = {
+    id: "pub-1",
+    ...base,
+    status: PublicationStatus.DRAFT,
+    scope: PublicationScope.GENERAL,
+    publishedAt: null,
+    startDate: null,
+    endDate: null,
+    activityStatus: null,
+    documentationStatus: null,
+    missions: [],
+  };
+  const publication = {
+    findMany: vi.fn().mockResolvedValue([row]),
+    findUnique: vi.fn().mockResolvedValue(row),
+    create: vi
+      .fn()
+      .mockImplementation(async ({ data }: any) => ({ ...row, ...data })),
+    update: vi
+      .fn()
+      .mockImplementation(async ({ data }: any) => ({ ...row, ...data })),
+    delete: vi.fn().mockResolvedValue(row),
+  };
+  const mission = { findMany: vi.fn().mockResolvedValue([]) };
+  const publicationMission = { deleteMany: vi.fn(), createMany: vi.fn() };
+  const client: any = { publication, mission, publicationMission };
+  client.$transaction = vi.fn(async (callback: any) => callback(client));
+  return { service: new PublicationsService({ client } as any), client, row };
+}
+
+describe("PublicationsService", () => {
+  beforeEach(() => vi.clearAllMocks());
+  it("sanitizes content, defaults to DRAFT, and orders list deterministically", async () => {
+    const { service, client } = fixture();
+    const created = await service.create(base);
+    expect(created).toBeTruthy();
+    expect(client.publication.create.mock.calls[0][0].data.content).toBe(
+      "<p>safe</p>",
+    );
+    expect(client.publication.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "DRAFT", publishedAt: null }),
+      }),
+    );
+    await service.findMany();
+    expect(client.publication.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      }),
+    );
+  });
+  it("rejects invalid activity fields and type changes without confirmation", async () => {
+    const { service } = fixture();
+    await expect(
+      service.create({ ...base, type: PublicationType.OUTING } as any),
+    ).rejects.toThrow(BadRequestException);
+    await expect(
+      service.update("pub-1", { type: PublicationType.OUTING } as any),
+    ).rejects.toThrow("confirmTypeChange");
+  });
+  it("validates scope and ACTIVE mission links", async () => {
+    const { service, client } = fixture();
+    await expect(
+      service.updateScope("pub-1", PublicationScope.MISSION, []),
+    ).rejects.toThrow("at least one");
+    client.mission.findMany.mockResolvedValue([{ id: "m1", status: "ACTIVE" }]);
+    await service.updateScope("pub-1", PublicationScope.MISSION, ["m1"]);
+    expect(client.publicationMission.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [{ publicationId: "pub-1", missionId: "m1" }],
+      }),
+    );
+  });
+  it("stamps and clears publishedAt through status transitions", async () => {
+    const { service, client } = fixture();
+    await service.updateStatus("pub-1", PublicationStatus.PUBLISHED);
+    expect(client.publication.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "PUBLISHED",
+          publishedAt: expect.any(Date),
+        }),
+      }),
+    );
+    await service.updateStatus("pub-1", PublicationStatus.DRAFT);
+    expect(client.publication.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "DRAFT", publishedAt: null }),
+      }),
+    );
+  });
+  it("maps missing and duplicate records and deletes directly for FK cascade", async () => {
+    const { service, client } = fixture();
+    client.publication.findUnique.mockResolvedValueOnce(null);
+    await expect(service.remove("missing")).rejects.toThrow(NotFoundException);
+    client.publication.findUnique.mockResolvedValueOnce({
+      id: "pub-1",
+      ...base,
+      missions: [],
+    });
+    const error: any = new Error("duplicate");
+    error.code = "P2002";
+    client.publication.create.mockRejectedValueOnce(error);
+    await expect(service.create(base)).rejects.toThrow(ConflictException);
+    await service.remove("pub-1");
+    expect(client.publication.delete).toHaveBeenCalledWith({
+      where: { id: "pub-1" },
+    });
+    expect(client.publicationMission.deleteMany).not.toHaveBeenCalled();
+  });
+});
