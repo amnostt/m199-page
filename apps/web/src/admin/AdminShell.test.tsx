@@ -112,6 +112,13 @@ describe("AdminShell", () => {
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
 
+  it("renders and navigates to Missions", () => {
+    const onNavigate = vi.fn();
+    renderShell("landing", { onNavigate });
+    fireEvent.click(screen.getByTestId("nav-missions"));
+    expect(onNavigate).toHaveBeenCalledWith("missions");
+  });
+
   it("opens the responsive mobile sidebar from the accessible trigger", async () => {
     window.innerWidth = 375;
     renderShell();
@@ -189,7 +196,12 @@ describe("AdminShell", () => {
 
   it("only marks the active section as aria-current and disabled", () => {
     renderShell("verses");
-    const allNav = ["nav-landing-settings", "nav-verses", "nav-responsibles"];
+    const allNav = [
+      "nav-landing-settings",
+      "nav-verses",
+      "nav-responsibles",
+      "nav-missions",
+    ];
     expect(screen.getByTestId("nav-verses").getAttribute("aria-current")).toBe(
       "page",
     );
