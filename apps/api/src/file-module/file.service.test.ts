@@ -63,15 +63,15 @@ interface FileAssetRow {
 const SAMPLE_IMAGE_ROW: FileAssetRow = {
   id: "file-1",
   storageProvider: "LOCAL",
-  category: "OUTING_MAIN_IMAGE",
+  category: "PUBLICATION_FEATURED_IMAGE",
   originalFilename: "photo.jpg",
   mimeType: "image/jpeg",
   extension: ".jpg",
   fileSize: 2048,
-  storagePath: "./uploads/OUTING_MAIN_IMAGE/f1.uuid.jpg",
+  storagePath: "./uploads/PUBLICATION_FEATURED_IMAGE/f1.uuid.jpg",
   url: "/files/file-1",
   metadata: null,
-  thumbnailPath: "./uploads/OUTING_MAIN_IMAGE/f1.uuid.jpg.thumb.jpg",
+  thumbnailPath: "./uploads/PUBLICATION_FEATURED_IMAGE/f1.uuid.jpg.thumb.jpg",
   uploadedById: "user-1",
   createdAt: new Date("2026-01-01"),
   updatedAt: new Date("2026-01-01"),
@@ -80,12 +80,12 @@ const SAMPLE_IMAGE_ROW: FileAssetRow = {
 const SAMPLE_DOC_ROW: FileAssetRow = {
   id: "file-2",
   storageProvider: "LOCAL",
-  category: "OUTING_CROQUIS",
+  category: "PUBLICATION_DOWNLOAD",
   originalFilename: "plan.pdf",
   mimeType: "application/pdf",
   extension: ".pdf",
   fileSize: 5120,
-  storagePath: "./uploads/OUTING_CROQUIS/f2.uuid.pdf",
+  storagePath: "./uploads/PUBLICATION_DOWNLOAD/f2.uuid.pdf",
   url: "/files/file-2",
   metadata: null,
   thumbnailPath: null,
@@ -174,7 +174,7 @@ describe("FileService", () => {
           buffer: Buffer.from("fake"),
           originalFilename: "evil.txt",
           mimeType: "text/plain",
-          category: "OUTING_MAIN_IMAGE",
+          category: "PUBLICATION_FEATURED_IMAGE",
           uploadedById: "user-1",
         }),
       ).rejects.toThrow("MIME type text/plain is not allowed");
@@ -188,13 +188,13 @@ describe("FileService", () => {
           buffer: Buffer.from("fake"),
           originalFilename: "evil.txt",
           mimeType: "text/plain",
-          category: "OUTING_CROQUIS",
+          category: "PUBLICATION_DOWNLOAD",
           uploadedById: "user-1",
         }),
       ).rejects.toThrow("MIME type text/plain is not allowed");
     });
 
-    it("accepts image/jpeg for OUTING_MAIN_IMAGE", async () => {
+    it("accepts image/jpeg for PUBLICATION_FEATURED_IMAGE", async () => {
       const { service, mocks } = await buildService({
         createResult: { ...SAMPLE_IMAGE_ROW, id: "new-file" },
       });
@@ -203,7 +203,7 @@ describe("FileService", () => {
         buffer: VALID_JPEG,
         originalFilename: "photo.jpg",
         mimeType: "image/jpeg",
-        category: "OUTING_MAIN_IMAGE",
+        category: "PUBLICATION_FEATURED_IMAGE",
         uploadedById: "user-1",
       });
 
@@ -218,7 +218,7 @@ describe("FileService", () => {
           buffer: VALID_PDF,
           originalFilename: "not-a-photo.jpg",
           mimeType: "image/jpeg",
-          category: "OUTING_MAIN_IMAGE",
+          category: "PUBLICATION_FEATURED_IMAGE",
           uploadedById: "user-1",
         }),
       ).rejects.toThrow("File content does not match MIME type image/jpeg");
@@ -240,14 +240,14 @@ describe("FileService", () => {
         buffer: VALID_PNG,
         originalFilename: "photo.png",
         mimeType: "image/png",
-        category: "OUTING_MAIN_IMAGE",
+        category: "PUBLICATION_FEATURED_IMAGE",
         uploadedById: "user-1",
       });
 
       expect(mocks.create).toHaveBeenCalled();
     });
 
-    it("accepts application/pdf for OUTING_CROQUIS (document category)", async () => {
+    it("accepts application/pdf for PUBLICATION_DOWNLOAD (document category)", async () => {
       const { service, mocks } = await buildService({
         createResult: { ...SAMPLE_DOC_ROW, id: "new-doc" },
       });
@@ -256,7 +256,7 @@ describe("FileService", () => {
         buffer: VALID_PDF,
         originalFilename: "plan.pdf",
         mimeType: "application/pdf",
-        category: "OUTING_CROQUIS",
+        category: "PUBLICATION_DOWNLOAD",
         uploadedById: "user-1",
       });
 
@@ -272,7 +272,7 @@ describe("FileService", () => {
         buffer: VALID_PDF,
         originalFilename: "plan.pdf",
         mimeType: "application/pdf",
-        category: "OUTING_CROQUIS",
+        category: "PUBLICATION_DOWNLOAD",
         uploadedById: "user-1",
       });
 
@@ -308,7 +308,7 @@ describe("FileService", () => {
         buffer: VALID_JPEG,
         originalFilename: "photo.jpg",
         mimeType: "image/jpeg",
-        category: "OUTING_MAIN_IMAGE",
+        category: "PUBLICATION_FEATURED_IMAGE",
         uploadedById: "user-1",
       });
 
@@ -324,7 +324,7 @@ describe("FileService", () => {
         buffer: VALID_PDF,
         originalFilename: "plan.pdf",
         mimeType: "application/pdf",
-        category: "OUTING_CROQUIS",
+        category: "PUBLICATION_DOWNLOAD",
         uploadedById: "user-1",
       });
 
@@ -354,7 +354,7 @@ describe("FileService", () => {
         buffer: VALID_JPEG,
         originalFilename: "photo.jpg",
         mimeType: "image/jpeg",
-        category: "OUTING_MAIN_IMAGE",
+        category: "PUBLICATION_FEATURED_IMAGE",
         uploadedById: "user-1",
       });
 
@@ -378,7 +378,7 @@ describe("FileService", () => {
           buffer: VALID_JPEG,
           originalFilename: "photo.jpg",
           mimeType: "image/jpeg",
-          category: "OUTING_MAIN_IMAGE",
+          category: "PUBLICATION_FEATURED_IMAGE",
           uploadedById: "user-1",
         }),
       ).rejects.toThrow("DB error");
@@ -400,7 +400,7 @@ describe("FileService", () => {
           buffer: VALID_JPEG,
           originalFilename: "photo.jpg",
           mimeType: "image/jpeg",
-          category: "OUTING_MAIN_IMAGE",
+          category: "PUBLICATION_FEATURED_IMAGE",
           uploadedById: "user-1",
         }),
       ).rejects.toThrow(updateError);
@@ -538,7 +538,7 @@ describe("FileService", () => {
 
     it("unlinks absolute paths stored under relative UPLOAD_DIR", async () => {
       const storagePath = path.resolve(
-        "./uploads/OUTING_MAIN_IMAGE/f1.uuid.jpg",
+        "./uploads/PUBLICATION_FEATURED_IMAGE/f1.uuid.jpg",
       );
       const thumbnailPath = `${storagePath}.thumb.jpg`;
       const { service } = await buildService({

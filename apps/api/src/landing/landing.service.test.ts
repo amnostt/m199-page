@@ -6,9 +6,9 @@
  * Test.createTestingModule with explicit provider overrides and per-test
  * fixture builders.
  *
- * Mocks respect Prisma query arguments (where, orderBy) so tests verify
- * that the service passes correct DB-level filters — not just in-memory
- * post-processing.
+ * Featured outing/posts keys are intentionally absent after the
+ * Mission/Publication domain reset (Slice 1). No replacement field is
+ * exposed.
  */
 import { Test } from "@nestjs/testing";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -23,38 +23,12 @@ interface LandingSettingsRow {
   heroTitle: string | null;
   heroSubtitle: string | null;
   heroImageId: string | null;
-  featuredOutingId: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
   featuredVideoUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
-}
-
-interface OutingRow {
-  id: string;
-  slug: string;
-  title: string;
-  location: string;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-  mainImageId: string | null;
-}
-
-interface PostRow {
-  id: string;
-  slug: string;
-  title: string;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-  coverImageId: string | null;
-}
-
-interface FeaturedPostRow {
-  id: string;
-  slot: string;
-  postId: string;
-  featuredAt: Date;
-  post: PostRow;
 }
 
 interface VerseRow {
@@ -76,141 +50,12 @@ const FULL_SETTINGS: LandingSettingsRow = {
   heroTitle: "Misión 1-99",
   heroSubtitle: "Transformando vidas",
   heroImageId: "img-001",
-  featuredOutingId: "out-001",
   mission: "Nuestra misión es servir",
   vision: "Ser referencia en la comunidad",
   description: "Somos una organización dedicada a...",
   featuredVideoUrl: "https://youtube.com/watch?v=abc",
   contactEmail: "info@m199.org",
   contactPhone: "+54 11 1234-5678",
-};
-
-const PUBLISHED_OUTING: OutingRow = {
-  id: "out-001",
-  slug: "salida-mensual",
-  title: "Salida Mensual",
-  location: "Barrio Norte",
-  status: "PUBLISHED",
-  mainImageId: "img-out-001",
-};
-
-const DRAFT_OUTING: OutingRow = {
-  id: "out-002",
-  slug: "salida-draft",
-  title: "Salida Draft",
-  location: "Centro",
-  status: "DRAFT",
-  mainImageId: null,
-};
-
-const ARCHIVED_OUTING: OutingRow = {
-  id: "out-003",
-  slug: "salida-archived",
-  title: "Salida Archivada",
-  location: "Palermo",
-  status: "ARCHIVED",
-  mainImageId: "img-out-003",
-};
-
-const PUBLISHED_POST: PostRow = {
-  id: "post-001",
-  slug: "primer-post",
-  title: "Primer Post",
-  status: "PUBLISHED",
-  coverImageId: "img-post-001",
-};
-
-const DRAFT_POST: PostRow = {
-  id: "post-002",
-  slug: "post-draft",
-  title: "Post Draft",
-  status: "DRAFT",
-  coverImageId: null,
-};
-
-const FEATURED_PUBLISHED: FeaturedPostRow = {
-  id: "fp-1",
-  slot: "SLOT_1",
-  postId: "post-001",
-  featuredAt: new Date("2026-07-01T12:00:00Z"),
-  post: PUBLISHED_POST,
-};
-
-const FEATURED_DRAFT: FeaturedPostRow = {
-  id: "fp-2",
-  slot: "SLOT_2",
-  postId: "post-002",
-  featuredAt: new Date("2026-07-02T12:00:00Z"),
-  post: DRAFT_POST,
-};
-
-// Multiple featured posts with different timestamps for ordering tests
-const POST_B: PostRow = {
-  id: "post-010",
-  slug: "post-beta",
-  title: "Post Beta",
-  status: "PUBLISHED",
-  coverImageId: "img-beta",
-};
-
-const POST_A: PostRow = {
-  id: "post-011",
-  slug: "post-alpha",
-  title: "Post Alpha",
-  status: "PUBLISHED",
-  coverImageId: "img-alpha",
-};
-
-const POST_C: PostRow = {
-  id: "post-012",
-  slug: "post-gamma",
-  title: "Post Gamma",
-  status: "PUBLISHED",
-  coverImageId: "img-gamma",
-};
-
-const POST_D: PostRow = {
-  id: "post-013",
-  slug: "post-delta",
-  title: "Post Delta",
-  status: "PUBLISHED",
-  coverImageId: null,
-};
-
-// Newest featuredAt = most recently featured
-const FP_NEWEST: FeaturedPostRow = {
-  id: "fp-newest",
-  slot: "SLOT_1",
-  postId: "post-011",
-  featuredAt: new Date("2026-07-05T12:00:00Z"),
-  post: POST_A,
-};
-
-// Middle featuredAt
-const FP_MIDDLE: FeaturedPostRow = {
-  id: "fp-middle",
-  slot: "SLOT_2",
-  postId: "post-010",
-  featuredAt: new Date("2026-07-03T12:00:00Z"),
-  post: POST_B,
-};
-
-// Oldest featuredAt
-const FP_OLDEST: FeaturedPostRow = {
-  id: "fp-oldest",
-  slot: "SLOT_3",
-  postId: "post-012",
-  featuredAt: new Date("2026-07-01T12:00:00Z"),
-  post: POST_C,
-};
-
-// Fourth post (should be excluded by take:3)
-const FP_FOURTH: FeaturedPostRow = {
-  id: "fp-fourth",
-  slot: "SLOT_1",
-  postId: "post-013",
-  featuredAt: new Date("2026-06-01T12:00:00Z"),
-  post: POST_D,
 };
 
 const CURRENT_VERSE: VerseRow = {
@@ -235,18 +80,8 @@ const DRAFT_VERSE: VerseRow = {
 
 interface MockDbOverrides {
   settingsReturn?: LandingSettingsRow | null;
-  featuredPostsReturns?: FeaturedPostRow[];
-  outingReturn?: OutingRow | null;
   verseReturn?: VerseRow | null;
   fileAssetReturn?: FileAssetRow | null;
-}
-
-/** Query shape the service passes to featuredPost.findMany */
-interface FeaturedPostQuery {
-  where?: { post?: { status?: string } };
-  include?: { post?: boolean };
-  orderBy?: { featuredAt?: string };
-  take?: number;
 }
 
 /** Query shape the service passes to verse.findFirst */
@@ -286,44 +121,6 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
       },
     );
 
-  // featuredPost.findMany — respects where, orderBy.featuredAt desc, and take
-  const findMany = vi
-    .fn<(args?: FeaturedPostQuery) => Promise<FeaturedPostRow[]>>()
-    .mockImplementation(async (args?: FeaturedPostQuery) => {
-      let results = overrides.featuredPostsReturns ?? [];
-      if (args?.where?.post?.status) {
-        results = results.filter(
-          (fp) => fp.post.status === args.where!.post!.status,
-        );
-      }
-      // Respect orderBy.featuredAt desc
-      const orderBy = args?.orderBy;
-      if (orderBy?.featuredAt === "desc") {
-        results = [...results].sort(
-          (a, b) => b.featuredAt.getTime() - a.featuredAt.getTime(),
-        );
-      }
-      // Respect take
-      if (args?.take != null) {
-        results = results.slice(0, args.take);
-      }
-      return results;
-    });
-
-  // outing.findUnique — returns the override or null
-  const findUnique = vi
-    .fn<
-      (args: { where: Record<string, unknown> }) => Promise<OutingRow | null>
-    >()
-    .mockImplementation(async (args: { where: Record<string, unknown> }) => {
-      const id = args.where?.id as string | undefined;
-      // Only return if the id matches the override
-      if (id && overrides.outingReturn && overrides.outingReturn.id === id) {
-        return overrides.outingReturn;
-      }
-      return null;
-    });
-
   // verse.findFirst — respects where.status; returns the configured
   // verseReturn. Multi-verse ordering (orderBy.publishedAt desc) is
   // delegated to the DB in production — this mock covers query-shape
@@ -349,8 +146,6 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
   const client = {
     landingSettings: { findFirst, upsert },
     fileAsset: { findUnique: fileAssetFindUnique },
-    featuredPost: { findMany },
-    outing: { findUnique },
     verse: { findFirst: verseFindFirst },
   };
 
@@ -358,8 +153,6 @@ function makeDbValue(overrides: MockDbOverrides = {}) {
     client,
     findFirst,
     upsert,
-    findMany,
-    findUnique,
     verseFindFirst,
     fileAssetFindUnique,
   };
@@ -472,16 +265,19 @@ describe("LandingService", () => {
     it("rejects a wrong-category hero asset before upserting changed copy", async () => {
       const { service, mocks } = await buildService({
         settingsReturn: FULL_SETTINGS,
-        fileAssetReturn: { id: "post-asset", category: "POST_COVER_IMAGE" },
+        fileAssetReturn: {
+          id: "publication-asset",
+          category: "PUBLICATION_FEATURED_IMAGE",
+        },
       });
 
       await expect(
         service.updateSettings({
           heroTitle: "Changed title",
-          heroImageId: "post-asset",
+          heroImageId: "publication-asset",
         }),
       ).rejects.toThrow(
-        'FileAsset "post-asset" must have category LANDING_HERO',
+        'FileAsset "publication-asset" must have category LANDING_HERO',
       );
 
       expect(mocks.upsert).not.toHaveBeenCalled();
@@ -555,38 +351,23 @@ describe("LandingService", () => {
     });
 
     it("ignores an attempted featured pointer while preserving hero settings", async () => {
+      // Validation pipe whitelists UpdateLandingSettingsDto fields; any
+      // unknown property is stripped before reaching the service. The
+      // service itself does not inspect featuredOutingId.
       const { service, mocks } = await buildService({
         settingsReturn: FULL_SETTINGS,
       });
 
       const result = await service.updateSettings({
         heroTitle: "Updated hero",
+        // featuredOutingId is no longer part of the DTO; this guards
+        // against any legacy field sneaking through.
         featuredOutingId: "out-002",
       } as never);
 
       const call = mocks.upsert.mock.calls[0]![0];
       expect(call.update).toEqual({ heroTitle: "Updated hero" });
-      expect(result.featuredOutingId).toBe("out-001");
-    });
-
-    it("persists a focused featured pointer including null", async () => {
-      const { service, mocks } = await buildService({
-        settingsReturn: FULL_SETTINGS,
-      });
-
-      await service.persistFeaturedOutingId("out-002");
-      await service.persistFeaturedOutingId(null);
-
-      expect(mocks.upsert).toHaveBeenNthCalledWith(1, {
-        where: { id: 1 },
-        create: { id: 1, featuredOutingId: "out-002" },
-        update: { featuredOutingId: "out-002" },
-      });
-      expect(mocks.upsert).toHaveBeenNthCalledWith(2, {
-        where: { id: 1 },
-        create: { id: 1, featuredOutingId: null },
-        update: { featuredOutingId: null },
-      });
+      expect(result.heroTitle).toBe("Updated hero");
     });
   });
 
@@ -596,8 +377,6 @@ describe("LandingService", () => {
     it("assembles full payload when all data is available", async () => {
       const { service, mocks } = await buildService({
         settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [FEATURED_PUBLISHED],
-        outingReturn: PUBLISHED_OUTING,
         verseReturn: CURRENT_VERSE,
       });
 
@@ -618,36 +397,10 @@ describe("LandingService", () => {
       expect(result.contactEmail).toBe("info@m199.org");
       expect(result.contactPhone).toBe("+54 11 1234-5678");
 
-      // Featured outing
-      expect(result.featuredOuting).not.toBeNull();
-      expect(result.featuredOuting?.id).toBe("out-001");
-      expect(result.featuredOuting?.title).toBe("Salida Mensual");
-      expect(result.featuredOuting?.slug).toBe("salida-mensual");
-      expect(result.featuredOuting?.location).toBe("Barrio Norte");
-      expect(result.featuredOuting?.mainImageUrl).toBe("/files/img-out-001");
-
-      // Featured posts
-      expect(result.featuredPosts).toHaveLength(1);
-      expect(result.featuredPosts[0]!.id).toBe("post-001");
-      expect(result.featuredPosts[0]!.title).toBe("Primer Post");
-      expect(result.featuredPosts[0]!.slug).toBe("primer-post");
-      expect(result.featuredPosts[0]!.coverImageUrl).toBe(
-        "/files/img-post-001",
-      );
-
       // Current verse
       expect(result.currentVerse).not.toBeNull();
       expect(result.currentVerse?.text).toContain("Todo lo puedo");
       expect(result.currentVerse?.reference).toBe("Filipenses 4:13");
-
-      // Verify featuredPosts query filters by PUBLISHED, ordered by featuredAt desc, capped at 3
-      expect(mocks.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { post: { status: "PUBLISHED" } },
-          orderBy: { featuredAt: "desc" },
-          take: 3,
-        }),
-      );
 
       // Verify verse query filters by PUBLISHED and orders by publishedAt desc, id desc
       expect(mocks.verseFindFirst).toHaveBeenCalledWith(
@@ -657,123 +410,18 @@ describe("LandingService", () => {
         }),
       );
 
-      // Verify outing query uses the correct featuredOutingId
-      expect(mocks.findUnique).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: "out-001" } }),
-      );
-    });
-
-    it("returns null for featuredOuting when featuredOutingId is null", async () => {
-      const { service } = await buildService({
-        settingsReturn: { ...FULL_SETTINGS, featuredOutingId: null },
-        featuredPostsReturns: [FEATURED_PUBLISHED],
-        outingReturn: null,
-        verseReturn: CURRENT_VERSE,
-      });
-
-      const result = await service.getPublicPayload();
-
-      expect(result.featuredOuting).toBeNull();
-      // Rest of payload intact
-      expect(result.heroTitle).toBe("Misión 1-99");
-      expect(result.featuredPosts).toHaveLength(1);
-      expect(result.currentVerse).not.toBeNull();
-    });
-
-    it("filters out draft featured posts at DB level (only PUBLISHED posts appear)", async () => {
-      const { service } = await buildService({
-        settingsReturn: FULL_SETTINGS,
-        // Mock returns all posts; the DB-level filter in the mock
-        // removes non-PUBLISHED ones based on the where clause
-        featuredPostsReturns: [FEATURED_PUBLISHED, FEATURED_DRAFT],
-        outingReturn: PUBLISHED_OUTING,
-        verseReturn: CURRENT_VERSE,
-      });
-
-      const result = await service.getPublicPayload();
-
-      // Only the published post should survive the filter
-      expect(result.featuredPosts).toHaveLength(1);
-      expect(result.featuredPosts[0]!.id).toBe("post-001");
-    });
-
-    it("returns outing as null when findUnique returns a DRAFT outing", async () => {
-      // The service passes featuredOutingId to findUnique; the mock returns
-      // the DRAFT outing. The service guards on status !== "PUBLISHED".
-      const { service } = await buildService({
-        settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [FEATURED_PUBLISHED],
-        outingReturn: DRAFT_OUTING, // status is DRAFT
-        verseReturn: CURRENT_VERSE,
-      });
-
-      const result = await service.getPublicPayload();
-
-      // Service should guard against non-PUBLISHED outings
-      expect(result.featuredOuting).toBeNull();
-    });
-
-    it("returns featuredOuting null when findUnique returns an ARCHIVED outing", async () => {
-      const { service } = await buildService({
-        settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [FEATURED_PUBLISHED],
-        outingReturn: ARCHIVED_OUTING,
-        verseReturn: CURRENT_VERSE,
-      });
-
-      const result = await service.getPublicPayload();
-
-      expect(result.featuredOuting).toBeNull();
-      // Rest of payload intact — DB-level non-PUBLISHED guard
-      expect(result.heroTitle).toBe("Misión 1-99");
-      expect(result.featuredPosts).toHaveLength(1);
-      expect(result.currentVerse).not.toBeNull();
-    });
-
-    it("returns featuredOuting null when featuredOutingId points to non-existent outing", async () => {
-      // featuredOutingId is set to an ID that doesn't match any outing.
-      // The mock findUnique returns null for unknown IDs.
-      const { service, mocks } = await buildService({
-        settingsReturn: {
-          ...FULL_SETTINGS,
-          featuredOutingId: "out-nonexistent",
-        },
-        featuredPostsReturns: [FEATURED_PUBLISHED],
-        outingReturn: null,
-        verseReturn: CURRENT_VERSE,
-      });
-
-      const result = await service.getPublicPayload();
-
-      expect(result.featuredOuting).toBeNull();
-      // findUnique was called with the non-existent ID
-      expect(mocks.findUnique).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: "out-nonexistent" } }),
-      );
-      // Rest of payload intact
-      expect(result.heroTitle).toBe("Misión 1-99");
-      expect(result.featuredPosts).toHaveLength(1);
-      expect(result.currentVerse).not.toBeNull();
-    });
-
-    it("returns empty array for featuredPosts when none exist", async () => {
-      const { service } = await buildService({
-        settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [],
-        outingReturn: null,
-        verseReturn: CURRENT_VERSE,
-      });
-
-      const result = await service.getPublicPayload();
-
-      expect(result.featuredPosts).toEqual([]);
+      // Featured outing/posts keys MUST NOT be present after the domain reset.
+      expect(
+        (result as unknown as Record<string, unknown>).featuredOuting,
+      ).toBeUndefined();
+      expect(
+        (result as unknown as Record<string, unknown>).featuredPosts,
+      ).toBeUndefined();
     });
 
     it("returns null for currentVerse when no published verse exists", async () => {
       const { service } = await buildService({
         settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [],
-        outingReturn: null,
         verseReturn: null,
       });
 
@@ -786,8 +434,6 @@ describe("LandingService", () => {
       // Mock has a DRAFT verse, findFirst filter removes it
       const { service } = await buildService({
         settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [],
-        outingReturn: null,
         verseReturn: DRAFT_VERSE,
       });
 
@@ -799,8 +445,6 @@ describe("LandingService", () => {
     it("never throws — returns null sections for completely missing data", async () => {
       const { service } = await buildService({
         settingsReturn: null,
-        featuredPostsReturns: [],
-        outingReturn: null,
         verseReturn: null,
       });
 
@@ -816,125 +460,18 @@ describe("LandingService", () => {
       expect(result.featuredVideoUrl).toBeNull();
       expect(result.contactEmail).toBeNull();
       expect(result.contactPhone).toBeNull();
-      expect(result.featuredOuting).toBeNull();
-      expect(result.featuredPosts).toEqual([]);
       expect(result.currentVerse).toBeNull();
     });
 
     it("returns null heroImageUrl when heroImageId is null", async () => {
       const { service } = await buildService({
         settingsReturn: { ...FULL_SETTINGS, heroImageId: null },
-        featuredPostsReturns: [],
-        outingReturn: null,
         verseReturn: null,
       });
 
       const result = await service.getPublicPayload();
 
       expect(result.heroImageUrl).toBeNull();
-    });
-
-    it("skips outing query when featuredOutingId is null", async () => {
-      const { service, mocks } = await buildService({
-        settingsReturn: { ...FULL_SETTINGS, featuredOutingId: null },
-        featuredPostsReturns: [],
-        outingReturn: null,
-        verseReturn: null,
-      });
-
-      await service.getPublicPayload();
-
-      // findUnique should not be called when featuredOutingId is null
-      // (the outing mock returns null for any id, but we assert it wasn't called)
-      expect(mocks.findUnique).not.toHaveBeenCalled();
-    });
-
-    it("mainImageUrl is null when outing mainImageId is null", async () => {
-      const outingWithoutImage: OutingRow = {
-        ...PUBLISHED_OUTING,
-        mainImageId: null,
-      };
-      const { service } = await buildService({
-        settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [],
-        outingReturn: outingWithoutImage,
-        verseReturn: null,
-      });
-
-      const result = await service.getPublicPayload();
-
-      expect(result.featuredOuting).not.toBeNull();
-      expect(result.featuredOuting?.mainImageUrl).toBeNull();
-    });
-
-    it("coverImageUrl is null when post coverImageId is null", async () => {
-      const postWithoutCover: PostRow = {
-        ...PUBLISHED_POST,
-        coverImageId: null,
-      };
-      const fpWithoutCover: FeaturedPostRow = {
-        ...FEATURED_PUBLISHED,
-        post: postWithoutCover,
-      };
-      const { service } = await buildService({
-        settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [fpWithoutCover],
-        outingReturn: null,
-        verseReturn: null,
-      });
-
-      const result = await service.getPublicPayload();
-
-      expect(result.featuredPosts).toHaveLength(1);
-      expect(result.featuredPosts[0]!.coverImageUrl).toBeNull();
-    });
-    it("orders featured posts by featuredAt desc (newest first)", async () => {
-      // FP_NEWEST (Jul 5) > FP_MIDDLE (Jul 3) > FP_OLDEST (Jul 1)
-      const { service, mocks } = await buildService({
-        settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [FP_MIDDLE, FP_OLDEST, FP_NEWEST], // unsorted input
-        outingReturn: null,
-        verseReturn: null,
-      });
-
-      const result = await service.getPublicPayload();
-
-      // Should be ordered newest → oldest
-      expect(result.featuredPosts).toHaveLength(3);
-      expect(result.featuredPosts[0]!.id).toBe("post-011"); // FP_NEWEST — Jul 5
-      expect(result.featuredPosts[1]!.id).toBe("post-010"); // FP_MIDDLE — Jul 3
-      expect(result.featuredPosts[2]!.id).toBe("post-012"); // FP_OLDEST — Jul 1
-
-      // Verify query uses orderBy and take
-      expect(mocks.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          orderBy: { featuredAt: "desc" },
-          take: 3,
-        }),
-      );
-    });
-
-    it("caps featured posts at 3 (take: 3)", async () => {
-      // 4 featured published posts — only first 3 by featuredAt desc should appear
-      const { service } = await buildService({
-        settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [
-          FP_FOURTH, // Jun 1 (oldest)
-          FP_OLDEST, // Jul 1
-          FP_MIDDLE, // Jul 3
-          FP_NEWEST, // Jul 5 (newest)
-        ],
-        outingReturn: null,
-        verseReturn: null,
-      });
-
-      const result = await service.getPublicPayload();
-
-      expect(result.featuredPosts).toHaveLength(3);
-      // Should be newest 3: FP_NEWEST, FP_MIDDLE, FP_OLDEST (FP_FOURTH excluded)
-      expect(result.featuredPosts[0]!.id).toBe("post-011"); // FP_NEWEST
-      expect(result.featuredPosts[1]!.id).toBe("post-010"); // FP_MIDDLE
-      expect(result.featuredPosts[2]!.id).toBe("post-012"); // FP_OLDEST
     });
 
     // -- currentVerse ordering by publishedAt ---------------------------------
@@ -954,9 +491,6 @@ describe("LandingService", () => {
 
       const { service, mocks } = await buildService({
         settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [],
-        outingReturn: null,
-        // The mock returns the configured published verse; query ordering is asserted below.
         verseReturn: laterVerse, // should be the one returned
       });
 
@@ -987,8 +521,6 @@ describe("LandingService", () => {
 
       const { service } = await buildService({
         settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [],
-        outingReturn: null,
         verseReturn: nearMidnightVerse,
       });
 
@@ -1004,8 +536,6 @@ describe("LandingService", () => {
     it("returns currentVerse null when the only verse is DRAFT", async () => {
       const { service } = await buildService({
         settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [],
-        outingReturn: null,
         verseReturn: DRAFT_VERSE,
       });
 
@@ -1040,8 +570,6 @@ describe("LandingService", () => {
 
       const { service, mocks } = await buildService({
         settingsReturn: FULL_SETTINGS,
-        featuredPostsReturns: [],
-        outingReturn: null,
         verseReturn: latestVerse, // initially the latest is the current
       });
 
@@ -1076,6 +604,25 @@ describe("LandingService", () => {
           orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
         }),
       );
+    });
+
+    // -- spec invariant: featured-outing/featured-posts keys absent ----------
+
+    it("public payload NEVER exposes featuredOuting or featuredPosts keys", async () => {
+      const { service } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        verseReturn: CURRENT_VERSE,
+      });
+
+      const result = await service.getPublicPayload();
+
+      // Hard spec invariant (landing spec: featured-payload-removal)
+      expect(
+        Object.prototype.hasOwnProperty.call(result, "featuredOuting"),
+      ).toBe(false);
+      expect(
+        Object.prototype.hasOwnProperty.call(result, "featuredPosts"),
+      ).toBe(false);
     });
   });
 });

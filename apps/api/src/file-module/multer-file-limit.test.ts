@@ -94,7 +94,7 @@ describe("Multer file-size limit HTTP proof (FU-06)", () => {
     const bigBuffer = Buffer.alloc(15 * 1024 * 1024, 0x41);
 
     const res = await request(server)
-      .post("/files/OUTING_MAIN_IMAGE")
+      .post("/files/PUBLICATION_FEATURED_IMAGE")
       .attach("file", bigBuffer, {
         filename: "big-image.jpg",
         contentType: "image/jpeg",
@@ -109,7 +109,7 @@ describe("Multer file-size limit HTTP proof (FU-06)", () => {
     const bigBuffer = Buffer.alloc(15 * 1024 * 1024, 0x42);
 
     const res = await request(server)
-      .post("/files/OUTING_CROQUIS")
+      .post("/files/PUBLICATION_DOWNLOAD")
       .attach("file", bigBuffer, {
         filename: "big-document.pdf",
         contentType: "application/pdf",
@@ -124,7 +124,7 @@ describe("Multer file-size limit HTTP proof (FU-06)", () => {
     const smallBuffer = Buffer.from("fake image data under limit");
 
     const res = await request(server)
-      .post("/files/OUTING_MAIN_IMAGE")
+      .post("/files/PUBLICATION_FEATURED_IMAGE")
       .attach("file", smallBuffer, {
         filename: "small-image.jpg",
         contentType: "image/jpeg",
@@ -179,7 +179,7 @@ describe("FilesController route-level file-size limit (FU-06)", () => {
     const bigBuffer = Buffer.alloc(15 * 1024 * 1024, 0x43);
 
     const res = await request(app.getHttpServer())
-      .post("/files/OUTING_MAIN_IMAGE")
+      .post("/files/PUBLICATION_FEATURED_IMAGE")
       .attach("file", bigBuffer, {
         filename: "oversized-image.jpg",
         contentType: "image/jpeg",

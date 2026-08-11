@@ -36,7 +36,7 @@ const SAMPLE_FILE_RESPONSE = {
   mimeType: "image/jpeg",
   fileSize: 1024,
   originalFilename: "test.jpg",
-  category: FileCategory.OUTING_MAIN_IMAGE,
+  category: FileCategory.PUBLICATION_FEATURED_IMAGE,
   createdAt: "2026-07-01T00:00:00.000Z",
 };
 
@@ -116,7 +116,7 @@ describe("FilesController", () => {
 
     function makeMockRequest(user?: AuthenticatedUser) {
       return {
-        params: { category: FileCategory.OUTING_MAIN_IMAGE },
+        params: { category: FileCategory.PUBLICATION_FEATURED_IMAGE },
         file: mockUploadedFile,
         user,
       } as unknown as Request;
@@ -126,7 +126,7 @@ describe("FilesController", () => {
       vi.mocked(fileService.upload).mockResolvedValue(SAMPLE_FILE_RESPONSE);
 
       const result = await controller.upload(
-        FileCategory.OUTING_MAIN_IMAGE as unknown as string,
+        FileCategory.PUBLICATION_FEATURED_IMAGE as unknown as string,
         mockUploadedFile,
         makeMockRequest({ id: "u-1", email: "a@b.com", displayName: "A" }),
       );
@@ -135,7 +135,7 @@ describe("FilesController", () => {
         buffer: mockUploadedFile.buffer,
         originalFilename: mockUploadedFile.originalname,
         mimeType: mockUploadedFile.mimetype,
-        category: FileCategory.OUTING_MAIN_IMAGE,
+        category: FileCategory.PUBLICATION_FEATURED_IMAGE,
         uploadedById: "u-1",
       });
       expect(result).toEqual(SAMPLE_FILE_RESPONSE);
@@ -144,7 +144,7 @@ describe("FilesController", () => {
     it("throws BadRequestException when fileService.upload rejects MIME type (FU-05)", async () => {
       vi.mocked(fileService.upload).mockRejectedValue(
         new BadRequestException(
-          "MIME type text/plain is not allowed for category OUTING_MAIN_IMAGE",
+          "MIME type text/plain is not allowed for category PUBLICATION_FEATURED_IMAGE",
         ),
       );
 
@@ -155,7 +155,7 @@ describe("FilesController", () => {
 
       await expect(
         controller.upload(
-          FileCategory.OUTING_MAIN_IMAGE as unknown as string,
+          FileCategory.PUBLICATION_FEATURED_IMAGE as unknown as string,
           badFile,
           makeMockRequest(),
         ),
@@ -177,7 +177,7 @@ describe("FilesController", () => {
     it("returns BadRequest when multipart file is missing", async () => {
       await expect(
         controller.upload(
-          FileCategory.OUTING_MAIN_IMAGE,
+          FileCategory.PUBLICATION_FEATURED_IMAGE,
           undefined,
           makeMockRequest(),
         ),

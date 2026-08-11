@@ -23,7 +23,6 @@ export interface LandingSettingsRow {
   heroTitle: string | null;
   heroSubtitle: string | null;
   heroImageId: string | null;
-  featuredOutingId: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
@@ -37,7 +36,6 @@ const FULL_SETTINGS: LandingSettingsRow = {
   heroTitle: "Misión 1-99",
   heroSubtitle: "Transformando vidas",
   heroImageId: "img-001",
-  featuredOutingId: "out-001",
   mission: "Nuestra misión es servir",
   vision: "Ser referencia en la comunidad",
   description: "Somos una organización dedicada a...",
@@ -195,7 +193,11 @@ describe("LandingAdminController", () => {
       }
     });
 
-    it("whitelists featuredOutingId from generic settings requests", async () => {
+    it("whitelists any legacy featured pointer from generic settings requests", async () => {
+      // After the Mission/Publication domain reset, featuredOutingId is no
+      // longer part of the UpdateLandingSettingsDto. ValidationPipe strips
+      // unknown fields via whitelist:true, so the service only sees
+      // legitimate DTO fields.
       const landingService = mockLandingService();
       const module = await Test.createTestingModule({
         controllers: [LandingAdminController],

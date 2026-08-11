@@ -7,6 +7,9 @@
  * Follows files-public.controller.test.ts pattern:
  * Test.createTestingModule with mocked LandingService, no guard override
  * (public routes have no auth).
+ *
+ * Featured outing/posts keys are intentionally absent after the
+ * Mission/Publication domain reset.
  */
 import { Test } from "@nestjs/testing";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -15,8 +18,6 @@ import { LandingService } from "./landing.service.js";
 
 import type {
   LandingPublicPayload,
-  FeaturedOutingPayload,
-  FeaturedPostPayload,
   CurrentVersePayload,
 } from "./landing.service.js";
 
@@ -32,21 +33,6 @@ const FULL_PAYLOAD: LandingPublicPayload = {
   featuredVideoUrl: "https://youtube.com/watch?v=abc",
   contactEmail: "info@m199.org",
   contactPhone: "+54 11 1234-5678",
-  featuredOuting: {
-    id: "out-001",
-    slug: "salida-mensual",
-    title: "Salida Mensual",
-    location: "Barrio Norte",
-    mainImageUrl: "/files/img-out-001",
-  } as FeaturedOutingPayload,
-  featuredPosts: [
-    {
-      id: "post-001",
-      slug: "primer-post",
-      title: "Primer Post",
-      coverImageUrl: "/files/img-post-001",
-    } as FeaturedPostPayload,
-  ],
   currentVerse: {
     text: "Todo lo puedo en Cristo que me fortalece",
     reference: "Filipenses 4:13",
@@ -64,8 +50,6 @@ const NULL_SECTIONS_PAYLOAD: LandingPublicPayload = {
   featuredVideoUrl: null,
   contactEmail: null,
   contactPhone: null,
-  featuredOuting: null,
-  featuredPosts: [],
   currentVerse: null,
 };
 
@@ -110,8 +94,6 @@ describe("LandingPublicController", () => {
       expect(result.heroTitle).toBe("Misión 1-99");
       expect(result.heroImageUrl).toBe("/files/img-001");
       expect(result.mission).toBe("Nuestra misión es servir");
-      expect(result.featuredOuting).not.toBeNull();
-      expect(result.featuredPosts).toHaveLength(1);
       expect(result.currentVerse).not.toBeNull();
     });
 
@@ -126,9 +108,18 @@ describe("LandingPublicController", () => {
       expect(result.heroTitle).toBeNull();
       expect(result.heroImageUrl).toBeNull();
       expect(result.mission).toBeNull();
-      expect(result.featuredOuting).toBeNull();
-      expect(result.featuredPosts).toEqual([]);
       expect(result.currentVerse).toBeNull();
+    });
+
+    it("public payload does NOT expose featuredOuting or featuredPosts", async () => {
+      const result = await controller.getPublicPayload();
+
+      expect(
+        Object.prototype.hasOwnProperty.call(result, "featuredOuting"),
+      ).toBe(false);
+      expect(
+        Object.prototype.hasOwnProperty.call(result, "featuredPosts"),
+      ).toBe(false);
     });
   });
 

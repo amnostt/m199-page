@@ -128,7 +128,9 @@ describe("AllExceptionsFilter", () => {
 
   describe("MulterError → HttpStatus mapping (FU-06)", () => {
     it("returns 413 and 'File too large' for LIMIT_FILE_SIZE", () => {
-      const { filter, host, reply } = mockHost("/files/OUTING_MAIN_IMAGE");
+      const { filter, host, reply } = mockHost(
+        "/files/PUBLICATION_FEATURED_IMAGE",
+      );
       const err = makeMulterError("LIMIT_FILE_SIZE", "file");
 
       filter.catch(err, host as never);
@@ -145,12 +147,12 @@ describe("AllExceptionsFilter", () => {
         statusCode: 413,
         message: "File too large",
         timestamp: expect.any(String) as string,
-        path: "/files/OUTING_MAIN_IMAGE",
+        path: "/files/PUBLICATION_FEATURED_IMAGE",
       });
     });
 
     it("returns 413 and 'File too large' even when field is undefined (FU-06 triangulation)", () => {
-      const { filter, host, reply } = mockHost("/files/OUTING_CROQUIS");
+      const { filter, host, reply } = mockHost("/files/PUBLICATION_DOWNLOAD");
       // MulterError may omit the field parameter in some edge cases
       const err = makeMulterError("LIMIT_FILE_SIZE");
 
@@ -169,7 +171,9 @@ describe("AllExceptionsFilter", () => {
     });
 
     it("returns 400 for LIMIT_UNEXPECTED_FILE", () => {
-      const { filter, host, reply } = mockHost("/files/OUTING_MAIN_IMAGE");
+      const { filter, host, reply } = mockHost(
+        "/files/PUBLICATION_FEATURED_IMAGE",
+      );
       const err = makeMulterError("LIMIT_UNEXPECTED_FILE", "extra");
 
       filter.catch(err, host as never);
@@ -184,7 +188,9 @@ describe("AllExceptionsFilter", () => {
     });
 
     it("never exposes MulterError stack traces", () => {
-      const { filter, host, reply } = mockHost("/files/OUTING_MAIN_IMAGE");
+      const { filter, host, reply } = mockHost(
+        "/files/PUBLICATION_FEATURED_IMAGE",
+      );
       const err = makeMulterError("LIMIT_FILE_SIZE", "file");
       err.stack = "multer-stack-trace-internal";
 

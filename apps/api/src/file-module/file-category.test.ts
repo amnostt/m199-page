@@ -1,9 +1,13 @@
 /**
- * FileCategory unit tests (FU-05 MIME validation).
+ * FileCategory unit tests (FU-05 MIME validation, file-categories spec).
  *
  * Tests the isAllowedMime() function against the spec's MIME allowlists:
  * - Image categories: image/jpeg, image/png, image/webp, image/gif
  * - Document categories: image/* + application/pdf
+ *
+ * Approved vocabulary only: MISSION_HERO, PUBLICATION_FEATURED_IMAGE,
+ * PUBLICATION_DOWNLOAD, LANDING_HERO, OTHER. Legacy POST_/OUTING_ values
+ * are NOT representable.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -15,14 +19,32 @@ import {
 } from "./file-category.js";
 
 describe("FileCategory enum", () => {
-  it("contains all expected categories", () => {
-    expect(FileCategory.OUTING_MAIN_IMAGE).toBe("OUTING_MAIN_IMAGE");
-    expect(FileCategory.OUTING_CROQUIS).toBe("OUTING_CROQUIS");
-    expect(FileCategory.OUTING_PLAN).toBe("OUTING_PLAN");
-    expect(FileCategory.POST_COVER_IMAGE).toBe("POST_COVER_IMAGE");
-    expect(FileCategory.POST_DOWNLOAD).toBe("POST_DOWNLOAD");
+  it("contains the approved Mission/Publication vocabulary", () => {
+    expect(FileCategory.MISSION_HERO).toBe("MISSION_HERO");
+    expect(FileCategory.PUBLICATION_FEATURED_IMAGE).toBe(
+      "PUBLICATION_FEATURED_IMAGE",
+    );
+    expect(FileCategory.PUBLICATION_DOWNLOAD).toBe("PUBLICATION_DOWNLOAD");
     expect(FileCategory.LANDING_HERO).toBe("LANDING_HERO");
     expect(FileCategory.OTHER).toBe("OTHER");
+  });
+
+  it("does NOT expose legacy POST_/OUTING_ categories", () => {
+    expect((FileCategory as Record<string, unknown>).OUTING_MAIN_IMAGE).toBe(
+      undefined,
+    );
+    expect((FileCategory as Record<string, unknown>).OUTING_CROQUIS).toBe(
+      undefined,
+    );
+    expect((FileCategory as Record<string, unknown>).OUTING_PLAN).toBe(
+      undefined,
+    );
+    expect((FileCategory as Record<string, unknown>).POST_COVER_IMAGE).toBe(
+      undefined,
+    );
+    expect((FileCategory as Record<string, unknown>).POST_DOWNLOAD).toBe(
+      undefined,
+    );
   });
 });
 
@@ -47,29 +69,28 @@ describe("DOC_MIMES", () => {
 });
 
 describe("IMAGE_CATS", () => {
-  it("contains exactly the four image-only categories", () => {
+  it("contains exactly the approved image-only categories", () => {
     expect(IMAGE_CATS).toBeInstanceOf(Set);
-    expect(IMAGE_CATS.has(FileCategory.OUTING_MAIN_IMAGE)).toBe(true);
-    expect(IMAGE_CATS.has(FileCategory.POST_COVER_IMAGE)).toBe(true);
+    expect(IMAGE_CATS.has(FileCategory.MISSION_HERO)).toBe(true);
+    expect(IMAGE_CATS.has(FileCategory.PUBLICATION_FEATURED_IMAGE)).toBe(true);
     expect(IMAGE_CATS.has(FileCategory.LANDING_HERO)).toBe(true);
     expect(IMAGE_CATS.has(FileCategory.OTHER)).toBe(true);
     expect(IMAGE_CATS.size).toBe(4);
   });
 
-  it("does NOT contain document categories", () => {
-    expect(IMAGE_CATS.has(FileCategory.OUTING_CROQUIS)).toBe(false);
-    expect(IMAGE_CATS.has(FileCategory.OUTING_PLAN)).toBe(false);
-    expect(IMAGE_CATS.has(FileCategory.POST_DOWNLOAD)).toBe(false);
+  it("does NOT contain PUBLICATION_DOWNLOAD (document category)", () => {
+    expect(IMAGE_CATS.has(FileCategory.PUBLICATION_DOWNLOAD)).toBe(false);
   });
 });
 
 describe("isAllowedMime (FU-05)", () => {
-  // --- Image categories (OUTING_MAIN_IMAGE, POST_COVER_IMAGE, LANDING_HERO, OTHER)
+  // --- Image categories (MISSION_HERO, PUBLICATION_FEATURED_IMAGE,
+  //     LANDING_HERO, OTHER)
 
   describe("for image categories", () => {
     const imageCats = [
-      FileCategory.OUTING_MAIN_IMAGE,
-      FileCategory.POST_COVER_IMAGE,
+      FileCategory.MISSION_HERO,
+      FileCategory.PUBLICATION_FEATURED_IMAGE,
       FileCategory.LANDING_HERO,
       FileCategory.OTHER,
     ];
@@ -117,14 +138,10 @@ describe("isAllowedMime (FU-05)", () => {
     });
   });
 
-  // --- Document categories (OUTING_CROQUIS, OUTING_PLAN, POST_DOWNLOAD)
+  // --- Document categories (PUBLICATION_DOWNLOAD)
 
   describe("for document categories", () => {
-    const docCats = [
-      FileCategory.OUTING_CROQUIS,
-      FileCategory.OUTING_PLAN,
-      FileCategory.POST_DOWNLOAD,
-    ];
+    const docCats = [FileCategory.PUBLICATION_DOWNLOAD];
 
     it("returns true for image/* MIME types", () => {
       for (const cat of docCats) {

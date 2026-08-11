@@ -3,8 +3,9 @@
  *
  * LP-01: getSettings() reads the singleton LandingSettings row.
  *        updateSettings(dto) upserts with id:1, applying only provided fields.
- * LP-02: getPublicPayload() assembles hero, featured posts, featured outing,
- *        and current verse into a public response with null-safe fallbacks.
+ * LP-02: getPublicPayload() assembles hero, current verse, and the public
+ *        contract — no featured-outing/featured-posts keys (Slice 1 of the
+ *        Mission/Publication domain reset removed those payloads).
  *
  * Follows the same pattern as ResponsiblesService: minimal Prisma interfaces
  * avoid static @prisma/client imports in apps/api/ (BF-02).
@@ -22,38 +23,12 @@ export interface LandingSettingsRow {
   heroTitle: string | null;
   heroSubtitle: string | null;
   heroImageId: string | null;
-  featuredOutingId: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
   featuredVideoUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
-}
-
-interface OutingRow {
-  id: string;
-  slug: string;
-  title: string;
-  location: string;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-  mainImageId: string | null;
-}
-
-interface PostRow {
-  id: string;
-  slug: string;
-  title: string;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-  coverImageId: string | null;
-}
-
-interface FeaturedPostRow {
-  id: string;
-  slot: string;
-  postId: string;
-  featuredAt: Date;
-  post: PostRow;
 }
 
 interface VerseRow {
@@ -84,17 +59,6 @@ interface LandingPrismaClient {
   fileAsset: {
     findUnique(args: { where: { id: string } }): Promise<FileAssetRow | null>;
   };
-  featuredPost: {
-    findMany(args?: {
-      where?: { post?: { status?: string } };
-      include?: { post?: boolean };
-      orderBy?: { featuredAt?: string };
-      take?: number;
-    }): Promise<FeaturedPostRow[]>;
-  };
-  outing: {
-    findUnique(args: { where: { id: string } }): Promise<OutingRow | null>;
-  };
   verse: {
     findFirst(args?: {
       where?: { status?: string };
@@ -108,27 +72,19 @@ interface LandingPrismaClient {
 // Public response shapes
 // ---------------------------------------------------------------------------
 
-export interface FeaturedOutingPayload {
-  id: string;
-  slug: string;
-  title: string;
-  location: string;
-  mainImageUrl: string | null;
-}
-
-export interface FeaturedPostPayload {
-  id: string;
-  slug: string;
-  title: string;
-  coverImageUrl: string | null;
-}
-
 export interface CurrentVersePayload {
   text: string;
   reference: string;
   date: string;
 }
 
+/**
+ * LandingPublicPayload — public landing payload (LP-02).
+ *
+ * Featured outing/posts keys are intentionally absent after the
+ * Mission/Publication domain reset. No replacement field is exposed in
+ * Slice 1.
+ */
 export interface LandingPublicPayload {
   heroTitle: string | null;
   heroSubtitle: string | null;
@@ -139,8 +95,6 @@ export interface LandingPublicPayload {
   featuredVideoUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
-  featuredOuting: FeaturedOutingPayload | null;
-  featuredPosts: FeaturedPostPayload[];
   currentVerse: CurrentVersePayload | null;
 }
 
@@ -229,17 +183,6 @@ export class LandingService {
     });
   }
 
-  /** Persists only the featured outing pointer for the outings domain. */
-  async persistFeaturedOutingId(
-    featuredOutingId: string | null,
-  ): Promise<LandingSettingsRow> {
-    return this.client.landingSettings.upsert({
-      where: { id: 1 },
-      create: { id: 1, featuredOutingId },
-      update: { featuredOutingId },
-    });
-  }
-
   // -----------------------------------------------------------------------
   // Public API — LP-02: Public Landing Payload
   // -----------------------------------------------------------------------
@@ -250,29 +193,11 @@ export class LandingService {
    * Never throws — missing or null sections return null/empty arrays so the
    * web renderer degrades gracefully (LP-02, LP-03).
    *
-   * DB-level filters enforce that only PUBLISHED content appears:
-   *  - featuredPost query filters on post.status = "PUBLISHED"
-   *  - verse query filters on status = "PUBLISHED"
-   *  - outing is fetched directly and then guarded for status = "PUBLISHED"
+   * Featured outing/posts keys are intentionally absent after the
+   * Mission/Publication domain reset.
    */
   async getPublicPayload(): Promise<LandingPublicPayload> {
     const settings = await this.client.landingSettings.findFirst();
-
-    // Fetch featured posts filtered to PUBLISHED, ordered by featuredAt desc, capped at 3 (LP-02).
-    const featuredPosts = await this.client.featuredPost.findMany({
-      where: { post: { status: "PUBLISHED" } },
-      include: { post: true },
-      orderBy: { featuredAt: "desc" },
-      take: 3,
-    });
-
-    // Fetch featured outing only if featuredOutingId is set.
-    let outing: OutingRow | null = null;
-    if (settings?.featuredOutingId) {
-      outing = await this.client.outing.findUnique({
-        where: { id: settings.featuredOutingId },
-      });
-    }
 
     // Fetch the most recent published verse by publishedAt (server UTC instant),
     // with id desc as deterministic tiebreaker.
@@ -291,24 +216,6 @@ export class LandingService {
       featuredVideoUrl: settings?.featuredVideoUrl ?? null,
       contactEmail: settings?.contactEmail ?? null,
       contactPhone: settings?.contactPhone ?? null,
-
-      featuredOuting:
-        outing && outing.status === "PUBLISHED"
-          ? {
-              id: outing.id,
-              slug: outing.slug,
-              title: outing.title,
-              location: outing.location,
-              mainImageUrl: this.fileUrl(outing.mainImageId),
-            }
-          : null,
-
-      featuredPosts: featuredPosts.map((fp) => ({
-        id: fp.post.id,
-        slug: fp.post.slug,
-        title: fp.post.title,
-        coverImageUrl: this.fileUrl(fp.post.coverImageId),
-      })),
 
       currentVerse: verse
         ? {

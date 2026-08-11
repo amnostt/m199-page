@@ -1,8 +1,13 @@
 /**
- * FileCategory constants and MIME validation (FU-05).
+ * FileCategory constants and MIME validation (FU-05, file-categories spec).
  *
  * Defines the FileCategory enum (from schema), MIME type allowlists,
  * and the isAllowedMime() guard used by FileService.upload().
+ *
+ * The approved vocabulary is the Mission/Publication domain reset
+ * subset: MISSION_HERO, PUBLICATION_FEATURED_IMAGE, PUBLICATION_DOWNLOAD,
+ * LANDING_HERO, OTHER. Legacy POST_/OUTING_-only values are not
+ * representable in the regenerated Prisma enum.
  */
 import { FileCategory } from "@prisma/client";
 
@@ -15,9 +20,14 @@ const IMAGE_MIMES = [
 
 const DOC_MIMES = [...IMAGE_MIMES, "application/pdf"] as const;
 
+/**
+ * Image-only categories — Mission hero, Publication featured image,
+ * Landing hero, and Other. PUBLICATION_DOWNLOAD is a document category
+ * (allows image/* + application/pdf).
+ */
 const IMAGE_CATS = new Set<FileCategory>([
-  FileCategory.OUTING_MAIN_IMAGE,
-  FileCategory.POST_COVER_IMAGE,
+  FileCategory.MISSION_HERO,
+  FileCategory.PUBLICATION_FEATURED_IMAGE,
   FileCategory.LANDING_HERO,
   FileCategory.OTHER,
 ]);
