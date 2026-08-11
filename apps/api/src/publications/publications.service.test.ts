@@ -28,7 +28,7 @@ const base = {
   type: PublicationType.POST,
 };
 function fixture() {
-  const row: any = {
+  const row = {
     id: "pub-1",
     ...base,
     status: PublicationStatus.DRAFT,
@@ -45,17 +45,32 @@ function fixture() {
     findUnique: vi.fn().mockResolvedValue(row),
     create: vi
       .fn()
-      .mockImplementation(async ({ data }: any) => ({ ...row, ...data })),
+      .mockImplementation(async ({ data }: { data: Partial<typeof row> }) => ({
+        ...row,
+        ...data,
+      })),
     update: vi
       .fn()
-      .mockImplementation(async ({ data }: any) => ({ ...row, ...data })),
+      .mockImplementation(async ({ data }: { data: Partial<typeof row> }) => ({
+        ...row,
+        ...data,
+      })),
     delete: vi.fn().mockResolvedValue(row),
   };
   const mission = { findMany: vi.fn().mockResolvedValue([]) };
   const publicationMission = { deleteMany: vi.fn(), createMany: vi.fn() };
-  const client: any = { publication, mission, publicationMission };
-  client.$transaction = vi.fn(async (callback: any) => callback(client));
-  return { service: new PublicationsService({ client } as any), client, row };
+  const client = { publication, mission, publicationMission } as {
+    fileAsset: { findUnique: typeof vi.fn };
+    publication: typeof publication;
+    mission: typeof mission;
+    publicationMission: typeof publicationMission;
+    $transaction: (callback: (tx: typeof client) => unknown) => unknown;
+  };
+  client.fileAsset = { findUnique: vi.fn() };
+  client.$transaction = vi.fn(
+    async (callback: (tx: typeof client) => unknown) => callback(client),
+  ) as unknown as typeof client.$transaction;
+  return { service: new PublicationsService({ client } as never), client, row };
 }
 
 describe("PublicationsService", () => {
@@ -64,12 +79,13 @@ describe("PublicationsService", () => {
     const { service, client } = fixture();
     const created = await service.create(base);
     expect(created).toBeTruthy();
-    expect(client.publication.create.mock.calls[0][0].data.content).toBe(
-      "<p>safe</p>",
-    );
     expect(client.publication.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: "DRAFT", publishedAt: null }),
+        data: expect.objectContaining({
+          content: "<p>safe</p>",
+          status: "DRAFT",
+          publishedAt: null,
+        }),
       }),
     );
     await service.findMany();
@@ -82,10 +98,10 @@ describe("PublicationsService", () => {
   it("rejects invalid activity fields and type changes without confirmation", async () => {
     const { service } = fixture();
     await expect(
-      service.create({ ...base, type: PublicationType.OUTING } as any),
+      service.create({ ...base, type: PublicationType.OUTING } as never),
     ).rejects.toThrow(BadRequestException);
     await expect(
-      service.update("pub-1", { type: PublicationType.OUTING } as any),
+      service.update("pub-1", { type: PublicationType.OUTING } as never),
     ).rejects.toThrow("confirmTypeChange");
   });
   it("validates scope and ACTIVE mission links", async () => {
@@ -128,7 +144,7 @@ describe("PublicationsService", () => {
       ...base,
       missions: [],
     });
-    const error: any = new Error("duplicate");
+    const error = Object.assign(new Error("duplicate"), { code: "P2002" });
     error.code = "P2002";
     client.publication.create.mockRejectedValueOnce(error);
     await expect(service.create(base)).rejects.toThrow(ConflictException);

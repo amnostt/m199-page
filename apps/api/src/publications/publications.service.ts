@@ -15,7 +15,44 @@ import {
   UpdatePublicationDto,
 } from "./dto/publication.dto.js";
 
-type Client = any;
+type Client = {
+  fileAsset: {
+    findUnique: (args: { where: { id: string } }) => Promise<{
+      id: string;
+      category: string;
+    } | null>;
+  };
+  publication: {
+    findMany: (args: unknown) => Promise<PublicationRow[]>;
+    findUnique: (args: unknown) => Promise<PublicationRow | null>;
+    create: (args: unknown) => Promise<PublicationRow>;
+    update: (args: unknown) => Promise<PublicationRow>;
+    delete: (args: unknown) => Promise<PublicationRow>;
+  };
+  mission: {
+    findMany: (args: unknown) => Promise<{ id: string; status: string }[]>;
+  };
+  publicationMission: {
+    deleteMany: (args: unknown) => Promise<void>;
+    createMany: (args: unknown) => Promise<void>;
+  };
+  $transaction: (
+    callback: (tx: Client) => Promise<unknown>,
+  ) => Promise<unknown>;
+};
+type PublicationRow = {
+  id: string;
+  type: PublicationType;
+  scope: PublicationScope;
+  slug: string;
+  publishedAt: Date | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  activityStatus: unknown;
+  documentationStatus: unknown;
+  missions: { missionId: string }[];
+  [key: string]: unknown;
+};
 
 @Injectable()
 export class PublicationsService {
@@ -111,7 +148,7 @@ export class PublicationsService {
       dto.scope || dto.missionIds
         ? await this.validateMissions(
             dto.scope ?? existing.scope,
-            dto.missionIds ?? existing.missions.map((m: any) => m.missionId),
+            dto.missionIds ?? existing.missions.map((m) => m.missionId),
           )
         : undefined;
     try {
