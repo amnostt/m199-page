@@ -7,12 +7,23 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { MissionsPage } from "./MissionsPage.js";
-import { listActiveMissions, listArchivedMissions } from "./missionsApi.js";
+import {
+  createMission,
+  listActiveMissions,
+  listArchivedMissions,
+  updateMission,
+  updateMissionStatus,
+} from "./missionsApi.js";
+import { adminFetch } from "./session.js";
 import type { MissionAdmin } from "./adminTypes.js";
 vi.mock("./missionsApi.js", () => ({
   listActiveMissions: vi.fn(),
   listArchivedMissions: vi.fn(),
+  createMission: vi.fn(),
+  updateMission: vi.fn(),
+  updateMissionStatus: vi.fn(),
 }));
+vi.mock("./session.js", () => ({ adminFetch: vi.fn() }));
 const mission = (id: string, status: MissionAdmin["status"]): MissionAdmin => ({
   id,
   slug: `mission-${id}`,
@@ -23,7 +34,11 @@ const mission = (id: string, status: MissionAdmin["status"]): MissionAdmin => ({
   createdAt: "2026-08-11",
   updatedAt: "2026-08-11",
 });
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  vi.clearAllMocks();
+});
 describe("MissionsPage", () => {
   it("loads both lists in parallel and keeps separate sections without delete", async () => {
     vi.mocked(listActiveMissions).mockResolvedValue([
@@ -64,5 +79,131 @@ describe("MissionsPage", () => {
     expect(
       screen.getByText("Todavía no hay misiones anteriores."),
     ).toBeTruthy();
+  });
+
+  it("creates only after required fields and uploaded hero are present", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    vi.mocked(createMission).mockResolvedValue(mission("new", "ACTIVE"));
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId("active-missions")).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Crear misión" }));
+    expect(screen.getByRole("alert")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Título"), {
+      target: { value: " Nueva " },
+    });
+    fireEvent.change(screen.getByLabelText("Slug"), {
+      target: { value: " nueva " },
+    });
+    fireEvent.change(screen.getByLabelText("Frase"), {
+      target: { value: " Phrase " },
+    });
+    vi.mocked(adminFetch).mockResolvedValue({ id: "hero-1" });
+    fireEvent.change(screen.getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["hero"], "hero.png", { type: "image/png" })],
+      },
+    });
+    await waitFor(() =>
+      expect(adminFetch).toHaveBeenCalledWith(
+        "/files/MISSION_HERO",
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Crear misión" }));
+    await waitFor(() =>
+      expect(createMission).toHaveBeenCalledWith({
+        title: "Nueva",
+        slug: "nueva",
+        heroImageId: "hero-1",
+        heroPhrase: "Phrase",
+      }),
+    );
+  });
+
+  it("prefills edit and confirms status transitions", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([
+      mission("active", "ACTIVE"),
+    ]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    vi.mocked(updateMission).mockResolvedValue(mission("active", "ACTIVE"));
+    vi.mocked(updateMissionStatus).mockResolvedValue(
+      mission("active", "ARCHIVED"),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByText("Mission active")).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    expect(screen.getByDisplayValue("Mission active")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    await waitFor(() =>
+      expect(updateMissionStatus).toHaveBeenCalledWith("active", "ARCHIVED"),
+    );
+  });
+
+  it("saves edited values and resets the form", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([
+      mission("active", "ACTIVE"),
+    ]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    vi.mocked(updateMission).mockResolvedValue(mission("active", "ACTIVE"));
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByText("Mission active")).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Título"), {
+      target: { value: "Updated" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() =>
+      expect(updateMission).toHaveBeenCalledWith(
+        "active",
+        expect.objectContaining({ title: "Updated" }),
+      ),
+    );
+    expect(screen.getByRole("button", { name: "Crear misión" })).toBeTruthy();
+  });
+
+  it("rejects confirmation and reactivates an archived mission", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([
+      mission("old", "ARCHIVED"),
+    ]);
+    vi.mocked(updateMissionStatus).mockResolvedValue(mission("old", "ACTIVE"));
+    vi.spyOn(window, "confirm")
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    render(<MissionsPage />);
+    await waitFor(() => expect(screen.getByText("Mission old")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
+    expect(updateMissionStatus).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
+    await waitFor(() =>
+      expect(updateMissionStatus).toHaveBeenCalledWith("old", "ACTIVE"),
+    );
+  });
+
+  it("refetches lists after archiving so the mission moves sections", async () => {
+    vi.mocked(listActiveMissions)
+      .mockResolvedValueOnce([mission("m", "ACTIVE")])
+      .mockResolvedValueOnce([]);
+    vi.mocked(listArchivedMissions)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([mission("m", "ARCHIVED")]);
+    vi.mocked(updateMissionStatus).mockResolvedValue(mission("m", "ARCHIVED"));
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<MissionsPage />);
+    await waitFor(() => expect(screen.getByText("Mission m")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("archived-missions").textContent).toContain(
+        "Mission m",
+      ),
+    );
   });
 });

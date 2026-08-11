@@ -40,6 +40,13 @@ function localizeMessage(message: string): string {
       "No hay un lugar disponible para destacar.",
     ],
     [/^Slug already exists$/i, "El slug ya existe."],
+    [/^Mission not found$/i, "No se encontró la misión."],
+    [
+      /^Cannot change mission status$/i,
+      "No se pudo cambiar el estado de la misión.",
+    ],
+    [/^heroPhrase should not be empty$/i, "La frase es obligatoria."],
+    [/^heroImageId should not be empty$/i, "La imagen es obligatoria."],
     [/^title should not be empty$/i, "El título es obligatorio."],
     [/^title is required$/i, "El título es obligatorio."],
     [/^slug must be unique$/i, "El slug debe ser único."],
@@ -69,6 +76,11 @@ function localizeMessage(message: string): string {
       'No se encontró el archivo "$1".',
     ],
     [/^Slug "(.+)" already exists$/i, 'El slug "$1" ya existe.'],
+    [/^Mission "(.+)" not found$/i, 'No se encontró la misión "$1".'],
+    [
+      /^FileAsset "(.+)" must have category MISSION_HERO$/i,
+      'El archivo "$1" debe ser una imagen hero de misión.',
+    ],
   ] as Array<[RegExp, string]>) {
     const match = message.match(pattern);
     if (match) return translation.replace("$1", match[1]!);
