@@ -10,8 +10,9 @@
  * Follows the same pattern as ResponsiblesService: minimal Prisma interfaces
  * avoid static @prisma/client imports in apps/api/ (BF-02).
  */
-import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { DbService } from "../db/db.service.js";
+import { assertFileCategory } from "../file-module/assert-file-category.js";
 import type { UpdateLandingSettingsDto } from "./dto/update-landing-settings.dto.js";
 
 // ---------------------------------------------------------------------------
@@ -123,17 +124,7 @@ export class LandingService {
 
   /** Validates that a hero asset exists and belongs to the hero category. */
   private async validateHeroImage(fileId: string): Promise<void> {
-    const asset = await this.client.fileAsset.findUnique({
-      where: { id: fileId },
-    });
-    if (!asset) {
-      throw new BadRequestException(`FileAsset with id "${fileId}" not found`);
-    }
-    if (asset.category !== "LANDING_HERO") {
-      throw new BadRequestException(
-        `FileAsset "${fileId}" must have category LANDING_HERO`,
-      );
-    }
+    await assertFileCategory(this.client, fileId, "LANDING_HERO");
   }
 
   // -----------------------------------------------------------------------
