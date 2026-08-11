@@ -62,6 +62,16 @@ describe("MissionsService", () => {
     });
   });
 
+  it("returns only archived missions in admin order", async () => {
+    const db = fixture();
+    db.findMany.mockImplementation(async ({ where }) =>
+      [active, archived].filter((mission) => mission.status === where.status),
+    );
+    const service = await build(db);
+
+    await expect(service.findByStatus("ARCHIVED")).resolves.toEqual([archived]);
+  });
+
   it("creates directly as ACTIVE after validating MISSION_HERO", async () => {
     const db = fixture();
     const service = await build(db);
@@ -75,6 +85,25 @@ describe("MissionsService", () => {
     expect(db.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ status: "ACTIVE" }),
     });
+  });
+
+  it("rejects a create whose file is not MISSION_HERO", async () => {
+    const db = fixture();
+    db.fileFindUnique.mockResolvedValue({
+      id: "f-1",
+      category: "LANDING_HERO",
+    });
+    const service = await build(db);
+
+    await expect(
+      service.create({
+        title: "One",
+        slug: "one",
+        heroImageId: "f-1",
+        heroPhrase: "Phrase",
+      }),
+    ).rejects.toThrow("must have category MISSION_HERO");
+    expect(db.create).not.toHaveBeenCalled();
   });
 
   it("translates duplicate slugs to conflict", async () => {
@@ -135,5 +164,17 @@ describe("MissionsService", () => {
       status: "ACTIVE",
     });
     expect(result[0]).not.toHaveProperty("heroImageId");
+  });
+
+  it("returns only archived public summaries in archived-list order", async () => {
+    const db = fixture();
+    db.findMany.mockImplementation(async ({ where }) =>
+      [active, archived].filter((mission) => mission.status === where.status),
+    );
+    const service = await build(db);
+
+    await expect(service.findPublicByStatus("ARCHIVED")).resolves.toEqual([
+      expect.objectContaining({ id: "m-2", status: "ARCHIVED" }),
+    ]);
   });
 });
