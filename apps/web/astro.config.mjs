@@ -108,16 +108,6 @@ export default defineConfig({
     plugins: [tailwindcss()],
     server: {
       proxy: {
-        "/posts": {
-          target: API_TARGET,
-          changeOrigin: true,
-          bypass: bypassHtmlDocument,
-        },
-        "/outings": {
-          target: API_TARGET,
-          changeOrigin: true,
-          bypass: bypassHtmlDocument,
-        },
         "/responsibles": { target: API_TARGET, changeOrigin: true },
         "/verses": { target: API_TARGET, changeOrigin: true },
         "/landing": { target: API_TARGET, changeOrigin: true },

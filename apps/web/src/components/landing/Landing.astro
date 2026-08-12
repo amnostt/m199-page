@@ -47,6 +47,7 @@ const hasContact = Boolean(
 );
 const aboutHref = hasAbout ? "#nosotros" : "#inicio";
 const contactHref = hasContact ? "#contacto" : "#inicio";
+const publicationsHref = "/publicaciones";
 ---
 
 {failure ? (
@@ -60,6 +61,7 @@ const contactHref = hasContact ? "#contacto" : "#inicio";
       missionHref={missionHref}
       aboutHref={aboutHref}
       contactHref={contactHref}
+      publicationsHref={publicationsHref}
     />
     <section
       class="public-state public-state--error"
@@ -74,6 +76,7 @@ const contactHref = hasContact ? "#contacto" : "#inicio";
       missionHref={missionHref}
       aboutHref={aboutHref}
       contactHref={contactHref}
+      publicationsHref={publicationsHref}
     />
     <LandingHero
       heroTitle={payload.heroTitle}

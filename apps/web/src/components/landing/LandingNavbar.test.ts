@@ -19,6 +19,7 @@ describe("LandingNavbar.astro — SSR contract", () => {
         missionHref: "#misiones",
         aboutHref: "#nosotros",
         contactHref: "#contacto",
+        publicationsHref: "/publicaciones",
       },
     });
     const anchors = [
@@ -39,11 +40,18 @@ describe("LandingNavbar.astro — SSR contract", () => {
       "#inicio",
       "#misiones",
       "#nosotros",
+      "/publicaciones",
       "#contacto",
     ]);
-    expect(labels).toEqual(["Inicio", "Misiones", "Nosotros", "Contacto"]);
+    expect(labels).toEqual([
+      "Inicio",
+      "Misiones",
+      "Nosotros",
+      "Publicaciones",
+      "Contacto",
+    ]);
     expect(html.match(/landing-navbar__link--cta/g)).toHaveLength(1);
-    expect(html).not.toContain("Publicaciones");
+    expect(html).toContain('href="/publicaciones"');
     expect(html).toMatch(
       /<button[^>]*aria-expanded="false"[^>]*aria-controls="landing-navbar-menu"[^>]*aria-label="Abrir menú"/,
     );
@@ -56,6 +64,7 @@ describe("LandingNavbar.astro — SSR contract", () => {
         missionHref: "#misiones",
         aboutHref: "#nosotros",
         contactHref: "#contacto",
+        publicationsHref: "/publicaciones",
       },
     });
     const dom = new JSDOM(html, {

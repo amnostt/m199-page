@@ -13,6 +13,7 @@ describe("Astro route ownership", () => {
       "404.astro",
       "admin.astro",
       "index.astro",
+      "publicaciones",
     ]);
   });
 

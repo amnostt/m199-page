@@ -194,40 +194,15 @@ describe("astro.config.mjs — adapter and output", () => {
   });
 });
 
-describe("astro.config.mjs — interactive document proxy", () => {
-  type ProxyRule = {
-    bypass?: (req: {
-      method?: string;
-      headers?: { accept?: string };
-      url?: string;
-    }) => string | undefined;
-  };
-
-  it.each(["/posts", "/outings"])(
-    "passes HTML navigation for %s to Astro while proxying API fetches",
-    async (path) => {
-      const config = await loadAstroConfig();
-      const proxyRules = (config.vite?.server?.proxy ?? {}) as Record<
-        string,
-        ProxyRule
-      >;
-      const bypass = proxyRules[path]?.bypass;
-
-      expect(bypass).toBeTypeOf("function");
-      expect(
-        bypass?.({
-          method: "GET",
-          headers: { accept: "text/html,application/xhtml+xml" },
-          url: path,
-        }),
-      ).toBe(path);
-      expect(
-        bypass?.({
-          method: "GET",
-          headers: { accept: "*/*" },
-          url: path,
-        }),
-      ).toBeUndefined();
-    },
-  );
+describe("astro.config.mjs — public API proxy", () => {
+  it("retires only the dead legacy proxies and preserves publications", async () => {
+    const config = await loadAstroConfig();
+    const proxyRules = config.vite?.server?.proxy ?? {};
+    expect(proxyRules["/posts"]).toBeUndefined();
+    expect(proxyRules["/outings"]).toBeUndefined();
+    expect(proxyRules["/publications"]).toMatchObject({
+      target: "http://localhost:3000",
+      changeOrigin: true,
+    });
+  });
 });

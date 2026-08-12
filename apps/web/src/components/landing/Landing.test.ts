@@ -128,7 +128,11 @@ describe("Landing.astro — successful markup", () => {
   });
 
   it.each([
-    ["full", fullPayload(), ["#inicio", "#misiones", "#nosotros", "#contacto"]],
+    [
+      "full",
+      fullPayload(),
+      ["#inicio", "#misiones", "#nosotros", "/publicaciones", "#contacto"],
+    ],
     [
       "optional",
       {
@@ -137,21 +141,22 @@ describe("Landing.astro — successful markup", () => {
         description: "Una comunidad de fe",
         contactEmail: "contacto@m199.org",
       },
-      ["#inicio", "#misiones", "#nosotros", "#contacto"],
+      ["#inicio", "#misiones", "#nosotros", "/publicaciones", "#contacto"],
     ],
     [
       "minimal",
       minimalPayload(),
-      ["#inicio", "#misiones", "#inicio", "#inicio"],
+      ["#inicio", "#misiones", "#inicio", "/publicaciones", "#inicio"],
     ],
   ] as const)(
-    "renders four navigable destinations with unique target ownership for the %s branch",
+    "renders five navigable destinations with unique target ownership for the %s branch",
     async (_branch, payload, expectedHrefs) => {
       const html = await render(payload);
       const hrefs = navbarHrefs(html);
 
       expect(hrefs).toEqual(expectedHrefs);
       for (const href of new Set(hrefs)) {
+        if (!href.startsWith("#")) continue;
         expect(ids(html).filter((id) => `#${id}` === href)).toHaveLength(1);
       }
       expect(new Set(ids(html)).size).toBe(ids(html).length);
@@ -214,6 +219,7 @@ describe("Landing.astro — about and contact", () => {
       "#inicio",
       "#misiones",
       "#inicio",
+      "/publicaciones",
       "#inicio",
     ]);
   });
@@ -279,7 +285,13 @@ describe("Landing.astro — failure markup", () => {
     const html = await render(null, { reason: "timeout" });
     const hrefs = navbarHrefs(html);
 
-    expect(hrefs).toEqual(["#inicio", "#inicio", "#inicio", "#inicio"]);
+    expect(hrefs).toEqual([
+      "#inicio",
+      "#inicio",
+      "#inicio",
+      "/publicaciones",
+      "#inicio",
+    ]);
     expect(ids(html).filter((id) => id === "inicio")).toHaveLength(1);
     expect(new Set(ids(html)).size).toBe(ids(html).length);
   });
@@ -298,9 +310,10 @@ describe("Landing.astro — navbar SSR contract", () => {
     expect(navbar).toContain("Misiones");
     expect(navbar).toContain("Nosotros");
     expect(navbar).toContain("Contacto");
-    expect(navbar).not.toContain("Publicaciones");
+    expect(navbar).toContain("Publicaciones");
+    expect(navbar).toContain('href="/publicaciones"');
     expect(navbar.match(/landing-navbar__link--cta/g)).toHaveLength(1);
-    expect(navbar.match(/<a\b/g)).toHaveLength(4);
+    expect(navbar.match(/<a\b/g)).toHaveLength(5);
   });
 });
 

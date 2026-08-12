@@ -3,9 +3,10 @@ interface Props {
   missionHref: string;
   aboutHref: string;
   contactHref: string;
+  publicationsHref: string;
 }
 
-const { missionHref, aboutHref, contactHref } = Astro.props;
+const { missionHref, aboutHref, contactHref, publicationsHref } = Astro.props;
 ---
 
 <header class="landing-navbar" data-testid="landing-navbar">
@@ -35,6 +36,7 @@ const { missionHref, aboutHref, contactHref } = Astro.props;
       <li><a class="landing-navbar__link" href="#inicio">Inicio</a></li>
       <li><a class="landing-navbar__link" href={missionHref}>Misiones</a></li>
       <li><a class="landing-navbar__link" href={aboutHref}>Nosotros</a></li>
+      <li><a class="landing-navbar__link" href={publicationsHref}>Publicaciones</a></li>
       <li>
         <a
           class="landing-navbar__link landing-navbar__link--cta"
