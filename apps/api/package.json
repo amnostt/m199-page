@@ -9,7 +9,7 @@
     "start:dev": "pnpm run dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:integration": "RUN_POSTGRES_INTEGRATION=1 vitest run src/auth/auth.service.integration.test.ts"
+    "test:integration": "RUN_POSTGRES_INTEGRATION=1 vitest run src/auth/auth.service.integration.test.ts src/publications/publications.service.integration.test.ts"
   },
   "dependencies": {
     "@m199/db": "workspace:*",

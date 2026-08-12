@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -56,7 +57,7 @@ type PublicationRow = {
 
 @Injectable()
 export class PublicationsService {
-  constructor(private readonly dbService: DbService) {}
+  constructor(@Inject(DbService) private readonly dbService: DbService) {}
   private get client(): Client {
     return this.dbService.client as unknown as Client;
   }
