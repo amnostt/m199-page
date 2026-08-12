@@ -1,4 +1,11 @@
-import { Controller, Get, Inject, Param, Query, ValidationPipe } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Query,
+  ValidationPipe,
+} from "@nestjs/common";
 import { ListPublicationsDto } from "./dto/list-publications.dto.js";
 import { PublicationsService } from "./publications.service.js";
 

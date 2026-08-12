@@ -30,17 +30,30 @@ describe("PublicationsPublicController", () => {
       providers: [{ provide: PublicationsService, useValue: service }],
     }).compile();
     const app = module.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     try {
       const response = await request(app.getHttpServer())
         .get("/publications/public?page=2&limit=1&type=POST")
         .expect(200);
-      expect(response.body).toEqual(expect.objectContaining({ page: 2, limit: 1, total: 2, hasMore: true }));
+      expect(response.body).toEqual(
+        expect.objectContaining({ page: 2, limit: 1, total: 2, hasMore: true }),
+      );
       expect(Object.keys(response.body.items[0]).sort()).toEqual([
-        "excerpt", "featuredImageUrl", "publishedAt", "slug", "title", "type",
+        "excerpt",
+        "featuredImageUrl",
+        "publishedAt",
+        "slug",
+        "title",
+        "type",
       ]);
-      expect(service.findManyPublic).toHaveBeenCalledWith({ page: 2, limit: 1, type: "POST" });
+      expect(service.findManyPublic).toHaveBeenCalledWith({
+        page: 2,
+        limit: 1,
+        type: "POST",
+      });
     } finally {
       await app.close();
     }
@@ -53,10 +66,14 @@ describe("PublicationsPublicController", () => {
       providers: [{ provide: PublicationsService, useValue: service }],
     }).compile();
     const app = module.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     try {
-      await request(app.getHttpServer()).get("/publications/public?type=INVALID").expect(400);
+      await request(app.getHttpServer())
+        .get("/publications/public?type=INVALID")
+        .expect(400);
       expect(service.findManyPublic).not.toHaveBeenCalled();
     } finally {
       await app.close();
@@ -65,15 +82,13 @@ describe("PublicationsPublicController", () => {
 
   it("delegates the unauthenticated public list", async () => {
     const service = {
-      findManyPublic: vi
-        .fn()
-        .mockResolvedValue({
-          items: [],
-          page: 1,
-          limit: 10,
-          total: 0,
-          hasMore: false,
-        }),
+      findManyPublic: vi.fn().mockResolvedValue({
+        items: [],
+        page: 1,
+        limit: 10,
+        total: 0,
+        hasMore: false,
+      }),
     };
     const result = await new PublicationsPublicController(
       service as never,
@@ -86,10 +101,17 @@ describe("PublicationsPublicController", () => {
     const service = {
       findManyPublic: vi.fn(),
       findOnePublicBySlug: vi.fn().mockResolvedValue({
-        slug: "trip", title: "Trip", excerpt: "", content: "<p>x</p>",
-        type: "OUTING", publishedAt: "2026-01-01T00:00:00.000Z",
-        featuredImageUrl: null, startDate: "2026-02-01T00:00:00.000Z",
-        endDate: null, activityStatus: "COMPLETED", documentationStatus: "DOCUMENTED",
+        slug: "trip",
+        title: "Trip",
+        excerpt: "",
+        content: "<p>x</p>",
+        type: "OUTING",
+        publishedAt: "2026-01-01T00:00:00.000Z",
+        featuredImageUrl: null,
+        startDate: "2026-02-01T00:00:00.000Z",
+        endDate: null,
+        activityStatus: "COMPLETED",
+        documentationStatus: "DOCUMENTED",
       }),
     };
     const module = await Test.createTestingModule({
@@ -99,12 +121,25 @@ describe("PublicationsPublicController", () => {
     const app = module.createNestApplication();
     await app.init();
     try {
-      const response = await request(app.getHttpServer()).get("/publications/public/trip").expect(200);
+      const response = await request(app.getHttpServer())
+        .get("/publications/public/trip")
+        .expect(200);
       expect(Object.keys(response.body).sort()).toEqual([
-        "activityStatus", "content", "documentationStatus", "endDate", "excerpt",
-        "featuredImageUrl", "publishedAt", "slug", "startDate", "title", "type",
+        "activityStatus",
+        "content",
+        "documentationStatus",
+        "endDate",
+        "excerpt",
+        "featuredImageUrl",
+        "publishedAt",
+        "slug",
+        "startDate",
+        "title",
+        "type",
       ]);
       expect(service.findOnePublicBySlug).toHaveBeenCalledWith("trip");
-    } finally { await app.close(); }
+    } finally {
+      await app.close();
+    }
   });
 });
