@@ -49,9 +49,12 @@ describe("publications SSR", () => {
       vi.fn().mockResolvedValue(new Response("down", { status: 503 })),
     );
     const container = await AstroContainer.create();
-    const html = await container.renderToString(Page, {
+    const response = await container.renderToResponse(Page, {
       request: new Request("http://localhost/publicaciones"),
     });
-    expect(html).toContain("No pudimos cargar las publicaciones.");
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain(
+      "No pudimos cargar las publicaciones.",
+    );
   });
 });

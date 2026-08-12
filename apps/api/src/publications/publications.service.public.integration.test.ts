@@ -124,4 +124,67 @@ integration("public publications PostgreSQL boundary", () => {
     if (draft)
       await expect(service.findOnePublicBySlug(draft.slug)).rejects.toThrow();
   });
+
+  it("returns content for published activity details in every activity state", async () => {
+    type IntegrationClient = {
+      fileAsset: {
+        findFirst(args: unknown): Promise<{ id: string } | null>;
+      };
+      publication: {
+        deleteMany(args: unknown): Promise<unknown>;
+        create(args: unknown): Promise<{ slug: string }>;
+      };
+      $transaction<T>(
+        callback: (tx: IntegrationClient) => Promise<T>,
+      ): Promise<T>;
+    };
+    const client = db.client as unknown as IntegrationClient & {
+      publication: IntegrationClient["publication"] & {};
+    };
+    const image = await client.fileAsset.findFirst({
+      where: { category: "PUBLICATION_FEATURED_IMAGE" },
+      select: { id: true },
+    });
+    if (!image)
+      throw new Error("A publication featured image fixture is required");
+    const prefix = `public-content-regression-${Date.now()}`;
+    const rows = await client.$transaction(async (tx) => {
+      return Promise.all(
+        ["OUTING", "EVENT"].flatMap((type) =>
+          ["UPCOMING", "CANCELLED", "COMPLETED"].map((activityStatus) =>
+            tx.publication.create({
+              data: {
+                slug: `${prefix}-${type.toLowerCase()}-${activityStatus.toLowerCase()}`,
+                title: "Regression",
+                excerpt: "Excerpt",
+                content: "<p>Activity content</p>",
+                featuredImageId: image.id,
+                type,
+                status: "PUBLISHED",
+                publishedAt: new Date(),
+                scope: "GENERAL",
+                startDate: new Date("2026-01-01T00:00:00.000Z"),
+                activityStatus,
+                documentationStatus: "DOCUMENTED",
+              },
+              select: { slug: true },
+            }),
+          ),
+        ),
+      );
+    });
+    try {
+      for (const row of rows) {
+        await expect(
+          service.findOnePublicBySlug(row.slug),
+        ).resolves.toMatchObject({
+          content: "<p>Activity content</p>",
+        });
+      }
+    } finally {
+      await client.publication.deleteMany({
+        where: { slug: { startsWith: prefix } },
+      });
+    }
+  });
 });

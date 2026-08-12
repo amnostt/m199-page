@@ -52,13 +52,16 @@ describe("publication detail SSR", () => {
           return failure;
         }),
       );
-      const html = await (
+      const response = await (
         await AstroContainer.create()
-      ).renderToString(Page, {
+      ).renderToResponse(Page, {
         params: { slug: "missing" },
         request: new Request("http://localhost/publicaciones/missing"),
       });
-      expect(html).toContain("No pudimos cargar esta publicación.");
+      expect(response.status).toBe(503);
+      expect(await response.text()).toContain(
+        "No pudimos cargar esta publicación.",
+      );
     }
   });
 });

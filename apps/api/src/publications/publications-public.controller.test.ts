@@ -80,6 +80,33 @@ describe("PublicationsPublicController", () => {
     }
   });
 
+  it.each([
+    ["page", "0"],
+    ["limit", "0"],
+    ["limit", "51"],
+    ["page", "not-a-number"],
+    ["limit", "not-a-number"],
+  ])("rejects invalid %s=%s before calling the service", async (key, value) => {
+    const service = { findManyPublic: vi.fn() };
+    const module = await Test.createTestingModule({
+      controllers: [PublicationsPublicController],
+      providers: [{ provide: PublicationsService, useValue: service }],
+    }).compile();
+    const app = module.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
+    await app.init();
+    try {
+      await request(app.getHttpServer())
+        .get(`/publications/public?${key}=${value}`)
+        .expect(400);
+      expect(service.findManyPublic).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   it("delegates the unauthenticated public list", async () => {
     const service = {
       findManyPublic: vi.fn().mockResolvedValue({
