@@ -1071,3 +1071,17 @@
     transition: none !important;
   }
 }
+.public-publication-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 1rem;
+}
+
+.public-publication-filters button {
+  cursor: pointer;
+}
+
+.public-publication-filters button.list-active {
+  font-weight: 700;
+}

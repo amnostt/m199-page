@@ -6,6 +6,7 @@ import { DbModule } from "../db/db.module.js";
 import { DbService } from "../db/db.service.js";
 import { PublicationsModule } from "./publications.module.js";
 import { PublicationsService } from "./publications.service.js";
+import { PublicationType } from "./dto/publication.dto.js";
 
 const enabled = process.env["RUN_POSTGRES_INTEGRATION"] === "1";
 const integration = enabled ? describe : describe.skip;
@@ -53,5 +54,13 @@ integration("public publications PostgreSQL boundary", () => {
     expect(first.items.length ? first.items[0]!.publishedAt >= (first.items[1]?.publishedAt ?? first.items[0]!.publishedAt) : true).toBe(true);
     expect(first.hasMore).toBe(first.total > 2);
     expect(second.page).toBe(2);
+  });
+
+  it("returns only published rows of the requested type", async () => {
+    const result = await service.findManyPublic({ page: 1, limit: 50, type: PublicationType.OUTING });
+    expect(result.items.every((item) => item.type === PublicationType.OUTING)).toBe(true);
+    expect(result.total).toBe(
+      await (db.client as any).publication.count({ where: { status: "PUBLISHED", type: PublicationType.OUTING }}),
+    );
   });
 });

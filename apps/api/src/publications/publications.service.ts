@@ -77,7 +77,10 @@ export class PublicationsService {
     dto: ListPublicationsDto,
   ): Promise<PublicationsPublicList> {
     const skip = (dto.page - 1) * dto.limit;
-    const where = { status: PublicationStatus.PUBLISHED };
+    const where = {
+      status: PublicationStatus.PUBLISHED,
+      ...(dto.type ? { type: dto.type } : {}),
+    };
     const rows = await this.client.publication.findMany({
       where,
       skip,

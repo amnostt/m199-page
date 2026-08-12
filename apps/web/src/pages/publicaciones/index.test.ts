@@ -23,9 +23,9 @@ describe("publications SSR", () => {
                 },
               ],
               page: 1,
-              limit: 10,
-              total: 1,
-              hasMore: false,
+              limit: 25,
+              total: 2,
+              hasMore: true,
             }),
             { status: 200 },
           ),
@@ -34,8 +34,17 @@ describe("publications SSR", () => {
     const html = await (
       await AstroContainer.create()
     ).renderToString(Page, {
-      request: new Request("http://localhost/publicaciones"),
+      request: new Request("http://localhost/publicaciones?type=OUTING&limit=25"),
     });
     expect(html).toContain("One");
+    expect(html).toContain('value="OUTING" aria-pressed="true"');
+    expect(html).toContain("/publicaciones?page=2&#38;limit=25&#38;type=OUTING");
+  });
+
+  it("renders the controlled 503 state", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("down", { status: 503 })));
+    const container = await AstroContainer.create();
+    const html = await container.renderToString(Page, { request: new Request("http://localhost/publicaciones") });
+    expect(html).toContain("No pudimos cargar las publicaciones.");
   });
 });

@@ -1,6 +1,10 @@
 ---
-const { page, limit, hasMore } = Astro.props;
-const link = (next: number) => `/publicaciones?page=${next}&limit=${limit}`;
+const { page, limit, hasMore, type } = Astro.props;
+const link = (next: number) => {
+  const params = new URLSearchParams({ page: String(next), limit: String(limit) });
+  if (type) params.set("type", type);
+  return `/publicaciones?${params}`;
+};
 ---
 <nav class="public-publications-pagination" aria-label="Paginación">
   {page > 1 && <a class="public-action" href={link(page - 1)}>Anterior</a>}

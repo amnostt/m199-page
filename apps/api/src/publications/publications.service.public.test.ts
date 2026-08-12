@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { PublicationsService } from "./publications.service.js";
+import { PublicationType } from "./dto/publication.dto.js";
 
 describe("PublicationsService public list", () => {
   it("filters published rows and maps a closed projection", async () => {
@@ -36,5 +37,16 @@ describe("PublicationsService public list", () => {
       publishedAt: "2026-01-01T00:00:00.000Z",
       featuredImageUrl: null,
     });
+  });
+
+  it("narrows the Prisma query by publication type", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const count = vi.fn().mockResolvedValue(0);
+    await new PublicationsService({ client: { publication: { findMany, count } } } as never)
+      .findManyPublic({ page: 1, limit: 10, type: PublicationType.OUTING });
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { status: "PUBLISHED", type: PublicationType.OUTING },
+    }));
+    expect(count).toHaveBeenCalledWith({ where: { status: "PUBLISHED", type: PublicationType.OUTING } });
   });
 });

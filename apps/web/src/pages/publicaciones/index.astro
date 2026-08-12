@@ -2,6 +2,7 @@
 import PublicLayout from "../../layouts/PublicLayout.astro";
 import PublicationCard from "../../components/publicaciones/PublicationCard.astro";
 import PublicationsPagination from "../../components/publicaciones/PublicationsPagination.astro";
+import PublicationsFilters from "../../components/publicaciones/PublicationsFilters.astro";
 import { fetchPublicationsList, PublicationsFetchError } from "../../lib/server/publications.js";
 import type { PublicationListItem } from "../../lib/server/publications.js";
 const result = await fetchPublicationsList(Astro.url).catch((error) => error);
@@ -11,12 +12,13 @@ const publications = result instanceof PublicationsFetchError ? null : result;
 <PublicLayout title="Publicaciones | Misión 1-99">
   <main class="public-ui public-page public-publications-list" data-testid="publications-page">
     <h1>Publicaciones</h1>
+    <PublicationsFilters />
     {publications ? <>
       <p>{publications.total} publicaciones</p>
       <section class="public-card-list" aria-label="Publicaciones">
         {publications.items.map((publication: PublicationListItem) => <PublicationCard publication={publication} />)}
       </section>
-      <PublicationsPagination {...publications} />
+      <PublicationsPagination {...publications} type={Astro.url.searchParams.get("type")} />
     </> : <div class="public-state public-state--error" role="alert"><p>No pudimos cargar las publicaciones.</p></div>}
   </main>
 </PublicLayout>
