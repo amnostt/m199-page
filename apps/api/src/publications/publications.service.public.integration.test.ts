@@ -63,4 +63,18 @@ integration("public publications PostgreSQL boundary", () => {
       await (db.client as any).publication.count({ where: { status: "PUBLISHED", type: PublicationType.OUTING }}),
     );
   });
+
+  it("returns a published detail and hides missing and DRAFT slugs", async () => {
+    const client = db.client as any;
+    const published = await client.publication.findFirst({ where: { status: "PUBLISHED" }, select: { slug: true } });
+    const draft = await client.publication.findFirst({ where: { status: "DRAFT" }, select: { slug: true } });
+    if (published) {
+      const result = await service.findOnePublicBySlug(published.slug);
+      expect(result).not.toHaveProperty("status");
+      expect(result).not.toHaveProperty("missionIds");
+      expect(result).toHaveProperty("content");
+    }
+    await expect(service.findOnePublicBySlug("definitely-missing")).rejects.toThrow();
+    if (draft) await expect(service.findOnePublicBySlug(draft.slug)).rejects.toThrow();
+  });
 });

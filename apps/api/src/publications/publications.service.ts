@@ -16,7 +16,10 @@ import {
   UpdatePublicationDto,
 } from "./dto/publication.dto.js";
 import type { ListPublicationsDto } from "./dto/list-publications.dto.js";
-import type { PublicationsPublicList } from "./dto/publication-public.dto.js";
+import type {
+  PublicationPublicDetail,
+  PublicationsPublicList,
+} from "./dto/publication-public.dto.js";
 
 type Client = {
   fileAsset: {
@@ -112,6 +115,45 @@ export class PublicationsService {
       total,
       hasMore: skip + dto.limit < total,
     };
+  }
+  async findOnePublicBySlug(slug: string): Promise<PublicationPublicDetail> {
+    const row = await this.client.publication.findUnique({
+      where: { slug, status: PublicationStatus.PUBLISHED },
+      select: {
+        slug: true,
+        title: true,
+        excerpt: true,
+        content: true,
+        type: true,
+        publishedAt: true,
+        featuredImageId: true,
+        startDate: true,
+        endDate: true,
+        activityStatus: true,
+        documentationStatus: true,
+      },
+    });
+    if (!row) throw new NotFoundException(`Publication "${slug}" not found`);
+    const detail: PublicationPublicDetail = {
+      slug: String(row.slug),
+      title: String(row.title),
+      excerpt: String(row.excerpt),
+      content: sanitizePublicationContent(String(row.content)),
+      type: String(row.type),
+      publishedAt: new Date(row.publishedAt as Date).toISOString(),
+      featuredImageUrl: row.featuredImageId
+        ? `/files/${String(row.featuredImageId)}`
+        : null,
+    };
+    if (row.type !== PublicationType.POST) {
+      detail.startDate = new Date(row.startDate as Date).toISOString();
+      detail.endDate = row.endDate
+        ? new Date(row.endDate as Date).toISOString()
+        : null;
+      detail.activityStatus = String(row.activityStatus);
+      detail.documentationStatus = String(row.documentationStatus);
+    }
+    return detail;
   }
   async findOne(id: string) {
     const row = await this.client.publication.findUnique({

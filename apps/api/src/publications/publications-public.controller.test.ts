@@ -81,4 +81,30 @@ describe("PublicationsPublicController", () => {
     expect(service.findManyPublic).toHaveBeenCalledWith({ page: 1, limit: 10 });
     expect(result.total).toBe(0);
   });
+
+  it("serves detail and returns the service 404 unchanged", async () => {
+    const service = {
+      findManyPublic: vi.fn(),
+      findOnePublicBySlug: vi.fn().mockResolvedValue({
+        slug: "trip", title: "Trip", excerpt: "", content: "<p>x</p>",
+        type: "OUTING", publishedAt: "2026-01-01T00:00:00.000Z",
+        featuredImageUrl: null, startDate: "2026-02-01T00:00:00.000Z",
+        endDate: null, activityStatus: "COMPLETED", documentationStatus: "DOCUMENTED",
+      }),
+    };
+    const module = await Test.createTestingModule({
+      controllers: [PublicationsPublicController],
+      providers: [{ provide: PublicationsService, useValue: service }],
+    }).compile();
+    const app = module.createNestApplication();
+    await app.init();
+    try {
+      const response = await request(app.getHttpServer()).get("/publications/public/trip").expect(200);
+      expect(Object.keys(response.body).sort()).toEqual([
+        "activityStatus", "content", "documentationStatus", "endDate", "excerpt",
+        "featuredImageUrl", "publishedAt", "slug", "startDate", "title", "type",
+      ]);
+      expect(service.findOnePublicBySlug).toHaveBeenCalledWith("trip");
+    } finally { await app.close(); }
+  });
 });

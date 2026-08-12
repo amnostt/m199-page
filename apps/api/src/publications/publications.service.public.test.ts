@@ -49,4 +49,23 @@ describe("PublicationsService public list", () => {
     }));
     expect(count).toHaveBeenCalledWith({ where: { status: "PUBLISHED", type: PublicationType.OUTING } });
   });
+
+  it("projects published POST and activity details without internal fields", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      slug: "post", title: "Post", excerpt: "Excerpt", content: "<p>safe</p>",
+      type: PublicationType.POST, publishedAt: new Date("2026-01-01"), featuredImageId: null,
+      startDate: null, endDate: null, activityStatus: null, documentationStatus: null,
+      status: "PUBLISHED", scope: "MISSION", missionIds: ["secret"], createdAt: new Date(),
+    });
+    const service = new PublicationsService({ client: { publication: { findUnique } } } as never);
+    const result = await service.findOnePublicBySlug("post");
+    expect(result).toEqual({ slug: "post", title: "Post", excerpt: "Excerpt", content: "<p>safe</p>", type: "POST", publishedAt: "2026-01-01T00:00:00.000Z", featuredImageUrl: null });
+    expect(findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { slug: "post", status: "PUBLISHED" }, select: expect.objectContaining({ content: true }) }));
+  });
+
+  it("maps a missing or draft slug to the same not-found error", async () => {
+    const findUnique = vi.fn().mockResolvedValue(null);
+    const service = new PublicationsService({ client: { publication: { findUnique } } } as never);
+    await expect(service.findOnePublicBySlug("hidden")).rejects.toThrow('Publication "hidden" not found');
+  });
 });

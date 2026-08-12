@@ -14,3 +14,14 @@ export interface PublicationsPublicList {
   total: number;
   hasMore: boolean;
 }
+
+export interface PublicationPublicDetailBase extends PublicationPublicListItem {
+  content: string;
+}
+
+export interface PublicationPublicDetail extends PublicationPublicDetailBase {
+  startDate?: string;
+  endDate?: string | null;
+  activityStatus?: string;
+  documentationStatus?: string;
+}

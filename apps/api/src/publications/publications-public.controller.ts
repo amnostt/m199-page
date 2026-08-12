@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Query, ValidationPipe } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Query, ValidationPipe } from "@nestjs/common";
 import { ListPublicationsDto } from "./dto/list-publications.dto.js";
 import { PublicationsService } from "./publications.service.js";
 
@@ -21,5 +21,10 @@ export class PublicationsPublicController {
     dto: ListPublicationsDto,
   ) {
     return this.publicationsService.findManyPublic(dto);
+  }
+
+  @Get(":slug")
+  findOne(@Param("slug") slug: string) {
+    return this.publicationsService.findOnePublicBySlug(slug);
   }
 }
