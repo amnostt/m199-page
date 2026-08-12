@@ -15,6 +15,8 @@ import {
   PublicationType,
   UpdatePublicationDto,
 } from "./dto/publication.dto.js";
+import type { ListPublicationsDto } from "./dto/list-publications.dto.js";
+import type { PublicationsPublicList } from "./dto/publication-public.dto.js";
 
 type Client = {
   fileAsset: {
@@ -29,6 +31,7 @@ type Client = {
     create: (args: unknown) => Promise<PublicationRow>;
     update: (args: unknown) => Promise<PublicationRow>;
     delete: (args: unknown) => Promise<PublicationRow>;
+    count: (args: unknown) => Promise<number>;
   };
   mission: {
     findMany: (args: unknown) => Promise<{ id: string; status: string }[]>;
@@ -69,6 +72,43 @@ export class PublicationsService {
       include: { missions: true },
     });
     return rows.map((row) => this.normalize(row));
+  }
+  async findManyPublic(
+    dto: ListPublicationsDto,
+  ): Promise<PublicationsPublicList> {
+    const skip = (dto.page - 1) * dto.limit;
+    const where = { status: PublicationStatus.PUBLISHED };
+    const rows = await this.client.publication.findMany({
+      where,
+      skip,
+      take: dto.limit + 1,
+      orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+      select: {
+        slug: true,
+        title: true,
+        excerpt: true,
+        type: true,
+        publishedAt: true,
+        featuredImageId: true,
+      },
+    });
+    const total = await this.client.publication.count({ where });
+    return {
+      items: rows.slice(0, dto.limit).map((row) => ({
+        slug: String(row.slug),
+        title: String(row.title),
+        excerpt: String(row.excerpt),
+        type: String(row.type),
+        publishedAt: new Date(row.publishedAt as Date).toISOString(),
+        featuredImageUrl: row.featuredImageId
+          ? `/files/${String(row.featuredImageId)}`
+          : null,
+      })),
+      page: dto.page,
+      limit: dto.limit,
+      total,
+      hasMore: skip + dto.limit < total,
+    };
   }
   async findOne(id: string) {
     const row = await this.client.publication.findUnique({

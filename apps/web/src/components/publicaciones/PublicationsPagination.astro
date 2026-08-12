@@ -1,0 +1,9 @@
+---
+const { page, limit, hasMore } = Astro.props;
+const link = (next: number) => `/publicaciones?page=${next}&limit=${limit}`;
+---
+<nav class="public-publications-pagination" aria-label="Paginación">
+  {page > 1 && <a class="public-action" href={link(page - 1)}>Anterior</a>}
+  <span>Página {page}</span>
+  {hasMore && <a class="public-action" href={link(page + 1)}>Siguiente</a>}
+</nav>

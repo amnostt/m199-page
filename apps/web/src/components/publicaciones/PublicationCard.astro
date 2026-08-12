@@ -1,0 +1,9 @@
+---
+const { publication } = Astro.props;
+---
+<article class="public-publication-card public-card">
+  <p class="public-publication-card__type">{publication.type}</p>
+  <h2><a href={`/publicaciones/${publication.slug}`}>{publication.title}</a></h2>
+  <p>{publication.excerpt}</p>
+  <time datetime={publication.publishedAt}>{new Date(publication.publishedAt).toLocaleDateString("es-AR")}</time>
+</article>

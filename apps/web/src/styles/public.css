@@ -65,6 +65,35 @@
 }
 
 @layer components {
+  .public-publications-list {
+    max-width: 75rem;
+  }
+  .public-publications-list > h1 {
+    margin-block: 1rem 2rem;
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 7vw, 5rem);
+  }
+  .public-publication-card__type {
+    color: var(--secondary) !important;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+  .public-publication-card h2 a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .public-publication-card time {
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+  }
+  .public-publications-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-block: 2rem;
+  }
   /* The public route stylesheet has no Tailwind Preflight, so the
    * `.public-ui` subtree needs an explicit `box-sizing: border-box`
    * to keep padding and borders inside the declared widths. The
