@@ -1,0 +1,20 @@
+---
+import { sanitizeAndMakeSafe } from "../../lib/sanitize.js";
+
+interface Props {
+  type: string;
+  activityStatus?: string;
+  content: string;
+}
+
+const { type, activityStatus, content } = Astro.props;
+const visible = type === "POST" || activityStatus === "COMPLETED";
+---
+
+{visible ? (
+  <div class="public-publication-detail__content" set:html={sanitizeAndMakeSafe(content)} />
+) : (
+  <p class="public-publication-content-placeholder" data-testid="publication-content-placeholder">
+    El contenido estará disponible cuando finalice la actividad.
+  </p>
+)}

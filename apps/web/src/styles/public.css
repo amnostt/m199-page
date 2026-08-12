@@ -87,6 +87,10 @@
     color: var(--muted-foreground);
     font-size: 0.875rem;
   }
+  .public-publication-content-placeholder {
+    color: var(--muted-foreground);
+    font-style: italic;
+  }
   .public-publications-pagination {
     display: flex;
     justify-content: center;

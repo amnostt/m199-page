@@ -1,8 +1,8 @@
 ---
 import PublicLayout from "../../layouts/PublicLayout.astro";
 import PublicationBadges from "../../components/publicaciones/PublicationBadges.astro";
+import PublicationContent from "../../components/publicaciones/PublicationContent.astro";
 import { fetchPublicationBySlug, PublicationsFetchError } from "../../lib/server/publications.js";
-import { sanitizeAndMakeSafe } from "../../lib/sanitize.js";
 
 let publication = null;
 try {
@@ -19,6 +19,6 @@ try {
     <time datetime={publication.publishedAt}>{new Date(publication.publishedAt).toLocaleDateString("es-AR")}</time>
     {publication.featuredImageUrl && <img src={publication.featuredImageUrl} alt="" />}
     <PublicationBadges publication={publication} />
-    <div class="public-publication-detail__content" set:html={sanitizeAndMakeSafe(publication.content)} />
+    <PublicationContent {...publication} />
   </main> : <div class="public-state public-state--error" role="alert"><p>No pudimos cargar esta publicación.</p></div>}
 </PublicLayout>
