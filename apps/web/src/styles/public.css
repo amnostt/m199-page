@@ -1085,3 +1085,14 @@
 .public-publication-filters button.list-active {
   font-weight: 700;
 }
+
+.public-publication-detail {
+  max-width: 65ch;
+}
+
+.public-publication-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 1rem;
+}

@@ -1,0 +1,24 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import PublicationBadges from "../../components/publicaciones/PublicationBadges.astro";
+import { fetchPublicationBySlug, PublicationsFetchError } from "../../lib/server/publications.js";
+import { sanitizeAndMakeSafe } from "../../lib/sanitize.js";
+
+let publication = null;
+try {
+  publication = await fetchPublicationBySlug(Astro.params.slug ?? "");
+} catch (error) {
+  Astro.response.status = error instanceof PublicationsFetchError && error.reason === "not_found" ? 404 : 503;
+}
+---
+<PublicLayout title={publication ? `${publication.title} | Misión 1-99` : "Publicación | Misión 1-99"}>
+  {publication ? <main class="public-ui public-publication-detail" data-testid="publication-detail">
+    <p class="public-publication-card__type">{publication.type}</p>
+    <h1>{publication.title}</h1>
+    <p>{publication.excerpt}</p>
+    <time datetime={publication.publishedAt}>{new Date(publication.publishedAt).toLocaleDateString("es-AR")}</time>
+    {publication.featuredImageUrl && <img src={publication.featuredImageUrl} alt="" />}
+    <PublicationBadges publication={publication} />
+    <div class="public-publication-detail__content" set:html={sanitizeAndMakeSafe(publication.content)} />
+  </main> : <div class="public-state public-state--error" role="alert"><p>No pudimos cargar esta publicación.</p></div>}
+</PublicLayout>
