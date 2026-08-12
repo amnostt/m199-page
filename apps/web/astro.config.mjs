@@ -124,6 +124,7 @@ export default defineConfig({
         "/auth": { target: API_TARGET, changeOrigin: true },
         "/files": { target: API_TARGET, changeOrigin: true },
         "/missions": { target: API_TARGET, changeOrigin: true },
+        "/publications": { target: API_TARGET, changeOrigin: true },
       },
     },
   },

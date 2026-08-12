@@ -119,6 +119,25 @@ describe("AdminShell", () => {
     expect(onNavigate).toHaveBeenCalledWith("missions");
   });
 
+  it("renders the Publications navigation item and placeholder branch", () => {
+    const onNavigate = vi.fn();
+    const { view } = renderShell("publications", { onNavigate });
+
+    expect(screen.getByTestId("nav-publications")).toBeTruthy();
+    expect(screen.getByText("Publicaciones (próximamente)")).toBeTruthy();
+    expect(
+      screen.getByTestId("nav-publications").getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      (screen.getByTestId("nav-publications") as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    view.unmount();
+    renderShell("landing", { onNavigate });
+    fireEvent.click(screen.getByTestId("nav-publications"));
+    expect(onNavigate).toHaveBeenCalledWith("publications");
+  });
+
   it("opens the responsive mobile sidebar from the accessible trigger", async () => {
     window.innerWidth = 375;
     renderShell();

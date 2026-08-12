@@ -2,6 +2,7 @@ import {
   BookOpenText,
   Files,
   Flag,
+  Newspaper,
   LogOut,
   Settings2,
   UsersRound,
@@ -31,7 +32,8 @@ import { ResponsiblesPage } from "./ResponsiblesPage.js";
 import { VersesPage } from "./VersesPage.js";
 import { MissionsPage } from "./MissionsPage.js";
 
-export type AdminSection = "landing" | "responsibles" | "verses" | "missions";
+export type AdminSection =
+  "landing" | "responsibles" | "verses" | "missions" | "publications";
 
 type AdminNavItem = {
   section: AdminSection;
@@ -48,6 +50,7 @@ const sections: AdminNavItem[] = [
   { section: "responsibles", label: "Responsables", icon: UsersRound },
   { section: "verses", label: "Versículos", icon: BookOpenText },
   { section: "missions", label: "Misiones", icon: Flag },
+  { section: "publications", label: "Publicaciones", icon: Newspaper },
 ];
 
 export interface AdminShellProps {
@@ -68,6 +71,7 @@ function SectionContent({
   if (section === "landing") return <LandingSettingsPage />;
   if (section === "verses") return <VersesPage />;
   if (section === "missions") return <MissionsPage />;
+  if (section === "publications") return <p>Publicaciones (próximamente)</p>;
   return <ResponsiblesPage currentUserId={user.id} />;
 }
 

@@ -25,6 +25,49 @@ export interface CreateResponsibleInput {
 
 export type MissionStatus = "ACTIVE" | "ARCHIVED";
 
+export type PublicationStatus = "DRAFT" | "PUBLISHED";
+export type PublicationType = "POST" | "OUTING" | "EVENT";
+export type PublicationScope = "GENERAL" | "MISSION";
+export type ActivityStatus = "UPCOMING" | "COMPLETED" | "CANCELLED";
+export type DocumentationStatus = "PENDING_DOCUMENTATION" | "DOCUMENTED";
+export interface PublicationAdmin {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  featuredImageId: string | null;
+  type: PublicationType;
+  status: PublicationStatus;
+  scope: PublicationScope;
+  publishedAt: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  activityStatus: ActivityStatus | null;
+  documentationStatus: DocumentationStatus | null;
+  missionIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+export interface CreatePublicationInput {
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  featuredImageId: string;
+  type: PublicationType;
+  status?: PublicationStatus;
+  scope?: PublicationScope;
+  missionIds?: string[];
+  startDate?: string | null;
+  endDate?: string | null;
+  activityStatus?: ActivityStatus | null;
+  documentationStatus?: DocumentationStatus | null;
+}
+export type UpdatePublicationInput = Partial<CreatePublicationInput> & {
+  confirmTypeChange?: boolean;
+};
+
 export interface MissionAdmin {
   id: string;
   slug: string;

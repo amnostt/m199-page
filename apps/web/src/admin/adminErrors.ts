@@ -41,6 +41,35 @@ function localizeMessage(message: string): string {
     ],
     [/^Slug already exists$/i, "El slug ya existe."],
     [/^Mission not found$/i, "No se encontró la misión."],
+    [/^Publication not found$/i, "No se encontró la publicación."],
+    [
+      /^POST publications cannot have activity fields$/i,
+      "Las publicaciones POST no pueden tener campos de actividad.",
+    ],
+    [
+      /^Activity publications require startDate, activityStatus, and documentationStatus$/i,
+      "Las publicaciones de actividad requieren fecha de inicio y estados de actividad y documentación.",
+    ],
+    [
+      /^endDate must be on or after startDate$/i,
+      "La fecha de fin debe ser posterior o igual a la fecha de inicio.",
+    ],
+    [
+      /^GENERAL publications cannot have missions$/i,
+      "Las publicaciones generales no pueden tener misiones.",
+    ],
+    [
+      /^MISSION publications require at least one mission$/i,
+      "Las publicaciones de misión requieren al menos una misión.",
+    ],
+    [
+      /^All linked missions must be ACTIVE$/i,
+      "Todas las misiones vinculadas deben estar activas.",
+    ],
+    [
+      /^confirmTypeChange is required when changing publication type$/i,
+      "confirmTypeChange es obligatorio al cambiar el tipo de publicación.",
+    ],
     [
       /^Cannot change mission status$/i,
       "No se pudo cambiar el estado de la misión.",
@@ -77,6 +106,11 @@ function localizeMessage(message: string): string {
     ],
     [/^Slug "(.+)" already exists$/i, 'El slug "$1" ya existe.'],
     [/^Mission "(.+)" not found$/i, 'No se encontró la misión "$1".'],
+    [/^Publication "(.+)" not found$/i, 'No se encontró la publicación "$1".'],
+    [
+      /^FileAsset "(.+)" must have category PUBLICATION_FEATURED_IMAGE$/i,
+      'El archivo "$1" debe ser una imagen destacada de publicación.',
+    ],
     [
       /^FileAsset "(.+)" must have category MISSION_HERO$/i,
       'El archivo "$1" debe ser una imagen hero de misión.',
