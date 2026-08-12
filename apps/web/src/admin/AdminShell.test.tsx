@@ -119,12 +119,12 @@ describe("AdminShell", () => {
     expect(onNavigate).toHaveBeenCalledWith("missions");
   });
 
-  it("renders the Publications navigation item and placeholder branch", () => {
+  it("renders the Publications navigation item and page branch", async () => {
     const onNavigate = vi.fn();
     const { view } = renderShell("publications", { onNavigate });
 
     expect(screen.getByTestId("nav-publications")).toBeTruthy();
-    expect(screen.getByText("Publicaciones (próximamente)")).toBeTruthy();
+    expect(screen.getByTestId("publications-loading")).toBeTruthy();
     expect(
       screen.getByTestId("nav-publications").getAttribute("aria-current"),
     ).toBe("page");

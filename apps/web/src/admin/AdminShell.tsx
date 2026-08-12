@@ -31,6 +31,7 @@ import { LandingSettingsPage } from "./LandingSettingsPage.js";
 import { ResponsiblesPage } from "./ResponsiblesPage.js";
 import { VersesPage } from "./VersesPage.js";
 import { MissionsPage } from "./MissionsPage.js";
+import { PublicationsPage } from "./PublicationsPage.js";
 
 export type AdminSection =
   "landing" | "responsibles" | "verses" | "missions" | "publications";
@@ -71,7 +72,7 @@ function SectionContent({
   if (section === "landing") return <LandingSettingsPage />;
   if (section === "verses") return <VersesPage />;
   if (section === "missions") return <MissionsPage />;
-  if (section === "publications") return <p>Publicaciones (próximamente)</p>;
+  if (section === "publications") return <PublicationsPage />;
   return <ResponsiblesPage currentUserId={user.id} />;
 }
 
