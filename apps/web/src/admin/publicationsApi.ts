@@ -42,7 +42,7 @@ export function updatePublicationScope(
   scope: PublicationScope,
   missionIds: string[],
 ) {
-  return adminFetch<PublicationAdmin>(path(id), {
+  return adminFetch<PublicationAdmin>(`${path(id)}/scope`, {
     method: "PATCH",
     headers: json,
     body: JSON.stringify({ scope, missionIds }),

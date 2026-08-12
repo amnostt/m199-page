@@ -120,7 +120,21 @@ export function PublicationForm({
         <select
           aria-label="Tipo"
           value={value.type}
-          onChange={(e) => set("type", e.target.value as PublicationType)}
+          onChange={(e) => {
+            const type = e.target.value as PublicationType;
+            setValue((current) =>
+              type === "POST"
+                ? {
+                    ...current,
+                    type,
+                    startDate: null,
+                    endDate: null,
+                    activityStatus: null,
+                    documentationStatus: null,
+                  }
+                : { ...current, type },
+            );
+          }}
           disabled={busy}
         >
           <option value="POST">Publicación</option>
@@ -183,7 +197,13 @@ export function PublicationForm({
           <input
             type="radio"
             checked={value.scope !== "MISSION"}
-            onChange={() => set("scope", "GENERAL")}
+            onChange={() =>
+              setValue((current) => ({
+                ...current,
+                scope: "GENERAL",
+                missionIds: [],
+              }))
+            }
           />
           General
         </label>

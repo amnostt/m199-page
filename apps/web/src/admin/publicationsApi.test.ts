@@ -4,6 +4,7 @@ import {
   createPublication,
   deletePublication,
   listPublications,
+  updatePublication,
   updatePublicationScope,
   updatePublicationStatus,
 } from "./publicationsApi.js";
@@ -46,10 +47,27 @@ describe("publicationsApi", () => {
     );
     expect(adminFetch).toHaveBeenNthCalledWith(
       3,
-      "/publications/admin/id%2Fone",
+      "/publications/admin/id%2Fone/scope",
       expect.objectContaining({
         body: JSON.stringify({ scope: "MISSION", missionIds: ["mission-1"] }),
       }),
+    );
+  });
+
+  it("keeps publication updates and scope updates on distinct routes", async () => {
+    vi.mocked(adminFetch).mockResolvedValue({});
+    await updatePublication("id/one", { title: "Updated" });
+    await updatePublicationScope("id/one", "GENERAL", []);
+
+    expect(adminFetch).toHaveBeenNthCalledWith(
+      1,
+      "/publications/admin/id%2Fone",
+      expect.objectContaining({ method: "PATCH" }),
+    );
+    expect(adminFetch).toHaveBeenNthCalledWith(
+      2,
+      "/publications/admin/id%2Fone/scope",
+      expect.objectContaining({ method: "PATCH" }),
     );
   });
 

@@ -11,6 +11,7 @@ import {
   listPublications,
   updatePublication,
   updatePublicationStatus,
+  updatePublicationScope,
 } from "./publicationsApi.js";
 import { listActiveMissions } from "./missionsApi.js";
 import { mapAdminError } from "./adminErrors.js";
@@ -52,7 +53,17 @@ export function PublicationsPage() {
     try {
       if (editing?.id) {
         const { status: _status, ...update } = input;
-        await updatePublication(editing.id, update);
+        if (update.scope) {
+          await updatePublicationScope(
+            editing.id,
+            update.scope,
+            update.missionIds ?? [],
+          );
+          delete update.scope;
+          delete update.missionIds;
+        }
+        if (Object.keys(update).length)
+          await updatePublication(editing.id, update);
       } else await createPublication(input as CreatePublicationInput);
       setEditing(null);
       await refresh();

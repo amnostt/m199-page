@@ -18,6 +18,7 @@ import {
   CreatePublicationDto,
   PublicationQueryDto,
   UpdatePublicationDto,
+  PublicationScopeDto,
   UpdatePublicationStatusDto,
 } from "./dto/publication.dto.js";
 import { PublicationsService } from "./publications.service.js";
@@ -63,6 +64,14 @@ export class PublicationsAdminController {
     dto: UpdatePublicationStatusDto,
   ) {
     return this.publicationsService.updateStatus(id, dto.status);
+  }
+
+  @Patch(":id/scope")
+  updateScope(
+    @Param("id") id: string,
+    @Body(validation(PublicationScopeDto)) dto: PublicationScopeDto,
+  ) {
+    return this.publicationsService.updateScope(id, dto.scope, dto.missionIds);
   }
 
   @Delete(":id")

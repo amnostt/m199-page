@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   create: vi.fn(),
   update: vi.fn(),
   status: vi.fn(),
+  scope: vi.fn(),
   remove: vi.fn(),
 }));
 vi.mock("./publicationsApi.js", () => ({
@@ -21,6 +22,7 @@ vi.mock("./publicationsApi.js", () => ({
   createPublication: api.create,
   updatePublication: api.update,
   updatePublicationStatus: api.status,
+  updatePublicationScope: api.scope,
   deletePublication: api.remove,
 }));
 vi.mock("./missionsApi.js", () => ({ listActiveMissions: api.missions }));
@@ -55,6 +57,7 @@ describe("PublicationsPage", () => {
     api.create.mockResolvedValue(undefined);
     api.update.mockResolvedValue(undefined);
     api.status.mockResolvedValue(undefined);
+    api.scope.mockResolvedValue(undefined);
     api.remove.mockResolvedValue(undefined);
   });
   it("loads the list and exposes the empty state", async () => {

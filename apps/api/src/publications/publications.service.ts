@@ -62,11 +62,12 @@ export class PublicationsService {
   }
 
   async findMany(status?: PublicationStatus) {
-    return this.client.publication.findMany({
+    const rows = await this.client.publication.findMany({
       where: status ? { status } : undefined,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       include: { missions: true },
     });
+    return rows.map((row) => this.normalize(row));
   }
   async findOne(id: string) {
     const row = await this.client.publication.findUnique({
@@ -74,7 +75,7 @@ export class PublicationsService {
       include: { missions: true },
     });
     if (!row) throw new NotFoundException(`Publication "${id}" not found`);
-    return row;
+    return this.normalize(row);
   }
   async create(dto: CreatePublicationDto) {
     this.validateShape(
@@ -106,7 +107,8 @@ export class PublicationsService {
             status: dto.status ?? PublicationStatus.DRAFT,
             publishedAt:
               dto.status === PublicationStatus.PUBLISHED ? new Date() : null,
-            scope: dto.scope ?? PublicationScope.GENERAL,
+            // The trigger requires a link before MISSION can be stored.
+            scope: PublicationScope.GENERAL,
             startDate: dto.startDate ?? null,
             endDate: dto.endDate ?? null,
             activityStatus: dto.activityStatus ?? null,
@@ -148,11 +150,13 @@ export class PublicationsService {
       dto.scope || dto.missionIds
         ? await this.validateMissions(
             dto.scope ?? existing.scope,
-            dto.missionIds ?? existing.missions.map((m) => m.missionId),
+            dto.missionIds ?? existing.missionIds,
           )
         : undefined;
     try {
       return await this.client.$transaction(async (tx: Client) => {
+        const changingToPost =
+          type === PublicationType.POST && existing.type !== type;
         const row = await tx.publication.update({
           where: { id },
           data: {
@@ -166,10 +170,12 @@ export class PublicationsService {
             featuredImageId: dto.featuredImageId,
             type: dto.type,
             scope: undefined,
-            startDate: dto.startDate,
-            endDate: dto.endDate,
-            activityStatus: dto.activityStatus,
-            documentationStatus: dto.documentationStatus,
+            startDate: changingToPost ? null : dto.startDate,
+            endDate: changingToPost ? null : dto.endDate,
+            activityStatus: changingToPost ? null : dto.activityStatus,
+            documentationStatus: changingToPost
+              ? null
+              : dto.documentationStatus,
           },
         });
         if (missions) await this.syncLinks(tx, id, missions);
@@ -206,10 +212,18 @@ export class PublicationsService {
     await this.client.publication.delete({ where: { id } });
   }
   private async findIn(client: Client, id: string) {
-    return client.publication.findUnique({
+    const row = await client.publication.findUnique({
       where: { id },
       include: { missions: true },
     });
+    return row && this.normalize(row);
+  }
+  private normalize(row: PublicationRow) {
+    const { missions, ...publication } = row;
+    return {
+      ...publication,
+      missionIds: missions.map((mission) => mission.missionId).sort(),
+    };
   }
   private async validateMissions(scope: PublicationScope, ids: string[]) {
     if (scope === PublicationScope.GENERAL && ids.length)
