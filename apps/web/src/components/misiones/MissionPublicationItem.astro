@@ -1,0 +1,7 @@
+---
+const { publication } = Astro.props;
+---
+<article data-testid="mission-publication">
+  <a href={`/publicaciones/${publication.slug}`}><h3>{publication.title}</h3></a>
+  <p>{publication.excerpt}</p>
+</article>

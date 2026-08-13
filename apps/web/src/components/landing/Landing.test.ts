@@ -52,9 +52,10 @@ function minimalPayload(): LandingPayloadShape {
 async function render(
   payload: LandingPayloadShape | null,
   failure: { reason: string } | null = null,
+  missions: { slug: string; title: string }[] | null = null,
 ): Promise<string> {
   return container.renderToString(Landing, {
-    props: { payload, failure },
+    props: { payload, failure, missions },
   });
 }
 
@@ -83,8 +84,10 @@ describe("Landing.astro — successful markup", () => {
     expect(html).toContain('data-testid="landing-page"');
   });
 
-  it("renders every section in payload order when the payload is full", async () => {
-    const html = await render(fullPayload());
+  it("renders every section in payload order when the payload is full and missions are loaded", async () => {
+    const html = await render(fullPayload(), null, [
+      { slug: "alpha", title: "Alpha" },
+    ]);
     const sections = [
       "hero-section",
       "missions-section",
@@ -109,12 +112,12 @@ describe("Landing.astro — successful markup", () => {
     expect(html).toContain("Marcos 16:15");
   });
 
-  it("renders the fallback hero and permanent missions slot while omitting empty optional sections", async () => {
+  it("renders the fallback hero and hides the missions slot when missions are unavailable, omitting empty optional sections", async () => {
     const html = await render(minimalPayload());
     expect(html).toContain('data-testid="landing-page"');
     expect(html).toContain('data-testid="hero-section"');
-    expect(html).toContain('data-testid="missions-section"');
     expect(html).toContain('src="/assets/template-picture.jpg"');
+    expect(html).not.toContain('data-testid="missions-section"');
     const sections = [
       "about-section",
       "video-section",
@@ -131,7 +134,7 @@ describe("Landing.astro — successful markup", () => {
     [
       "full",
       fullPayload(),
-      ["#inicio", "#misiones", "#nosotros", "/publicaciones", "#contacto"],
+      ["#inicio", "/misiones", "#nosotros", "/publicaciones", "#contacto"],
     ],
     [
       "optional",
@@ -141,12 +144,12 @@ describe("Landing.astro — successful markup", () => {
         description: "Una comunidad de fe",
         contactEmail: "contacto@m199.org",
       },
-      ["#inicio", "#misiones", "#nosotros", "/publicaciones", "#contacto"],
+      ["#inicio", "/misiones", "#nosotros", "/publicaciones", "#contacto"],
     ],
     [
       "minimal",
       minimalPayload(),
-      ["#inicio", "#misiones", "#inicio", "/publicaciones", "#inicio"],
+      ["#inicio", "/misiones", "#inicio", "/publicaciones", "#inicio"],
     ],
   ] as const)(
     "renders five navigable destinations with unique target ownership for the %s branch",
@@ -217,7 +220,7 @@ describe("Landing.astro — about and contact", () => {
     expect(html).not.toContain('id="contacto"');
     expect(navbarHrefs(html)).toEqual([
       "#inicio",
-      "#misiones",
+      "/misiones",
       "#inicio",
       "/publicaciones",
       "#inicio",
@@ -315,6 +318,32 @@ describe("Landing.astro — navbar SSR contract", () => {
     expect(navbar.match(/landing-navbar__link--cta/g)).toHaveLength(1);
     expect(navbar.match(/<a\b/g)).toHaveLength(5);
   });
+
+  it("navigates Misiones to /misiones when the payload is loaded, while leaving the other anchors unchanged", async () => {
+    const html = await render(fullPayload());
+    const navbar = navbarMarkup(html);
+    const misionesAnchor = navbar.match(
+      /<a\b[^>]*class="[^"]*\blanding-navbar__link\b[^"]*"[^>]*>Misiones<\/a>/,
+    );
+
+    expect(misionesAnchor).not.toBeNull();
+    expect(misionesAnchor?.[0]).toContain('href="/misiones"');
+
+    expect(html).toContain('href="/publicaciones"');
+    expect(html).toContain('href="#inicio"');
+    expect(html).toContain('href="#nosotros"');
+    expect(html).toContain('href="#contacto"');
+  });
+
+  it("falls back to #inicio for the Misiones destination on the failure root", async () => {
+    const html = await render(null, { reason: "timeout" });
+    const navbar = navbarMarkup(html);
+    const misionesAnchor = navbar.match(
+      /<a\b[^>]*class="[^"]*\blanding-navbar__link\b[^"]*"[^>]*>Misiones<\/a>/,
+    );
+
+    expect(misionesAnchor?.[0]).toContain('href="#inicio"');
+  });
 });
 
 describe("Landing.astro — CSS scope contract", () => {
@@ -323,15 +352,22 @@ describe("Landing.astro — CSS scope contract", () => {
     expect(html).toMatch(/class="public-ui public-page"/);
   });
 
-  it("uses public-section for every block-level section", async () => {
-    const html = await render(fullPayload());
-    // After WU3 the legacy featured-outing and featured-posts sections
-    // are gone, so the count drops from 6 to 4 (hero, missions, about,
-    // verse, contact — the contact section is a public-card-list, not
-    // a public-section, so it does not contribute).
+  it("uses public-section for every block-level section when missions are loaded", async () => {
+    const html = await render(fullPayload(), null, [
+      { slug: "alpha", title: "Alpha" },
+    ]);
     expect(
       html.match(/class="[^"]*\bpublic-section\b[^"]*"/g)?.length,
     ).toBeGreaterThanOrEqual(4);
+  });
+
+  it("drops the missions public-section when no missions are provided", async () => {
+    const html = await render(fullPayload(), null, []);
+    const count = html.match(/class="[^"]*\bpublic-section\b[^"]*"/g)?.length;
+    // About + verse + contact (missions hidden, hero uses public-hero, not
+    // public-section, and LandingMissions is conditional on data).
+    expect(count).toBe(3);
+    expect(html).not.toContain('data-testid="missions-section"');
   });
 
   it("does not render the legacy featured-outing or featured-posts sections", async () => {

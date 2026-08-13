@@ -24,10 +24,12 @@ import {
   LandingFetchError,
 } from "../lib/server/landing.js";
 import { resolveApiBaseUrl } from "../lib/server/env.js";
+import { fetchMissionsList } from "../lib/server/missions.js";
 
 let payload: import("../lib/server/landing.js").LandingPublicPayload | null =
   null;
 let failure: { reason: string } | null = null;
+let missions: import("../lib/server/missions.js").MissionListItem[] | null = null;
 
 try {
   const apiBaseUrl = resolveApiBaseUrl();
@@ -40,6 +42,15 @@ try {
   failure = { reason };
 }
 
+try {
+  const apiBaseUrl = resolveApiBaseUrl();
+  missions = (await fetchMissionsList(new URL("/", Astro.url), { apiBaseUrl })).items;
+} catch (cause) {
+  console.warn("Landing missions fetch failed", {
+    reason: cause instanceof Error ? cause.name : "unknown",
+  });
+}
+
 if (failure) {
   Astro.response.status = 503;
   Astro.response.statusText = "Service Unavailable";
@@ -47,5 +58,5 @@ if (failure) {
 ---
 
 <PublicLayout>
-  <Landing payload={payload} failure={failure} />
+  <Landing payload={payload} failure={failure} missions={missions} />
 </PublicLayout>

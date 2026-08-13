@@ -1,0 +1,9 @@
+---
+const { page, limit, hasMore } = Astro.props;
+const link = (next: number) => `/misiones?${new URLSearchParams({ page: String(next), limit: String(limit) })}`;
+---
+<nav class="public-missions-pagination" aria-label="Paginación">
+  {page > 1 && <a class="public-action" href={link(page - 1)}>Anterior</a>}
+  <span>Página {page}</span>
+  {hasMore && <a class="public-action" href={link(page + 1)}>Siguiente</a>}
+</nav>

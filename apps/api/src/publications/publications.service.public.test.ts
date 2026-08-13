@@ -87,11 +87,75 @@ describe("PublicationsService public list", () => {
       type: "POST",
       publishedAt: "2026-01-01T00:00:00.000Z",
       featuredImageUrl: null,
+      missions: [],
     });
     expect(findUnique).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { slug: "post", status: "PUBLISHED" },
         select: expect.objectContaining({ content: true }),
+      }),
+    );
+  });
+
+  it("projects associated Missions as closed {slug,title,status} rows ordered createdAt DESC,id DESC", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      slug: "linked",
+      title: "Linked",
+      excerpt: "",
+      content: "<p>safe</p>",
+      type: PublicationType.POST,
+      publishedAt: new Date("2026-01-01"),
+      featuredImageId: null,
+      startDate: null,
+      endDate: null,
+      activityStatus: null,
+      documentationStatus: null,
+      status: "PUBLISHED",
+      scope: "MISSION",
+      missions: [
+        {
+          mission: {
+            slug: "newer-archived",
+            title: "Newer archived",
+            status: "ARCHIVED",
+          },
+        },
+        {
+          mission: {
+            slug: "older-active",
+            title: "Older active",
+            status: "ACTIVE",
+          },
+        },
+      ],
+    });
+    const service = new PublicationsService({
+      client: { publication: { findUnique } },
+    } as never);
+    const result = await service.findOnePublicBySlug("linked");
+    expect(result.missions).toEqual([
+      { slug: "newer-archived", title: "Newer archived", status: "ARCHIVED" },
+      { slug: "older-active", title: "Older active", status: "ACTIVE" },
+    ]);
+    expect(
+      result.missions.map((mission) => Object.keys(mission).sort()),
+    ).toEqual([
+      ["slug", "status", "title"],
+      ["slug", "status", "title"],
+    ]);
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          missions: expect.objectContaining({
+            orderBy: [
+              { mission: { createdAt: "desc" } },
+              { mission: { id: "desc" } },
+            ],
+            select: {
+              mission: { select: { slug: true, title: true, status: true } },
+            },
+          }),
+        }),
       }),
     );
   });

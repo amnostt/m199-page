@@ -131,6 +131,15 @@ export class PublicationsService {
         endDate: true,
         activityStatus: true,
         documentationStatus: true,
+        missions: {
+          orderBy: [
+            { mission: { createdAt: "desc" } },
+            { mission: { id: "desc" } },
+          ],
+          select: {
+            mission: { select: { slug: true, title: true, status: true } },
+          },
+        },
       },
     });
     if (!row) throw new NotFoundException(`Publication "${slug}" not found`);
@@ -144,6 +153,23 @@ export class PublicationsService {
       featuredImageUrl: row.featuredImageId
         ? `/files/${String(row.featuredImageId)}`
         : null,
+      missions: (
+        (
+          row as unknown as {
+            missions?: {
+              mission: {
+                slug: string;
+                title: string;
+                status: "ACTIVE" | "ARCHIVED";
+              };
+            }[];
+          }
+        ).missions ?? []
+      ).map(({ mission }) => ({
+        slug: String(mission.slug),
+        title: String(mission.title),
+        status: mission.status,
+      })),
     };
     if (row.type !== PublicationType.POST) {
       detail.startDate = new Date(row.startDate as Date).toISOString();

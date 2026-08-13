@@ -1,0 +1,6 @@
+---
+const { gallery = [] } = Astro.props;
+---
+{gallery.length > 0 && <section data-testid="mission-gallery" aria-label="Imágenes de publicaciones">
+  {gallery.map((image: { imageUrl: string }) => <img src={image.imageUrl} alt="" loading="lazy" />)}
+</section>}

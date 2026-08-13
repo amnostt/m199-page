@@ -1,0 +1,22 @@
+---
+import PublicLayout from "../../layouts/PublicLayout.astro";
+import MissionCard from "../../components/misiones/MissionCard.astro";
+import MissionsPagination from "../../components/misiones/MissionsPagination.astro";
+import { fetchMissionsList, MissionsFetchError } from "../../lib/server/missions.js";
+import type { MissionListItem } from "../../lib/server/missions.js";
+const result = await fetchMissionsList(Astro.url).catch((error) => error);
+if (result instanceof MissionsFetchError) Astro.response.status = 503;
+const missions = result instanceof MissionsFetchError ? null : result;
+---
+<PublicLayout title="Misiones | Misión 1-99">
+  <main class="public-ui public-page public-missions-list" data-testid="missions-page">
+    <h1>Misiones</h1>
+    {missions ? <>
+      <p>{missions.total} misiones</p>
+      <section class="public-card-list" aria-label="Misiones">
+        {missions.items.map((mission: MissionListItem) => <MissionCard mission={mission} />)}
+      </section>
+      <MissionsPagination {...missions} />
+    </> : <div class="public-state public-state--error" role="alert"><p>No pudimos cargar las misiones.</p></div>}
+  </main>
+</PublicLayout>

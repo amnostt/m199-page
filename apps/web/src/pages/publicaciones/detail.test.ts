@@ -7,7 +7,7 @@ vi.mock("../../lib/sanitize.js", () => ({
 }));
 import Page from "./[slug].astro";
 
-const detail = (type: string) => ({
+const detail = (type: string, missions: object[] = []) => ({
   slug: "demo",
   title: "Demo",
   excerpt: "Intro",
@@ -15,6 +15,7 @@ const detail = (type: string) => ({
   type,
   publishedAt: "2026-01-01T00:00:00.000Z",
   featuredImageUrl: null,
+  missions,
   startDate: "2026-02-01T00:00:00.000Z",
   endDate: null,
   activityStatus: "COMPLETED",
@@ -38,6 +39,36 @@ describe("publication detail SSR", () => {
       type !== "POST",
     );
     expect(html).not.toContain("<script>");
+    expect(html).not.toContain('data-testid="publication-missions"');
+  });
+
+  it("renders the publication-missions section with mixed ACTIVE+ARCHIVED links", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify(
+            detail("POST", [
+              { slug: "alpha", title: "Alpha mission", status: "ACTIVE" },
+              { slug: "beta", title: "Beta mission", status: "ARCHIVED" },
+            ]),
+          ),
+        ),
+      ),
+    );
+    const html = await (
+      await AstroContainer.create()
+    ).renderToString(Page, {
+      params: { slug: "demo" },
+      request: new Request("http://localhost/publicaciones/demo"),
+    });
+    expect(html).toContain('data-testid="publication-missions"');
+    expect(html).toContain('href="/misiones/alpha"');
+    expect(html).toContain('href="/misiones/beta"');
+    expect(html).toContain("Alpha mission");
+    expect(html).toContain("Beta mission");
+    expect(html).toContain("Misión finalizada");
+    expect(html).toContain("Body");
   });
   it("renders a controlled failure", async () => {
     for (const failure of [

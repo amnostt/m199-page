@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { NotFoundException } from "@nestjs/common";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import { ValidationPipe } from "@nestjs/common";
@@ -36,6 +37,22 @@ async function createApp(guard: {
         status: row.status,
       },
     ]),
+    findManyPublic: vi.fn().mockResolvedValue({
+      items: [],
+      page: 1,
+      limit: 10,
+      total: 0,
+      hasMore: false,
+    }),
+    findOnePublicBySlug: vi.fn().mockResolvedValue({
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      heroImageUrl: "/files/f-1",
+      heroPhrase: row.heroPhrase,
+      status: row.status,
+      finished: false,
+    }),
     create: vi.fn().mockResolvedValue(row),
     update: vi.fn().mockResolvedValue(row),
     updateStatus: vi.fn().mockResolvedValue(row),
@@ -71,8 +88,50 @@ describe("Mission route boundaries", () => {
     try {
       await request(app.getHttpServer()).get("/missions/active").expect(200);
       await request(app.getHttpServer()).get("/missions/archived").expect(200);
+      await request(app.getHttpServer())
+        .get("/missions/public?page=1&limit=10")
+        .expect(200);
+      await request(app.getHttpServer())
+        .get("/missions/public/one")
+        .expect(200);
       expect(service.findPublicByStatus).toHaveBeenCalledWith("ACTIVE");
       expect(service.findPublicByStatus).toHaveBeenCalledWith("ARCHIVED");
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("serves active and archived public details and 404s unknown slugs", async () => {
+    const { app, service } = await createApp({
+      canActivate: vi.fn().mockReturnValue(false),
+    });
+    service.findOnePublicBySlug = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...row,
+        heroImageUrl: "/files/f-1",
+        finished: false,
+      })
+      .mockResolvedValueOnce({
+        ...row,
+        status: "ARCHIVED",
+        heroImageUrl: "/files/f-1",
+        finished: true,
+      })
+      .mockRejectedValueOnce(new NotFoundException());
+    try {
+      await request(app.getHttpServer())
+        .get("/missions/public/one")
+        .expect(200)
+        .expect(({ body }) => expect(body.finished).toBe(false));
+      await request(app.getHttpServer())
+        .get("/missions/public/two")
+        .expect(200)
+        .expect(({ body }) => expect(body.finished).toBe(true));
+      await request(app.getHttpServer())
+        .get("/missions/public/missing")
+        .expect(404);
+      expect(service.findManyPublic).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }
@@ -95,6 +154,24 @@ describe("Mission route boundaries", () => {
       await request(app.getHttpServer())
         .get("/missions/m-1/gallery")
         .expect(404);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it.each([
+    ["page=0", "page=0"],
+    ["nonnumeric page", "page=abc"],
+    ["limit=51", "limit=51"],
+    ["nonnumeric limit", "limit=abc"],
+  ])("rejects invalid public pagination: %s", async (_label, query) => {
+    const { app } = await createApp({
+      canActivate: vi.fn().mockReturnValue(true),
+    });
+    try {
+      await request(app.getHttpServer())
+        .get(`/missions/public?${query}`)
+        .expect(400);
     } finally {
       await app.close();
     }

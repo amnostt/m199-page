@@ -2,6 +2,7 @@
 import PublicLayout from "../../layouts/PublicLayout.astro";
 import PublicationBadges from "../../components/publicaciones/PublicationBadges.astro";
 import PublicationContent from "../../components/publicaciones/PublicationContent.astro";
+import PublicationMissionsList from "../../components/publicaciones/PublicationMissionsList.astro";
 import { fetchPublicationBySlug, PublicationsFetchError } from "../../lib/server/publications.js";
 
 let publication = null;
@@ -19,6 +20,7 @@ try {
     <time datetime={publication.publishedAt}>{new Date(publication.publishedAt).toLocaleDateString("es-AR")}</time>
     {publication.featuredImageUrl && <img src={publication.featuredImageUrl} alt="" />}
     <PublicationBadges publication={publication} />
+    <PublicationMissionsList missions={publication.missions} />
     <PublicationContent {...publication} />
   </main> : <div class="public-state public-state--error" role="alert"><p>No pudimos cargar esta publicación.</p></div>}
 </PublicLayout>

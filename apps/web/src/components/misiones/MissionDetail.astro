@@ -1,0 +1,16 @@
+---
+import MissionFinishedBadge from "./MissionFinishedBadge.astro";
+import MissionGallery from "./MissionGallery.astro";
+import MissionPublicationItem from "./MissionPublicationItem.astro";
+const { mission } = Astro.props;
+---
+<main class="public-ui public-page public-mission-detail" data-testid="mission-detail">
+  <img src={mission.heroImageUrl} alt="" />
+  <h1>{mission.title}</h1>
+  {mission.finished && <MissionFinishedBadge />}
+  <p>{mission.heroPhrase}</p>
+  <MissionGallery gallery={mission.gallery} />
+  <section data-testid="mission-publications" aria-label="Publicaciones relacionadas">
+    {mission.publications.length > 0 ? mission.publications.map((publication: object) => <MissionPublicationItem publication={publication} />) : <p>No hay publicaciones relacionadas.</p>}
+  </section>
+</main>

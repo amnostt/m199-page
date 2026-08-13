@@ -1,4 +1,14 @@
-<section
+---
+import type { MissionListItem } from "../../lib/server/missions.js";
+
+interface Props {
+  missions: MissionListItem[] | null;
+}
+
+const { missions } = Astro.props;
+---
+
+{missions && missions.length > 0 && <section
   class="public-section landing-missions"
   id="misiones"
   data-testid="missions-section"
@@ -9,18 +19,14 @@
       <p class="landing-missions__kicker">Ministerios y misiones</p>
       <h2 id="missions-title">Misiones</h2>
     </div>
-    <p class="landing-missions__status">Próximamente</p>
+    <a class="landing-missions__status" href="/misiones">Ver todas las misiones</a>
   </header>
 
-  <div class="landing-missions__focus">
-    <div class="landing-missions__visual" aria-hidden="true"></div>
-    <div class="landing-missions__copy">
-      <p class="landing-missions__eyebrow">Historias en preparación</p>
-      <h3>Un espacio para conocer cada misión</h3>
-      <p>
-        Estamos preparando este espacio para compartir el trabajo de nuestros
-        ministerios y misiones.
-      </p>
-    </div>
+  <div class="public-card-list">
+    {missions.map((mission) => <article class="public-mission-card public-card">
+      <img src={mission.heroImageUrl} alt="" />
+      <h3><a href={`/misiones/${mission.slug}`}>{mission.title}</a></h3>
+      <p>{mission.heroPhrase}</p>
+    </article>)}
   </div>
-</section>
+</section>}

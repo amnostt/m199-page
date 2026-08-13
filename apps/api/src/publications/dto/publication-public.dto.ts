@@ -19,7 +19,14 @@ export interface PublicationPublicDetailBase extends PublicationPublicListItem {
   content: string;
 }
 
+export interface PublicationMissionLink {
+  slug: string;
+  title: string;
+  status: "ACTIVE" | "ARCHIVED";
+}
+
 export interface PublicationPublicDetail extends PublicationPublicDetailBase {
+  missions: PublicationMissionLink[];
   startDate?: string;
   endDate?: string | null;
   activityStatus?: string;

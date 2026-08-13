@@ -26,15 +26,17 @@ import LandingHero from "./LandingHero.astro";
 import LandingMissions from "./LandingMissions.astro";
 import LandingAbout from "./LandingAbout.astro";
 import LandingContact from "./LandingContact.astro";
+import type { MissionListItem } from "../../lib/server/missions.js";
 
 interface Props {
   payload: LandingPayloadShape | null;
   failure: LandingFailure | null;
+  missions: MissionListItem[] | null;
 }
 
-const { payload, failure } = Astro.props;
+const { payload, failure, missions = null } = Astro.props;
 
-const missionHref = payload ? "#misiones" : "#inicio";
+const missionHref = payload ? "/misiones" : "#inicio";
 const hasAbout = Boolean(
   payload &&
     (payload.mission?.trim() ||
@@ -84,7 +86,7 @@ const publicationsHref = "/publicaciones";
       heroImageUrl={payload.heroImageUrl}
     />
 
-    <LandingMissions />
+    <LandingMissions missions={missions} />
 
     <LandingAbout
       mission={payload.mission}

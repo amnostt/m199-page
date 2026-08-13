@@ -139,6 +139,10 @@ describe("PublicationsPublicController", () => {
         endDate: null,
         activityStatus: "COMPLETED",
         documentationStatus: "DOCUMENTED",
+        missions: [
+          { slug: "alpha", title: "Alpha", status: "ACTIVE" },
+          { slug: "beta", title: "Beta", status: "ARCHIVED" },
+        ],
       }),
     };
     const module = await Test.createTestingModule({
@@ -158,11 +162,16 @@ describe("PublicationsPublicController", () => {
         "endDate",
         "excerpt",
         "featuredImageUrl",
+        "missions",
         "publishedAt",
         "slug",
         "startDate",
         "title",
         "type",
+      ]);
+      expect(response.body.missions).toEqual([
+        { slug: "alpha", title: "Alpha", status: "ACTIVE" },
+        { slug: "beta", title: "Beta", status: "ARCHIVED" },
       ]);
       expect(service.findOnePublicBySlug).toHaveBeenCalledWith("trip");
     } finally {

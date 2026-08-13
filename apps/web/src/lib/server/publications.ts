@@ -17,6 +17,7 @@ export type PublicationsList = {
 };
 export type PublicationPublicDetail = PublicationListItem & {
   content: string;
+  missions: { slug: string; title: string; status: "ACTIVE" | "ARCHIVED" }[];
   startDate?: string;
   endDate?: string | null;
   activityStatus?: string;
@@ -81,6 +82,17 @@ export function validatePublicationPublicPayload(
     !(
       typeof value.featuredImageUrl === "string" ||
       value.featuredImageUrl === null
+    ) ||
+    !Array.isArray(value.missions) ||
+    value.missions.some(
+      (mission) =>
+        !mission ||
+        typeof mission !== "object" ||
+        typeof (mission as Record<string, unknown>).slug !== "string" ||
+        typeof (mission as Record<string, unknown>).title !== "string" ||
+        !["ACTIVE", "ARCHIVED"].includes(
+          (mission as Record<string, unknown>).status as string,
+        ),
     )
   )
     throw new PublicationsFetchError("invalid_payload");

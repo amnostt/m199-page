@@ -8,6 +8,7 @@ import { DbService } from "../db/db.service.js";
 import { assertFileCategory } from "../file-module/assert-file-category.js";
 import type { CreateMissionDto } from "./dto/create-mission.dto.js";
 import type { UpdateMissionDto } from "./dto/update-mission.dto.js";
+import type { ListMissionsDto } from "./dto/list-missions.dto.js";
 
 export interface MissionRow {
   id: string;
@@ -27,12 +28,33 @@ export interface MissionPublicSummary {
   heroPhrase: string;
   status: "ACTIVE" | "ARCHIVED";
 }
+export interface MissionPublicPublication {
+  slug: string;
+  title: string;
+  excerpt: string;
+  type: string;
+  publishedAt: string;
+  featuredImageUrl: string | null;
+}
+export type MissionPublicDetail = MissionPublicSummary & {
+  finished: boolean;
+  publications: MissionPublicPublication[];
+  gallery: { imageUrl: string }[];
+};
+export interface MissionsPublicList {
+  items: MissionPublicSummary[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
 interface MissionsClient {
   mission: {
     findMany(args: {
       where: { status: MissionRow["status"] };
       orderBy: Array<Record<string, string>>;
     }): Promise<MissionRow[]>;
+    count(args: unknown): Promise<number>;
     findUnique(args: {
       where: { id?: string; slug?: string };
     }): Promise<MissionRow | null>;
@@ -123,6 +145,96 @@ export class MissionsService {
     return (await this.findByStatus(status)).map((row) =>
       this.toPublicSummary(row),
     );
+  }
+  async findManyPublic(dto: ListMissionsDto): Promise<MissionsPublicList> {
+    const skip = (dto.page - 1) * dto.limit;
+    const where = { status: "ACTIVE" as const };
+    const rows = await this.client.mission.findMany({
+      where,
+      skip,
+      take: dto.limit + 1,
+      orderBy: this.orderBy,
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        heroImageId: true,
+        heroPhrase: true,
+        status: true,
+      },
+    } as never);
+    const total = await this.client.mission.count({ where });
+    return {
+      items: rows.slice(0, dto.limit).map((row) => this.toPublicSummary(row)),
+      page: dto.page,
+      limit: dto.limit,
+      total,
+      hasMore: skip + dto.limit < total,
+    };
+  }
+  async findOnePublicBySlug(slug: string): Promise<MissionPublicDetail> {
+    const row = await this.client.mission.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        heroImageId: true,
+        heroPhrase: true,
+        status: true,
+        publications: {
+          where: { publication: { status: "PUBLISHED" } },
+          orderBy: [
+            { publication: { publishedAt: "desc" } },
+            { publication: { id: "desc" } },
+          ],
+          select: {
+            publication: {
+              select: {
+                slug: true,
+                title: true,
+                excerpt: true,
+                type: true,
+                publishedAt: true,
+                featuredImageId: true,
+              },
+            },
+          },
+        },
+      },
+    } as never);
+    if (!row || !["ACTIVE", "ARCHIVED"].includes(row.status))
+      throw new NotFoundException(`Mission "${slug}" not found`);
+    const publications = (
+      (
+        row as typeof row & {
+          publications: Array<{
+            publication: MissionPublicPublication & {
+              featuredImageId: string | null;
+            };
+          }>;
+        }
+      ).publications ?? []
+    ).map(({ publication }) => ({
+      ...publication,
+      publishedAt: new Date(publication.publishedAt).toISOString(),
+      featuredImageUrl: publication.featuredImageId
+        ? `/files/${publication.featuredImageId}`
+        : null,
+    }));
+    const seen = new Set<string>();
+    const gallery = publications.flatMap((publication) => {
+      const id = publication.featuredImageUrl;
+      if (!id || seen.has(id)) return [];
+      seen.add(id);
+      return [{ imageUrl: id }];
+    });
+    return {
+      ...this.toPublicSummary(row),
+      finished: row.status === "ARCHIVED",
+      publications,
+      gallery,
+    };
   }
   private handleUnique(error: unknown, slug: string): void {
     if (

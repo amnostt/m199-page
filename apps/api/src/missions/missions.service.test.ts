@@ -23,6 +23,7 @@ const archived = {
 
 function fixture(rows: MissionRow[] = [active, archived]) {
   const findMany = vi.fn().mockResolvedValue(rows);
+  const count = vi.fn().mockResolvedValue(rows.length);
   const findUnique = vi.fn().mockResolvedValue(active);
   const create = vi.fn().mockResolvedValue(active);
   const update = vi.fn().mockResolvedValue(active);
@@ -31,10 +32,11 @@ function fixture(rows: MissionRow[] = [active, archived]) {
     .mockResolvedValue({ id: "f-1", category: "MISSION_HERO" });
   return {
     client: {
-      mission: { findMany, findUnique, create, update },
+      mission: { findMany, findUnique, create, update, count },
       fileAsset: { findUnique: fileFindUnique },
     },
     findMany,
+    count,
     findUnique,
     create,
     update,
@@ -176,5 +178,59 @@ describe("MissionsService", () => {
     await expect(service.findPublicByStatus("ARCHIVED")).resolves.toEqual([
       expect.objectContaining({ id: "m-2", status: "ARCHIVED" }),
     ]);
+  });
+
+  it("returns a paginated active-only closed projection", async () => {
+    const db = fixture([active]);
+    db.findMany.mockResolvedValue([active]);
+    const service = await build(db);
+    db.count.mockResolvedValue(3);
+    await expect(
+      service.findManyPublic({ page: 2, limit: 1 }),
+    ).resolves.toEqual({
+      items: [expect.objectContaining({ id: "m-1", status: "ACTIVE" })],
+      page: 2,
+      limit: 1,
+      total: 3,
+      hasMore: true,
+    });
+    expect(db.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: "ACTIVE" },
+        skip: 1,
+        take: 2,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      }),
+    );
+  });
+
+  it("returns ACTIVE and ARCHIVED mission details with a closed projection", async () => {
+    const db = fixture();
+    const service = await build(db);
+    await expect(service.findOnePublicBySlug("one")).resolves.toEqual(
+      expect.objectContaining({ id: "m-1", status: "ACTIVE", finished: false }),
+    );
+    expect(db.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { slug: "one" },
+      }),
+    );
+    db.findUnique.mockResolvedValueOnce(archived);
+    await expect(service.findOnePublicBySlug("two")).resolves.toEqual(
+      expect.objectContaining({
+        id: "m-2",
+        status: "ARCHIVED",
+        finished: true,
+      }),
+    );
+  });
+
+  it("404s missing public details", async () => {
+    const db = fixture();
+    db.findUnique.mockResolvedValue(null);
+    const service = await build(db);
+    await expect(service.findOnePublicBySlug("missing")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });
