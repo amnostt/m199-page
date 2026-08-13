@@ -64,4 +64,25 @@ describe("publication detail SSR", () => {
       );
     }
   });
+
+  it.each(["missing", "draft"])(
+    "returns the same visitor-facing 404 for %s detail",
+    async (slug) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response("not found", { status: 404 })),
+      );
+      const response = await (
+        await AstroContainer.create()
+      ).renderToResponse(Page, {
+        params: { slug },
+        request: new Request(`http://localhost/publicaciones/${slug}`),
+      });
+
+      expect(response.status).toBe(404);
+      expect(await response.text()).toContain(
+        "No pudimos cargar esta publicación.",
+      );
+    },
+  );
 });
