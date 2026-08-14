@@ -1,4 +1,21 @@
 ---
+/**
+ * LandingNavbar.astro — fixed header with progressive mobile menu.
+ *
+ * OpenDesign rhythm:
+ *   - Fixed header with a transparent background at the top of the
+ *     page. A scroll listener adds `.is-scrolled` for the bordered /
+ *     blurred treatment.
+ *   - Skip link to `#contenido` is rendered inside the header so it
+ *     is the first focusable element on the page.
+ *   - All five destinations stay SSR-visible when JS is disabled.
+ *   - The mobile toggle is server-visible but hidden until the
+ *     `.landing-navbar--enhanced` class is added by the inline
+ *     enhancement script.
+ *   - The enhancement script preserves the existing accessibility
+ *     contract: Escape closes the menu and restores focus to the
+ *     toggle; activating any link closes the menu.
+ */
 interface Props {
   missionHref: string;
   aboutHref: string;
@@ -10,73 +27,88 @@ const { missionHref, aboutHref, contactHref, publicationsHref } = Astro.props;
 ---
 
 <header class="landing-navbar" data-testid="landing-navbar">
-  <div class="landing-navbar__logo" data-testid="landing-navbar-logo">
-    <img
-      src="/assets/brand/logo-horizontal.png"
-      alt="Misión 1-99"
-      data-testid="landing-navbar-logo-image"
-    />
-  </div>
-  <button
-    class="landing-navbar__menu-toggle"
-    type="button"
-    aria-expanded="false"
-    aria-controls="landing-navbar-menu"
-    aria-label="Abrir menú"
-    data-testid="landing-navbar-menu-toggle"
-  >
-    <span aria-hidden="true">☰</span>
-  </button>
+  <a class="landing-navbar__skip" href="#contenido" data-testid="landing-navbar-skip">
+    Saltar al contenido
+  </a>
   <nav
-    id="landing-navbar-menu"
+    class="landing-navbar__nav"
     aria-label="Navegación principal"
-    data-testid="landing-navbar-menu"
   >
-    <ul class="landing-navbar__links">
-      <li><a class="landing-navbar__link" href="#inicio">Inicio</a></li>
-      <li><a class="landing-navbar__link" href={missionHref}>Misiones</a></li>
-      <li><a class="landing-navbar__link" href={aboutHref}>Nosotros</a></li>
-      <li><a class="landing-navbar__link" href={publicationsHref}>Publicaciones</a></li>
-      <li>
-        <a
-          class="landing-navbar__link landing-navbar__link--cta"
-          href={contactHref}
-        >Contacto</a>
-      </li>
-    </ul>
+    <div class="landing-navbar__logo" data-testid="landing-navbar-logo">
+      <span class="landing-navbar__logo-frame">
+        <img
+          src="/assets/brand/logo-horizontal.png"
+          alt="Misión 1-99"
+          data-testid="landing-navbar-logo-image"
+        />
+      </span>
+    </div>
+    <button
+      class="landing-navbar__menu-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="landing-navbar-menu"
+      aria-label="Abrir menú"
+      data-testid="landing-navbar-menu-toggle"
+    >
+      <span aria-hidden="true">MENÚ</span>
+    </button>
+    <div
+      id="landing-navbar-menu"
+      class="landing-navbar__links"
+      data-testid="landing-navbar-menu"
+    >
+      <a class="landing-navbar__link" href="#inicio">Inicio</a>
+      <a class="landing-navbar__link" href={missionHref}>Misiones</a>
+      <a class="landing-navbar__link" href={aboutHref}>Nosotros</a>
+      <a class="landing-navbar__link" href={publicationsHref}>Publicaciones</a>
+      <a
+        class="landing-navbar__link landing-navbar__link--cta"
+        href={contactHref}
+      >Contacto</a>
+    </div>
   </nav>
   <script is:inline>
-    const script = document.currentScript;
-    const navbar = script?.closest(".landing-navbar");
+    (function () {
+      const script = document.currentScript;
+      const navbar = script && script.closest(".landing-navbar");
+      if (!(navbar instanceof HTMLElement)) return;
 
-    if (navbar instanceof HTMLElement) {
       const button = navbar.querySelector(".landing-navbar__menu-toggle");
       const menu = navbar.querySelector("#landing-navbar-menu");
+      if (!(button instanceof HTMLButtonElement) || !(menu instanceof HTMLElement)) return;
 
-      if (button instanceof HTMLButtonElement && menu instanceof HTMLElement) {
-        const setMenuOpen = (open, returnFocus = false) => {
-          navbar.classList.toggle("landing-navbar--open", open);
-          button.setAttribute("aria-expanded", String(open));
-          button.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
+      const setMenuOpen = function (open, returnFocus) {
+        navbar.classList.toggle("landing-navbar--open", open);
+        button.setAttribute("aria-expanded", open ? "true" : "false");
+        button.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
+        if (returnFocus) button.focus();
+      };
 
-          if (returnFocus) button.focus();
-        };
-
-        navbar.classList.add("landing-navbar--enhanced");
-        button.addEventListener("click", () => {
-          setMenuOpen(button.getAttribute("aria-expanded") !== "true");
+      navbar.classList.add("landing-navbar--enhanced");
+      button.addEventListener("click", function () {
+        setMenuOpen(button.getAttribute("aria-expanded") !== "true");
+      });
+      menu.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          setMenuOpen(false);
         });
-        menu.querySelectorAll("a").forEach((link) => {
-          link.addEventListener("click", () => setMenuOpen(false));
-        });
-        navbar.addEventListener("keydown", (event) => {
-          if (event.key !== "Escape") return;
-          if (!navbar.classList.contains("landing-navbar--open")) return;
+      });
+      navbar.addEventListener("keydown", function (event) {
+        if (event.key !== "Escape") return;
+        if (!navbar.classList.contains("landing-navbar--open")) return;
+        event.preventDefault();
+        setMenuOpen(false, true);
+      });
 
-          event.preventDefault();
-          setMenuOpen(false, true);
-        });
-      }
-    }
+      const syncScrolled = function () {
+        navbar.classList.toggle(
+          "landing-navbar--scrolled",
+          window.scrollY > 8,
+        );
+      };
+      window.addEventListener("scroll", syncScrolled, { passive: true });
+      syncScrolled();
+    })();
   </script>
 </header>

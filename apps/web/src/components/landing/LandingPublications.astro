@@ -1,0 +1,29 @@
+---
+/**
+ * LandingPublications.astro — honest static publications entry.
+ *
+ * Links to the real `/publicaciones` route. Never carries a fake
+ * placeholder href/anchor and never restores the legacy
+ * `featuredPosts` payload. Renders nothing if the entry should not be
+ * present (it is always present on the public landing — exposed as a
+ * component for parity with the other blocks).
+ */
+---
+
+<section
+  class="public-section landing-publications"
+  id="publicaciones"
+  data-testid="publications-entry"
+  aria-labelledby="publications-entry-title"
+>
+  <div class="landing-publications__inner">
+    <p class="landing-publications__eyebrow">Publicaciones</p>
+    <h2 id="publications-entry-title" class="landing-publications__title">
+      Lo que estamos <span class="landing-publications__underline">viviendo.</span>
+    </h2>
+    <a class="landing-publications__link" href="/publicaciones" data-testid="publications-entry-link">
+      <span class="landing-publications__link-label">Ver todas las publicaciones</span>
+      <span aria-hidden="true" class="landing-publications__link-arrow">→</span>
+    </a>
+  </div>
+</section>

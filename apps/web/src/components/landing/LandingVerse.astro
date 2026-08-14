@@ -1,0 +1,30 @@
+---
+/**
+ * LandingVerse.astro — dynamic current-verse section sourced from the
+ * validated landing payload. The component is purely presentational:
+ * `currentVerse` arrives already null-trimmed by `validateCurrentVerse`,
+ * and the section is omitted when the payload has no verse.
+ */
+import type { LandingVerse } from "./landing-shape.js";
+
+interface Props {
+  verse: LandingVerse | null;
+}
+
+const { verse } = Astro.props;
+---
+
+{verse && (
+  <section
+    class="landing-verse"
+    id="versiculo"
+    data-testid="verse-section"
+    aria-labelledby="verse-title"
+  >
+    <h2 id="verse-title" class="public-visually-hidden">Versículo del día</h2>
+    <div class="landing-verse__inner">
+      <p data-testid="verse-text" class="landing-verse__text">{verse.text}</p>
+      <cite data-testid="verse-reference" class="landing-verse__reference">{verse.reference}</cite>
+    </div>
+  </section>
+)}

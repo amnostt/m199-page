@@ -112,44 +112,80 @@ describe("public.css route-owned stylesheet", () => {
     expect(css).not.toMatch(/^\s*(html|body)\s*\{/m);
     expect(css).not.toMatch(/@layer\s+base\s*\{/);
   });
+
+  it("scopes document and root spacing changes to the landing", () => {
+    const css = readPublic();
+    expect(
+      readToken(css, 'body[data-theme="public"].landing-body', "margin"),
+    ).toBe("0");
+    expect(readToken(css, ".public-ui.public-page", "padding")).toBe(
+      "0 var(--public-page-gutter)",
+    );
+    expect(
+      readToken(css, ".public-ui.public-page.landing-page", "padding"),
+    ).toBe("0");
+  });
 });
 
 describe("public.css landing hero contract", () => {
-  it("defines the scoped desktop three-layer composition", () => {
+  it("defines the scoped OpenDesign hero composition with fixed bg + foreground + isotype layers", () => {
     const css = readPublic();
     expect(css).toMatch(
-      /\.public-ui\s+\.public-hero\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:[^;]*440px/s,
+      /\.public-ui\s+\.public-hero\s*\{[^}]*position:\s*relative;[^}]*isolation:\s*isolate;[^}]*overflow:\s*hidden;/s,
     );
     expect(css).toMatch(
-      /\.public-ui\s+\.public-hero__visual\s*\{[^}]*width:\s*440px;[^}]*height:\s*520px;[^}]*overflow:\s*hidden;/s,
+      /\.public-ui\s+\.public-hero__background\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*z-index:\s*-1;[^}]*background-image:[^;]*hero-bg\.png/s,
     );
     expect(css).toMatch(
-      /\.public-ui\s+\.public-hero__accent\s*\{[^}]*width:\s*148px;[^}]*background:\s*var\(--primary\);/s,
+      /\.public-ui\s+\.public-hero__visual\s*\{[^}]*position:\s*relative;[^}]*min-height:\s*620px;/s,
     );
     expect(css).toMatch(
-      /\.public-ui\s+\.public-hero__image\s*\{[^}]*z-index:\s*1;[^}]*object-fit:\s*cover;/s,
+      /\.public-ui\s+\.public-hero__image\s*\{[^}]*position:\s*absolute;[^}]*z-index:\s*2;[^}]*width:\s*94\.3%;[^}]*aspect-ratio:\s*1;[^}]*object-fit:\s*cover;[^}]*object-position:\s*center/s,
     );
     expect(css).toMatch(
-      /\.public-ui\s+\.public-hero__accent\s*\{[^}]*z-index:\s*2;/s,
-    );
-    expect(css).toMatch(
-      /\.public-ui\s+\.public-hero__isotipo\s*\{[^}]*z-index:\s*3;/s,
+      /\.public-ui\s+\.public-hero__isotipo\s*\{[^}]*position:\s*absolute;[^}]*z-index:\s*3;[^}]*transform:\s*rotate\(-8deg\)/s,
     );
   });
 
-  it("defines the compact-mobile dimensions and stacked layout", () => {
+  it("centers desktop copy without adding global bottom space and anchors the visual", () => {
     const css = readPublic();
     expect(css).toMatch(
-      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.public-hero\s*\{[^}]*grid-template-columns:\s*1fr;/s,
+      /\.public-ui\s+\.public-hero\s*\{[^}]*padding-block:\s*76px\s+0;/s,
     );
     expect(css).toMatch(
-      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.public-hero__visual\s*\{[^}]*width:\s*342px;[^}]*height:\s*252px;/s,
+      /\.public-ui\s+\.public-hero__copy\s*\{[^}]*align-self:\s*center;[^}]*padding-block-end:\s*104px;/s,
     );
     expect(css).toMatch(
-      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.public-hero__accent\s*\{[^}]*width:\s*92px;/s,
+      /\.public-ui\s+\.public-hero__grid\s*\{[^}]*align-items:\s*center;/s,
     );
     expect(css).toMatch(
-      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.public-hero__isotipo\s*\{[^}]*width:\s*220px;[^}]*height:\s*220px;/s,
+      /\.public-ui\s+\.public-hero__visual\s*\{[^}]*align-self:\s*end;/s,
+    );
+  });
+
+  it("defines the compact-mobile stacked layout with a single-column grid", () => {
+    const css = readPublic();
+    expect(css).toMatch(
+      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.public-hero\s*\{[^}]*padding-block:\s*48px\s+72px;/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.public-hero__grid\s*\{[^}]*grid-template-columns:\s*1fr;/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.public-hero__isotipo\s*\{[^}]*width:\s*96px;[^}]*height:\s*96px;/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.public-hero__image\s*\{[^}]*width:\s*100%;[^}]*height:\s*auto;[^}]*aspect-ratio:\s*1;/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.public-hero__copy\s*\{[^}]*padding-block-end:\s*0;/s,
+    );
+  });
+
+  it("offsets only the enhanced mobile hero by the fixed header height", () => {
+    const css = readPublic();
+    expect(css).toMatch(
+      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.landing-navbar--enhanced\s*~\s*\.public-hero\s*\{[^}]*padding-block-start:\s*calc\(76px\s*\+\s*48px\);/s,
     );
   });
 });
@@ -160,21 +196,24 @@ describe("public.css landing navbar contract", () => {
     expect(css).toMatch(/\.public-ui\s+\.landing-navbar\s*\{/);
     expect(css).toMatch(/\.public-ui\s+\.landing-navbar__links\s*\{/);
     expect(css).not.toMatch(/^\s*\.landing-navbar\s*\{/m);
-    expect(css).toMatch(
-      /\.public-ui\.public-page#inicio\s*,[\s\S]*scroll-margin-block-start:\s*92px;/,
-    );
+    // The page wrapper id changed from `#inicio` to `#contenido` so
+    // the skip link can resolve to a unique target.
+    expect(css).toMatch(/\.public-ui[\s\S]*scroll-margin-block-start:\s*92px;/);
     expect(css).not.toMatch(
       /\.landing-navbar[^{}]*\{[^}]*scroll-margin-block-start/s,
     );
   });
 
-  it("defines desktop and compact-mobile framing with usable controls", () => {
+  it("defines the fixed header with desktop and compact-mobile framing", () => {
     const css = readPublic();
     expect(css).toMatch(
-      /\.public-ui\s+\.landing-navbar\s*\{[^}]*min-height:\s*92px;[^}]*padding:\s*15px 120px;/s,
+      /\.public-ui\s+\.landing-navbar\s*\{[^}]*position:\s*fixed;[^}]*min-height:\s*92px;[^}]*background:\s*transparent;/s,
     );
     expect(css).toMatch(
-      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.landing-navbar\s*\{[^}]*min-height:\s*76px;[^}]*padding-inline:\s*24px;/s,
+      /\.public-ui\s+\.landing-navbar--scrolled\s*\{[^}]*background:\s*rgb\(17\s+17\s+17/,
+    );
+    expect(css).toMatch(
+      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.landing-navbar\s*\{[^}]*min-height:\s*76px;/s,
     );
     expect(css).toMatch(
       /\.public-ui\s+\.landing-navbar__link,[\s\S]*\.public-ui\s+\.landing-navbar__menu-toggle\s*\{[^}]*min-height:\s*44px;/s,
@@ -182,12 +221,18 @@ describe("public.css landing navbar contract", () => {
     expect(css).toMatch(
       /\.public-ui\s+\.landing-navbar__menu-toggle\s*\{[^}]*min-width:\s*44px;/s,
     );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-navbar__logo-frame\s+img\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center\s+43%;/s,
+    );
   });
 
-  it("defines enhanced menu state, focus-visible styling, and reduced motion", () => {
+  it("defines the skip link, enhanced menu state, focus-visible styling, and reduced motion", () => {
     const css = readPublic();
     expect(css).toMatch(
-      /\.public-ui\s+\.landing-navbar--enhanced\s+\.landing-navbar__links\s*\{/,
+      /\.public-ui\s+\.landing-navbar__skip\s*\{[^}]*position:\s*absolute;[^}]*inset-block-start:\s*-64px;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-navbar--enhanced[\s\S]*?landing-navbar__menu-toggle\s*\{/,
     );
     expect(css).toMatch(
       /\.public-ui[\s\S]*?landing-navbar__menu-toggle\):focus-visible\s*\{/,
@@ -197,6 +242,100 @@ describe("public.css landing navbar contract", () => {
     );
     expect(css).toMatch(
       /@media\s+\(max-width:\s*767px\)[\s\S]*scroll-margin-block-start:\s*76px;/s,
+    );
+  });
+
+  it("uses an opaque design token for the open and no-JS mobile menu", () => {
+    const css = readPublic();
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-navbar--open,[\s\S]*\.landing-navbar:not\(\.landing-navbar--enhanced\)\s*\{[^}]*background:\s*var\(--popover\);/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-navbar--open\s+\.landing-navbar__links,[\s\S]*\.landing-navbar:not\(\.landing-navbar--enhanced\)\s+\.landing-navbar__links\s*\{[^}]*background:\s*var\(--popover\);/s,
+    );
+  });
+});
+
+describe("public.css landing scroll-snap missions contract", () => {
+  it("defines the horizontal scroll-snap carousel with derived-card composition", () => {
+    const css = readPublic();
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-missions\s*\{[^}]*padding-block-end:\s*0;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-missions__track\s*\{[^}]*scroll-snap-type:\s*x\s+mandatory;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-missions__carousel\s*\{[^}]*width:\s*min\([^;]+var\(--public-shell-max\)\);[^}]*margin:\s*4rem\s+auto\s+0/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-missions__track\s*\{[^}]*scrollbar-color:\s*var\(--secondary\)\s+var\(--card\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-missions__track::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*var\(--secondary\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-missions__item\s*\{[^}]*scroll-snap-align:\s*start;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-mission-card__index\s*\{[^}]*font-family:\s*var\(--font-display\)/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.public-ui\s+\.landing-missions__track\s*\{[^}]*scroll-behavior:\s*auto/s,
+    );
+  });
+});
+
+describe("public.css landing OpenDesign blocks contract", () => {
+  it("defines the verse, banner, about gallery, publications entry, and unconditional footer", () => {
+    const css = readPublic();
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-verse\s*\{[^}]*background:\s*var\(--secondary\);[^}]*border-block:\s*1px\s+solid\s+var\(--secondary-foreground\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-verse::before\s*\{[^}]*content:\s*"“";[^}]*opacity:\s*0\.78/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-verse__inner\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto;[^}]*width:\s*min\([^;]+var\(--public-shell-max\)\);[^}]*padding-inline-start:\s*68px/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-banner\s*\{[^}]*height:\s*clamp\(360px,\s*50vw,\s*560px\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-banner::after\s*\{[^}]*height:\s*42%;[^}]*background:\s*linear-gradient\(transparent,\s*var\(--background\)\);[^}]*pointer-events:\s*none/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-about__gallery\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.02fr\)\s*minmax\(0,\s*0\.78fr\);[^}]*grid-template-rows:\s*214px\s+214px/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-about__figure:nth-child\(1\)\s*\{[^}]*grid-column:\s*1;[^}]*grid-row:\s*1\s*\/\s*span\s*2/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-about__inner\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*0\.9fr\);[^}]*width:\s*min\([^;]+var\(--public-shell-max\)\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-about\s*\{[^}]*margin-block:\s*0;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications__link\s*\{[^}]*display:\s*inline-flex/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications__inner\s*\{[^}]*width:\s*min\([^;]+var\(--public-shell-max\)\);[^}]*margin-inline:\s*auto/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications\s*\{[^}]*isolation:\s*isolate;[^}]*background:\s*#fff/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications::before\s*\{[^}]*url\("\/assets\/redesign\/bg-posts\.jpg"\);[^}]*filter:\s*grayscale\(1\)\s+blur\(2px\);[^}]*opacity:\s*0\.54/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-footer\s*\{[^}]*display:\s*flex;[^}]*background:\s*#111;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-contact__inner\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.35fr\)\s+minmax\(20rem,\s*1fr\);[^}]*width:\s*min\([^;]+var\(--public-shell-max\)\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-contact\s*\{[^}]*margin-block:\s*0;/s,
     );
   });
 });

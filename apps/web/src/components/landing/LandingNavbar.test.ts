@@ -13,7 +13,7 @@ beforeAll(async () => {
 });
 
 describe("LandingNavbar.astro — SSR contract", () => {
-  it("renders four server-visible Spanish links and one Contacto CTA", async () => {
+  it("renders the skip link, five server-visible Spanish links, and one Contacto CTA", async () => {
     const html = await container.renderToString(LandingNavbar, {
       props: {
         missionHref: "#misiones",
@@ -36,7 +36,9 @@ describe("LandingNavbar.astro — SSR contract", () => {
     expect(html).toMatch(/<nav\b[^>]*aria-label="Navegación principal"/);
     expect(html).toContain('src="/assets/brand/logo-horizontal.png"');
     expect(html).toContain('alt="Misión 1-99"');
+    // Skip link is the first focusable anchor; the five nav links follow.
     expect(anchors.map(([, href]) => href)).toEqual([
+      "#contenido",
       "#inicio",
       "#misiones",
       "#nosotros",
@@ -44,6 +46,7 @@ describe("LandingNavbar.astro — SSR contract", () => {
       "#contacto",
     ]);
     expect(labels).toEqual([
+      "Saltar al contenido",
       "Inicio",
       "Misiones",
       "Nosotros",
@@ -56,6 +59,7 @@ describe("LandingNavbar.astro — SSR contract", () => {
       /<button[^>]*aria-expanded="false"[^>]*aria-controls="landing-navbar-menu"[^>]*aria-label="Abrir menú"/,
     );
     expect(html).toContain('data-testid="landing-navbar-menu-toggle"');
+    expect(html).toContain('data-testid="landing-navbar-skip"');
   });
 
   it("progressively enhances the mobile menu without hiding SSR links", async () => {
@@ -108,6 +112,16 @@ describe("LandingNavbar.astro — SSR contract", () => {
     );
     expect(header.classList).not.toContain("landing-navbar--open");
     expect(dom.window.document.activeElement).toBe(button);
+
+    // The header toggles its scrolled treatment when the inline
+    // enhancement script detects a non-zero scroll position. After
+    // the sync fires the class is present.
+    Object.defineProperty(dom.window, "scrollY", {
+      value: 32,
+      configurable: true,
+    });
+    dom.window.dispatchEvent(new dom.window.Event("scroll"));
+    expect(header.classList).toContain("landing-navbar--scrolled");
 
     dom.window.close();
   });

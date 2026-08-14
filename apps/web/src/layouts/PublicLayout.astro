@@ -14,7 +14,10 @@ const { title = "Misión 1-99" } = Astro.props;
     <meta name="viewport" content="width=device-width" />
     <title>{title}</title>
   </head>
-  <body data-theme="public">
+  <body
+    data-theme="public"
+    class={Astro.url.pathname === "/" ? "landing-body" : undefined}
+  >
     <slot />
   </body>
 </html>

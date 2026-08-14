@@ -1,0 +1,19 @@
+---
+/**
+ * LandingBanner.astro — visual pause between the verse and the
+ * missions block. Reuses the bundled OpenDesign `banner.png` asset.
+ * The image is decorative so the figure is collapsed to aria-label
+ * semantics and the image carries an empty alt.
+ */
+---
+
+<figure class="landing-banner" data-testid="banner-section">
+  <img
+    src="/assets/redesign/banner.png"
+    alt=""
+    loading="lazy"
+    decoding="async"
+    class="landing-banner__image"
+    data-testid="banner-image"
+  />
+</figure>

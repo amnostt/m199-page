@@ -1,21 +1,32 @@
 ---
 /**
  * Landing.astro — pure presentational landing surface for the Astro
- * SSR (PR3 root rendering).
+ * SSR (PR3 root rendering, recomposed for the OpenDesign rhythm).
  *
- * Renders the validated `LandingPublicPayload` produced by
- * `fetchLandingPublicPayload` (PR2) as semantic HTML using the
- * shared `.public-ui` composition hooks. The failure branch is intentionally
- * generic and NEVER includes the failure reason, the API host, the
- * stack, or any driver detail. The HTTP status (503) is set in the
- * page wrapper, not here.
+ * Export rhythm (top to bottom):
+ *   1. Skip link + header (LandingNavbar) inside the
+ *      `<header>` so the first focusable element is the
+ *      "Saltar al contenido" link.
+ *   2. `<main id="contenido">` wraps every section so the skip
+ *      link destination is unique and unambiguous.
+ *   3. Hero (CMS image foreground + design background, decorative
+ *      brand isotype).
+ *   4. Dynamic verse (currentVerse from the payload).
+ *   5. Visual banner (`/assets/redesign/banner.png`).
+ *   6. Real missions (omitted for null/empty).
+ *   7. Honest static publications entry linking /publicaciones
+ *      (no fake href/anchor, no restored legacy payload).
+ *   8. About (CMS narrative precedence + local gallery + featured
+ *      video + optional contact CTA).
+ *   9. Contact (conditional channels; never placeholder values).
+ *  10. Footer (always present).
  *
- * The iframe is only emitted when the payload has a non-null
- * `featuredVideoUrl`. The URL has already been sanitized by
- * `validateFeaturedVideoUrl` inside `validateLandingPublicPayload`
- * (PR2 / A-006), so the renderer does not duplicate the allowlist
- * policy. The page wrapper owns the CSS boundary so the test pipeline can render
- * the component in isolation through the Container API.
+ * The failure branch is intentionally generic and NEVER includes
+ * the failure reason, the API host, the stack, or any driver
+ * detail. The HTTP status (503) is set in the page wrapper, not
+ * here. The iframe is only emitted when the payload has a
+ * non-null `featuredVideoUrl` already sanitized by the landing
+ * helper.
  */
 import type {
   LandingFailure,
@@ -23,7 +34,10 @@ import type {
 } from "./landing-shape.js";
 import LandingNavbar from "./LandingNavbar.astro";
 import LandingHero from "./LandingHero.astro";
+import LandingVerse from "./LandingVerse.astro";
+import LandingBanner from "./LandingBanner.astro";
 import LandingMissions from "./LandingMissions.astro";
+import LandingPublications from "./LandingPublications.astro";
 import LandingAbout from "./LandingAbout.astro";
 import LandingContact from "./LandingContact.astro";
 import type { MissionListItem } from "../../lib/server/missions.js";
@@ -54,8 +68,8 @@ const publicationsHref = "/publicaciones";
 
 {failure ? (
   <main
-    class="public-ui public-page"
-    id="inicio"
+    class="public-ui public-page landing-page"
+    id="contenido"
     data-testid="landing-error"
     aria-live="polite"
   >
@@ -65,6 +79,7 @@ const publicationsHref = "/publicaciones";
       contactHref={contactHref}
       publicationsHref={publicationsHref}
     />
+    <div id="inicio" class="public-visually-hidden" aria-hidden="true"></div>
     <section
       class="public-state public-state--error"
       data-testid="landing-error-section"
@@ -73,20 +88,31 @@ const publicationsHref = "/publicaciones";
     </section>
   </main>
 ) : payload ? (
-  <main class="public-ui public-page" id="inicio" data-testid="landing-page">
+  <main
+    class="public-ui public-page landing-page"
+    id="contenido"
+    data-testid="landing-page"
+  >
     <LandingNavbar
       missionHref={missionHref}
       aboutHref={aboutHref}
       contactHref={contactHref}
       publicationsHref={publicationsHref}
     />
+
     <LandingHero
       heroTitle={payload.heroTitle}
       heroSubtitle={payload.heroSubtitle}
       heroImageUrl={payload.heroImageUrl}
     />
 
+    <LandingVerse verse={payload.currentVerse} />
+
+    <LandingBanner />
+
     <LandingMissions missions={missions} />
+
+    <LandingPublications />
 
     <LandingAbout
       mission={payload.mission}
@@ -95,20 +121,6 @@ const publicationsHref = "/publicaciones";
       featuredVideoUrl={payload.featuredVideoUrl}
       hasContact={hasContact}
     />
-
-    {payload.currentVerse && (
-      <section class="public-section" data-testid="verse-section">
-        <blockquote
-          class="public-verse"
-          data-testid="verse-block"
-        >
-          <span data-testid="verse-text">{payload.currentVerse.text}</span>
-          <cite data-testid="verse-reference">
-            {payload.currentVerse.reference}
-          </cite>
-        </blockquote>
-      </section>
-    )}
 
     <LandingContact
       contactEmail={payload.contactEmail}

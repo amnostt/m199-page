@@ -1,4 +1,23 @@
 ---
+/**
+ * LandingContact.astro — contact channels + unconditional footer.
+ *
+ * Contact channels:
+ *   - The block is omitted when the payload has no `contactEmail`
+ *     AND no `contactPhone`.
+ *   - Email is normalized to the raw address (whitespace trimmed).
+ *   - Phone is normalized for the `tel:` href by stripping every
+ *     non-`+`/non-digit character; the visible label keeps the
+ *     original formatting.
+ *   - The component NEVER renders placeholder contact values
+ *     (e.g. `contacto@pendiente.example`, `+000000000`); it only
+ *     renders what the validated payload actually carries.
+ *
+ * Footer:
+ *   - The footer is always present on the public landing root and
+ *     carries the brand wordmark, an editorial line, and the
+ *     obligatory copyright.
+ */
 import type { LandingPayloadShape } from "./landing-shape.js";
 
 interface Props extends Pick<LandingPayloadShape, "contactEmail" | "contactPhone"> {}
@@ -15,34 +34,60 @@ const phoneHref = phone?.replace(/[^+\d]/g, "");
     data-testid="contact-section"
     aria-labelledby="contact-title"
   >
-    <div class="landing-contact__intro">
-      <p class="landing-contact__kicker">Contacto</p>
-      <h2 id="contact-title">Vamos juntos.<br />El Evangelio está en acción.</h2>
-      <p>¿Querés servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos.</p>
-    </div>
+    <div class="landing-contact__inner">
+      <div class="landing-contact__intro">
+        <p class="landing-contact__eyebrow">Contacto</p>
+        <h2 id="contact-title" class="landing-contact__title">
+          Hablemos.<br />Vamos juntos.
+        </h2>
+        <p class="landing-contact__copy">
+          ¿Querés servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos.
+        </p>
+      </div>
 
-    <div class="landing-contact__channels">
-      {email && (
-        <a href={`mailto:${email}`} data-testid="contact-email">
-          <span><small>Escribinos</small><strong>{email}</strong></span>
-          <span aria-hidden="true">↗</span>
-        </a>
-      )}
-      {phone && phoneHref && (
-        <a href={`tel:${phoneHref}`} data-testid="contact-phone">
-          <span><small>Llamanos</small><strong>{phone}</strong></span>
-          <span aria-hidden="true">↗</span>
-        </a>
-      )}
+      <div class="landing-contact__channels">
+        {email && (
+          <a
+            class="landing-contact__link"
+            href={`mailto:${email}`}
+            data-testid="contact-email"
+          >
+            <span class="landing-contact__link-body">
+              <small>Escribinos</small>
+              <strong>{email}</strong>
+            </span>
+            <span aria-hidden="true" class="landing-contact__link-arrow">↗</span>
+          </a>
+        )}
+        {phone && phoneHref && (
+          <a
+            class="landing-contact__link"
+            href={`tel:${phoneHref}`}
+            data-testid="contact-phone"
+          >
+            <span class="landing-contact__link-body">
+              <small>Llamanos</small>
+              <strong>{phone}</strong>
+            </span>
+            <span aria-hidden="true" class="landing-contact__link-arrow">↗</span>
+          </a>
+        )}
+      </div>
     </div>
   </section>
 )}
 
 <footer class="landing-footer" data-testid="landing-footer">
-  <div>
-    <strong>Misión 1—99</strong>
-    <span>Vamos por el uno.</span>
+  <div class="landing-footer__brand">
+    <span class="landing-footer__logo-frame">
+      <img
+        src="/assets/brand/logo-horizontal.png"
+        alt="Misión 1-99"
+        class="landing-footer__logo"
+        data-testid="landing-footer-logo"
+      />
+    </span>
+    <p class="landing-footer__tagline">Evangelismo sin límites. Vamos por el uno.</p>
   </div>
-  <p>Cristo es el centro · Cada persona tiene valor</p>
-  <small>© Misión 1—99</small>
+  <p class="landing-footer__meta">© Misión 1-99</p>
 </footer>

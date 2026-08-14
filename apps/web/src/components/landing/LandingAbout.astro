@@ -1,4 +1,20 @@
 ---
+/**
+ * LandingAbout.astro — "Nosotros" block with narrative precedence.
+ *
+ * Narrative precedence (already validated upstream):
+ *   1. `description`
+ *   2. `mission`
+ *   3. `vision`
+ *
+ * Visual composition (back-to-front):
+ *   - Editorial copy + headline + (optional) featured video.
+ *   - Local gallery figures (ours-1, ours-2, ours-3) using the
+ *     bundled OpenDesign assets at `/assets/redesign/ours-*.png`.
+ *   - Optional "Quiero ser parte" CTA, only rendered when the
+ *     payload exposes at least one contact channel (the parent
+ *     passes `hasContact`).
+ */
 import type { LandingPayloadShape } from "./landing-shape.js";
 
 interface Props extends Pick<
@@ -11,6 +27,20 @@ interface Props extends Pick<
 const { mission, vision, description, featuredVideoUrl, hasContact } = Astro.props;
 const narrative = description?.trim() || mission?.trim() || vision?.trim();
 const hasContent = Boolean(narrative || featuredVideoUrl);
+const galleryImages = [
+  {
+    src: "/assets/redesign/ours-1.png",
+    alt: "Conversación cercana durante una salida en la calle",
+  },
+  {
+    src: "/assets/redesign/ours-2.png",
+    alt: "Miembro de Misión 1-99 acompañando una actividad comunitaria",
+  },
+  {
+    src: "/assets/redesign/ours-3.png",
+    alt: "Equipo de Misión 1-99 compartiendo Café con Jesús",
+  },
+];
 ---
 
 {hasContent && (
@@ -20,42 +50,56 @@ const hasContent = Boolean(narrative || featuredVideoUrl);
     data-testid="about-section"
     aria-labelledby="about-title"
   >
-    <div class="landing-about__visual">
-      <img
-        src="/assets/template-picture.jpg"
-        alt="Dos personas conversando durante una acción en la calle"
-        loading="lazy"
-      />
-      <span aria-hidden="true">1—99</span>
-    </div>
+    <div class="landing-about__inner">
+      <div class="landing-about__intro">
+        <p class="landing-about__eyebrow">Nosotros</p>
+        <h2 id="about-title" class="landing-about__title">
+          No esperamos.<br />
+          <span class="landing-about__underline">Salimos.</span>
+        </h2>
+        {narrative && (
+          <p class="landing-about__copy" data-testid="about-description">{narrative}</p>
+        )}
+      </div>
 
-    <div class="landing-about__content">
-      <header class="landing-about__manifesto">
-        <p class="landing-about__kicker">Nosotros</p>
-        <h2 id="about-title">No construimos una institución.<br />Buscamos al uno.</h2>
-        {narrative && <p data-testid="about-description">{narrative}</p>}
-      </header>
-
-      <ol class="landing-about__principles" aria-label="Nuestros principios">
-        <li><span>01</span><strong>Cristo es el centro</strong></li>
-        <li><span>02</span><strong>Cada persona tiene valor</strong></li>
-        <li><span>03</span><strong>Acción antes que comodidad</strong></li>
-      </ol>
-
-      {featuredVideoUrl && (
-        <div class="public-media public-media--cover landing-about__video" data-testid="video-section">
-          <iframe
-            src={featuredVideoUrl}
-            title="Misión 1-99 en acción"
-            data-testid="featured-video"
-            loading="lazy"
-          ></iframe>
+      <div class="landing-about__media" data-testid="about-media">
+        <div class="landing-about__gallery" data-testid="about-gallery">
+          {galleryImages.map((image, index) => (
+            <figure class="landing-about__figure" data-testid={`about-image-${index + 1}`}>
+              <img
+                src={image.src}
+                alt={image.alt}
+                loading="lazy"
+                decoding="async"
+                class="landing-about__image"
+              />
+            </figure>
+          ))}
         </div>
-      )}
 
-      {hasContact && (
-        <a class="landing-about__action" href="#contacto">Quiero ser parte <span aria-hidden="true">→</span></a>
-      )}
+        {featuredVideoUrl && (
+          <div
+            class="public-media public-media--cover landing-about__video"
+            data-testid="video-section"
+          >
+            <iframe
+              src={featuredVideoUrl}
+              title="Misión 1-99 en acción"
+              data-testid="featured-video"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+            ></iframe>
+          </div>
+        )}
+
+        {hasContact && (
+          <a class="landing-about__action" href="#contacto" data-testid="about-cta">
+            Quiero ser parte
+            <span aria-hidden="true">→</span>
+          </a>
+        )}
+      </div>
     </div>
   </section>
 )}

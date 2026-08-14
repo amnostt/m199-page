@@ -1,4 +1,24 @@
 ---
+/**
+ * LandingMissions.astro — SSR-first editorial mission cards.
+ *
+ * Populates cards only from the validated fields:
+ * `title`, `heroPhrase`, `heroImageUrl`, `slug`. The card index is
+ * derived from the iteration position (zero-padded two-digit label).
+ *
+ * Composition:
+ *   - The section is omitted entirely when `missions` is null or
+ *     empty (graceful failure for missing missions payload).
+ *   - Cards render inside a horizontal scroll-snap track; each
+ *     `<a>` card links to `/misiones/{slug}`.
+ *   - Prev/Next controls are rendered but `disabled` when the
+ *     track cannot scroll in that direction (and remain safe with
+ *     a single card: both controls are disabled).
+ *   - The horizontal scroll respects `prefers-reduced-motion` via
+ *     `scroll-behavior: auto` in the global reduced-motion block.
+ *   - All logic is SSR; the progressive enhancement script only
+ *     wires button disabled-state and keyboard scroll support.
+ */
 import type { MissionListItem } from "../../lib/server/missions.js";
 
 interface Props {
@@ -6,27 +26,148 @@ interface Props {
 }
 
 const { missions } = Astro.props;
+const hasMissions = Boolean(missions && missions.length > 0);
+const showControls = hasMissions && (missions?.length ?? 0) > 1;
+const trackId = "missions-track";
 ---
 
-{missions && missions.length > 0 && <section
-  class="public-section landing-missions"
-  id="misiones"
-  data-testid="missions-section"
-  aria-labelledby="missions-title"
->
-  <header class="landing-missions__header">
-    <div>
-      <p class="landing-missions__kicker">Ministerios y misiones</p>
-      <h2 id="missions-title">Misiones</h2>
-    </div>
-    <a class="landing-missions__status" href="/misiones">Ver todas las misiones</a>
-  </header>
+{hasMissions && (
+  <section
+    class="public-section landing-missions"
+    id="misiones"
+    data-testid="missions-section"
+    aria-labelledby="missions-title"
+  >
+    <header class="landing-missions__header">
+      <div class="landing-missions__heading">
+        <p class="landing-missions__eyebrow">Misiones</p>
+        <h2 id="missions-title" class="landing-missions__title">
+          Proyectos <span class="landing-missions__underline">reales.</span>
+        </h2>
+      </div>
+      <a class="landing-missions__status" href="/misiones" data-testid="missions-view-all">
+        Ver todas las misiones
+        <span aria-hidden="true">→</span>
+      </a>
+    </header>
 
-  <div class="public-card-list">
-    {missions.map((mission) => <article class="public-mission-card public-card">
-      <img src={mission.heroImageUrl} alt="" />
-      <h3><a href={`/misiones/${mission.slug}`}>{mission.title}</a></h3>
-      <p>{mission.heroPhrase}</p>
-    </article>)}
-  </div>
-</section>}
+    <div class="landing-missions__carousel">
+      <div class="landing-missions__carousel-head">
+        <p class="landing-missions__note" data-testid="missions-subtitle">
+          Cada salida, conversación y servicio es una oportunidad para buscar al uno.
+        </p>
+        {showControls && (
+          <div
+            class="landing-missions__controls"
+            aria-label="Controles del carrusel de misiones"
+          >
+            <button
+              type="button"
+              class="landing-missions__control"
+              data-mission-control="prev"
+              data-testid="missions-prev"
+              aria-label="Ver misiones anteriores"
+              disabled
+            >←</button>
+            <button
+              type="button"
+              class="landing-missions__control"
+              data-mission-control="next"
+              data-testid="missions-next"
+              aria-label="Ver más misiones"
+              disabled
+            >→</button>
+          </div>
+        )}
+      </div>
+
+      <ol
+        class="landing-missions__track"
+        id={trackId}
+        role="region"
+        aria-label="Misiones disponibles"
+        tabindex="0"
+        data-testid="missions-track"
+        data-mission-track
+      >
+        {missions!.map((mission, index) => (
+          <li class="landing-missions__item">
+            <a
+              class="landing-mission-card"
+              href={`/misiones/${mission.slug}`}
+              data-testid="mission-card"
+              aria-label={`Misión ${mission.title}`}
+            >
+              <div class="landing-mission-card__media">
+                <img
+                  src={mission.heroImageUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  class="landing-mission-card__image"
+                />
+              </div>
+              <div class="landing-mission-card__body">
+                <div class="landing-mission-card__meta">
+                  <span
+                    class="landing-mission-card__index"
+                    data-testid="mission-card-index"
+                    aria-hidden="true"
+                  >{String(index + 1).padStart(2, "0")}</span>
+                  <span class="landing-mission-card__arrow" aria-hidden="true">↗</span>
+                </div>
+                <h3 class="landing-mission-card__title" data-testid="mission-card-title">{mission.title}</h3>
+                <p class="landing-mission-card__phrase" data-testid="mission-card-phrase">{mission.heroPhrase}</p>
+              </div>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    {showControls && (
+      <script is:inline>
+        (function () {
+          const script = document.currentScript;
+          const section = script && script.closest(".landing-missions");
+          if (!(section instanceof HTMLElement)) return;
+
+          const track = section.querySelector("[data-mission-track]");
+          const prev = section.querySelector('[data-mission-control="prev"]');
+          const next = section.querySelector('[data-mission-control="next"]');
+          if (!(track instanceof HTMLElement)) return;
+          if (!(prev instanceof HTMLButtonElement)) return;
+          if (!(next instanceof HTMLButtonElement)) return;
+
+          const reduceMotion =
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+          const sync = function () {
+            prev.disabled = track.scrollLeft <= 2;
+            next.disabled =
+              track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+          };
+
+          const step = function (direction) {
+            const firstCard = track.querySelector(".landing-mission-card");
+            const width =
+              firstCard instanceof HTMLElement
+                ? firstCard.getBoundingClientRect().width + 16
+                : track.clientWidth * 0.8;
+            track.scrollBy({
+              left: direction * width,
+              behavior: reduceMotion ? "auto" : "smooth",
+            });
+          };
+
+          prev.addEventListener("click", function () { step(-1); });
+          next.addEventListener("click", function () { step(1); });
+          track.addEventListener("scroll", sync, { passive: true });
+          window.addEventListener("resize", sync);
+          sync();
+        })();
+      </script>
+    )}
+  </section>
+)}

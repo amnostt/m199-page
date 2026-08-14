@@ -1,30 +1,69 @@
 ---
+/**
+ * LandingHero.astro — OpenDesign hero composition.
+ *
+ * Visual layers (back-to-front):
+ *   1. The OpenDesign design background at `/assets/redesign/hero-bg.png`
+ *      applied via CSS to the `.public-hero__background` element.
+ *   2. The CMS hero image (`heroImageUrl`) is the foreground
+ *      photographic layer when present.
+ *   3. The CMS hero image is rendered as a clipped photographic base
+ *      with decorative brand isotype layered on top, per the
+ *      approved CMS hero-layering decision. The fallback (when the
+ *      CMS image is missing) is the bundled `hero-final.png`.
+ *   4. The brand isotype (`isotipo-white.png`) is a decorative
+ *      overlay; it never replaces or hardcodes over the CMS
+ *      title/subtitle.
+ *
+ * Accessibility:
+ *   - The section is labelled by the CMS `heroTitle` (h1) when
+ *     present, falling back to `aria-label="Presentación"`.
+ *   - When the title is null, the hero image is announced
+ *     `aria-hidden="true"` with an empty alt so the section is not
+ *     double-read.
+ *   - The isotype image is always decorative (empty alt,
+ *     aria-hidden).
+ */
 import type { LandingPayloadShape } from "./landing-shape.js";
 
 interface Props extends Pick<LandingPayloadShape, "heroTitle" | "heroSubtitle" | "heroImageUrl"> {}
 
 const { heroTitle, heroSubtitle, heroImageUrl } = Astro.props;
 const hasTitle = Boolean(heroTitle);
-const imageUrl = heroImageUrl || "/assets/template-picture.jpg";
+const foregroundSrc = heroImageUrl || "/assets/redesign/hero-final.png";
+const isDecorativeForeground = !heroImageUrl;
+const isotypeSrc = "/assets/brand/isotipo-white.png";
 ---
 
 <section
   class="public-hero"
+  id="inicio"
   data-testid="hero-section"
   aria-labelledby={hasTitle ? "hero-title" : undefined}
   aria-label={hasTitle ? undefined : "Presentación"}
 >
-  <div class="public-hero__copy">
-    {heroTitle && <h1 id="hero-title" data-testid="hero-title">{heroTitle}</h1>}
-    {heroSubtitle && <p data-testid="hero-subtitle">{heroSubtitle}</p>}
-  </div>
-  <div class="public-hero__visual" data-testid="hero-visual">
-    <img
-      src={imageUrl}
-      alt={heroTitle ?? ""}
-      class="public-hero__image"
-      data-testid="hero-image"
-      aria-hidden={hasTitle ? undefined : "true"}
-    />
+  <div class="public-hero__background" aria-hidden="true"></div>
+  <div class="public-hero__grid">
+    <div class="public-hero__copy">
+      {heroTitle && <h1 id="hero-title" data-testid="hero-title">{heroTitle}</h1>}
+      {heroSubtitle && <p data-testid="hero-subtitle">{heroSubtitle}</p>}
+    </div>
+    <div class="public-hero__visual" data-testid="hero-visual">
+      <img
+        src={foregroundSrc}
+        alt={heroTitle ?? ""}
+        class="public-hero__image"
+        data-testid="hero-image"
+        aria-hidden={hasTitle ? undefined : "true"}
+        data-cms-image={isDecorativeForeground ? "fallback" : "present"}
+      />
+      <img
+        src={isotypeSrc}
+        alt=""
+        aria-hidden="true"
+        class="public-hero__isotipo"
+        data-testid="hero-isotype"
+      />
+    </div>
   </div>
 </section>

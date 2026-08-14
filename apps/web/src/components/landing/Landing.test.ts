@@ -67,10 +67,13 @@ function navbarMarkup(html: string): string {
   return navbar[0];
 }
 
-function navbarHrefs(html: string): string[] {
-  return [...navbarMarkup(html).matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/g)].map(
-    (match) => match[1]!,
-  );
+function navbarNavLinks(html: string): string[] {
+  // Skip the skip link inside the navbar; it targets `#contenido`,
+  // not a section anchor. The Landing page exposes it as an
+  // accessibility escape hatch, not as a navigable destination.
+  return [...navbarMarkup(html).matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>/g)]
+    .map((match) => match[1]!)
+    .filter((href) => href !== "#contenido");
 }
 
 function ids(html: string): string[] {
@@ -78,10 +81,11 @@ function ids(html: string): string[] {
 }
 
 describe("Landing.astro — successful markup", () => {
-  it("renders the full landing root with the .public-ui public-page scope", async () => {
+  it("renders the full landing root with its public scopes and the #contenido skip target", async () => {
     const html = await render(fullPayload());
-    expect(html).toContain('class="public-ui public-page"');
+    expect(html).toContain('class="public-ui public-page landing-page"');
     expect(html).toContain('data-testid="landing-page"');
+    expect(html).toContain('id="contenido"');
   });
 
   it("renders every section in payload order when the payload is full and missions are loaded", async () => {
@@ -90,10 +94,12 @@ describe("Landing.astro — successful markup", () => {
     ]);
     const sections = [
       "hero-section",
+      "verse-section",
+      "banner-section",
       "missions-section",
+      "publications-entry",
       "about-section",
       "video-section",
-      "verse-section",
       "contact-section",
       "landing-footer",
     ];
@@ -110,14 +116,26 @@ describe("Landing.astro — successful markup", () => {
     expect(html).toContain("Transformamos vidas");
     expect(html).toContain("Id por todo el mundo");
     expect(html).toContain("Marcos 16:15");
+    // The honest static publications entry links /publicaciones — never
+    // a placeholder or fake anchor.
+    expect(html).toContain('href="/publicaciones"');
+    expect(html).not.toContain('href="#"');
+    expect(html).not.toContain("featured-outing-section");
+    expect(html).not.toContain("featured-posts-section");
   });
 
-  it("renders the fallback hero and hides the missions slot when missions are unavailable, omitting empty optional sections", async () => {
+  it("renders the OpenDesign fallback hero, hides the missions slot when missions are unavailable, and omits empty optional sections", async () => {
     const html = await render(minimalPayload());
     expect(html).toContain('data-testid="landing-page"');
     expect(html).toContain('data-testid="hero-section"');
-    expect(html).toContain('src="/assets/template-picture.jpg"');
+    expect(html).toContain('src="/assets/redesign/hero-final.png"');
     expect(html).not.toContain('data-testid="missions-section"');
+    // The banner and the publications entry are static OpenDesign
+    // blocks and are always rendered. The optional CMS-driven
+    // sections (about / video / contact / verse) are omitted when
+    // the payload has no values for them.
+    expect(html).toContain('data-testid="banner-section"');
+    expect(html).toContain('data-testid="publications-entry"');
     const sections = [
       "about-section",
       "video-section",
@@ -149,13 +167,17 @@ describe("Landing.astro — successful markup", () => {
     [
       "minimal",
       minimalPayload(),
+      // `minimalPayload()` is still a non-null `payload`, so the
+      // Misiones link points at `/misiones`; Nosotros and Contacto
+      // fall back to `#inicio` because the optional sections have
+      // no content. Publications stays absolute.
       ["#inicio", "/misiones", "#inicio", "/publicaciones", "#inicio"],
     ],
   ] as const)(
     "renders five navigable destinations with unique target ownership for the %s branch",
     async (_branch, payload, expectedHrefs) => {
       const html = await render(payload);
-      const hrefs = navbarHrefs(html);
+      const hrefs = navbarNavLinks(html);
 
       expect(hrefs).toEqual(expectedHrefs);
       for (const href of new Set(hrefs)) {
@@ -167,18 +189,45 @@ describe("Landing.astro — successful markup", () => {
   );
 });
 
-describe("Landing.astro — about and contact", () => {
-  it("renders the approved manifesto, principles, and exact contact CTA", async () => {
+describe("Landing.astro — about, verse, banner, and contact", () => {
+  it("renders the approved OpenDesign about headline and contact CTA when contact exists", async () => {
     const html = await render(fullPayload());
 
-    expect(html).toContain("No construimos una institución");
-    expect(html).toContain("Buscamos al uno");
-    expect(html).toContain("Cristo es el centro");
-    expect(html).toContain("Cada persona tiene valor");
-    expect(html).toContain("Acción antes que comodidad");
+    expect(html).toContain("No esperamos");
+    expect(html).toContain("Salimos");
     expect(html).toContain('href="#contacto"');
     expect(html).toContain("Quiero ser parte");
     expect(html).not.toContain('href="/nosotros"');
+  });
+
+  it("renders the local gallery images from the OpenDesign redesign bundle", async () => {
+    const html = await render(fullPayload());
+
+    expect(html).toContain('data-testid="about-gallery"');
+    expect(html).toContain('src="/assets/redesign/ours-1.png"');
+    expect(html).toContain('src="/assets/redesign/ours-2.png"');
+    expect(html).toContain('src="/assets/redesign/ours-3.png"');
+  });
+
+  it("renders the dynamic verse from the validated payload only", async () => {
+    const html = await render(fullPayload());
+    expect(html).toContain('data-testid="verse-section"');
+    expect(html).toContain("Id por todo el mundo");
+    expect(html).toContain("Marcos 16:15");
+  });
+
+  it("renders the OpenDesign banner visual pause", async () => {
+    const html = await render(fullPayload());
+    expect(html).toContain('data-testid="banner-section"');
+    expect(html).toContain('src="/assets/redesign/banner.png"');
+  });
+
+  it("renders the honest publications entry linking /publicaciones", async () => {
+    const html = await render(fullPayload());
+    expect(html).toContain('data-testid="publications-entry"');
+    expect(html).toContain('href="/publicaciones"');
+    expect(html).toContain("Ver todas las publicaciones");
+    expect(html).not.toContain("PUBLICACIÓN PENDIENTE");
   });
 
   it("renders only available contact channels as direct actions", async () => {
@@ -218,7 +267,7 @@ describe("Landing.astro — about and contact", () => {
 
     expect(html).not.toContain('id="nosotros"');
     expect(html).not.toContain('id="contacto"');
-    expect(navbarHrefs(html)).toEqual([
+    expect(navbarNavLinks(html)).toEqual([
       "#inicio",
       "/misiones",
       "#inicio",
@@ -232,7 +281,7 @@ describe("Landing.astro — failure markup", () => {
   it("renders the landing-error root with the public-ui scope and error class", async () => {
     const html = await render(null, { reason: "timeout" });
     expect(html).toContain('data-testid="landing-error"');
-    expect(html).toContain('class="public-ui public-page"');
+    expect(html).toContain('class="public-ui public-page landing-page"');
     expect(html).toContain('class="public-state public-state--error"');
     expect(html).toContain('aria-live="polite"');
   });
@@ -286,7 +335,7 @@ describe("Landing.astro — failure markup", () => {
 
   it("keeps all failure-branch destinations valid on the error root", async () => {
     const html = await render(null, { reason: "timeout" });
-    const hrefs = navbarHrefs(html);
+    const hrefs = navbarNavLinks(html);
 
     expect(hrefs).toEqual([
       "#inicio",
@@ -301,7 +350,7 @@ describe("Landing.astro — failure markup", () => {
 });
 
 describe("Landing.astro — navbar SSR contract", () => {
-  it("keeps the semantic navigation, exact Spanish destinations, CTA, and logo", async () => {
+  it("keeps the semantic navigation, exact Spanish destinations, CTA, logo, and skip link", async () => {
     const html = await render(fullPayload());
     const navbar = navbarMarkup(html);
 
@@ -309,6 +358,8 @@ describe("Landing.astro — navbar SSR contract", () => {
     expect(navbar).toMatch(/<nav\b[^>]*aria-label="Navegación principal"/);
     expect(navbar).toContain('src="/assets/brand/logo-horizontal.png"');
     expect(navbar).toContain('alt="Misión 1-99"');
+    expect(navbar).toContain('data-testid="landing-navbar-skip"');
+    expect(navbar).toContain("Saltar al contenido");
     expect(navbar).toContain("Inicio");
     expect(navbar).toContain("Misiones");
     expect(navbar).toContain("Nosotros");
@@ -316,7 +367,8 @@ describe("Landing.astro — navbar SSR contract", () => {
     expect(navbar).toContain("Publicaciones");
     expect(navbar).toContain('href="/publicaciones"');
     expect(navbar.match(/landing-navbar__link--cta/g)).toHaveLength(1);
-    expect(navbar.match(/<a\b/g)).toHaveLength(5);
+    // Skip link + five navigable destinations = 6 anchors total.
+    expect(navbar.match(/<a\b/g)).toHaveLength(6);
   });
 
   it("navigates Misiones to /misiones when the payload is loaded, while leaving the other anchors unchanged", async () => {
@@ -344,28 +396,38 @@ describe("Landing.astro — navbar SSR contract", () => {
 
     expect(misionesAnchor?.[0]).toContain('href="#inicio"');
   });
+
+  it("exposes the skip link as the first focusable anchor inside the header", async () => {
+    const html = await render(fullPayload());
+    const navbar = navbarMarkup(html);
+    const skipAnchor = navbar.match(
+      /<a\b[^>]*data-testid="landing-navbar-skip"[^>]*>/,
+    );
+
+    expect(skipAnchor).not.toBeNull();
+    expect(skipAnchor?.[0]).toContain('href="#contenido"');
+  });
 });
 
 describe("Landing.astro — CSS scope contract", () => {
-  it("uses the documented compound class .public-ui.public-page on the root", async () => {
+  it("uses the documented landing and public compound classes on the root", async () => {
     const html = await render(fullPayload());
-    expect(html).toMatch(/class="public-ui public-page"/);
+    expect(html).toMatch(/class="public-ui public-page landing-page"/);
   });
 
-  it("uses public-section for every block-level section when missions are loaded", async () => {
+  it("keeps generic section spacing off the full-width verse strip", async () => {
     const html = await render(fullPayload(), null, [
       { slug: "alpha", title: "Alpha" },
     ]);
-    expect(
-      html.match(/class="[^"]*\bpublic-section\b[^"]*"/g)?.length,
-    ).toBeGreaterThanOrEqual(4);
+    expect(html).toContain('class="landing-verse"');
+    expect(html).not.toMatch(/class="[^"]*public-section[^"]*landing-verse/);
   });
 
   it("drops the missions public-section when no missions are provided", async () => {
     const html = await render(fullPayload(), null, []);
     const count = html.match(/class="[^"]*\bpublic-section\b[^"]*"/g)?.length;
-    // About + verse + contact (missions hidden, hero uses public-hero, not
-    // public-section, and LandingMissions is conditional on data).
+    // About + contact + publications-entry. Hero, verse, and banner use
+    // dedicated full-width composition classes; missions are conditional.
     expect(count).toBe(3);
     expect(html).not.toContain('data-testid="missions-section"');
   });
@@ -376,6 +438,34 @@ describe("Landing.astro — CSS scope contract", () => {
     expect(html).not.toContain("featured-posts-section");
     expect(html).not.toContain("featured-outing-link");
     expect(html).not.toContain("featured-outing-title");
+  });
+});
+
+describe("Landing.astro — no OpenDesign API URLs or placeholder payload values", () => {
+  it("never references the OpenDesign /api/projects/ asset CDN", async () => {
+    const html = await render(fullPayload(), null, [
+      { slug: "alpha", title: "Alpha" },
+    ]);
+    expect(html).not.toContain("/api/projects/");
+    expect(html).not.toContain("workspaceId=");
+    expect(html).not.toContain("workspaceMemberId=");
+  });
+
+  it("never renders placeholder contact values from the OpenDesign draft", async () => {
+    const html = await render(fullPayload());
+    expect(html).not.toContain("contacto@pendiente.example");
+    expect(html).not.toContain("+000000000");
+    expect(html).not.toContain("Email pendiente de confirmar");
+    expect(html).not.toContain("Teléfono pendiente de confirmar");
+  });
+
+  it("never renders placeholder mission cards from the OpenDesign draft", async () => {
+    const html = await render(fullPayload(), null, [
+      { slug: "alpha", title: "Alpha mission" },
+    ]);
+    expect(html).not.toContain("Misión pendiente");
+    expect(html).not.toContain("Incorporar nombre, logo, descripción breve");
+    expect(html).not.toContain('aria-label="Misión pendiente 0');
   });
 });
 

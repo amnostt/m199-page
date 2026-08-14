@@ -419,7 +419,9 @@ describe("PR4 SSR proof — built Astro standalone server", () => {
     expect(body).toMatch(/<html\s+lang=["']es["']>/);
     expect(body).toMatch(/<meta\s+charset=["']utf-8["']/);
     expect(body).toMatch(/<title>Misión 1-99<\/title>/);
-    expect(body).toContain('class="public-ui public-page"');
+    expect(body).toMatch(
+      /class=["'][^"']*\bpublic-ui\b[^"']*\bpublic-page\b[^"']*["']/,
+    );
     expect(body).toContain('data-testid="landing-page"');
     // Server-rendered payload — content from the stub is in the body.
     expect(body).toContain("PR4 SSR proof — verse text");
