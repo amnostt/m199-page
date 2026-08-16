@@ -331,6 +331,7 @@ describe("public.css landing OpenDesign blocks contract", () => {
     expect(css).toMatch(
       /\.public-ui\s+\.landing-footer\s*\{[^}]*display:\s*flex;[^}]*background:\s*#111;/s,
     );
+    expect(css).not.toMatch(/\.public-ui\s+\.landing-footer\s*\{[^}]*50vw/s);
     expect(css).toMatch(
       /\.public-ui\s+\.landing-contact__inner\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.35fr\)\s+minmax\(20rem,\s*1fr\);[^}]*width:\s*min\([^;]+var\(--public-shell-max\)\)/s,
     );

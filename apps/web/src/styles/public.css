@@ -1139,7 +1139,6 @@ body[data-theme="public"].landing-body {
     color: #9e918d;
     background: #111;
     border-block-start: 1px solid var(--border);
-    margin-inline: calc(50% - 50vw);
   }
 
   .public-ui .landing-footer__brand {
