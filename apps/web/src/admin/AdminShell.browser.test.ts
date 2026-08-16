@@ -101,7 +101,7 @@ test("keeps the portaled mobile sidebar controls styled", async ({ page }) => {
   });
 });
 
-// Sidebar 07 canonical closure: identity in footer, header trigger/title,
+// Sidebar 07 canonical closure: identity in footer, compact header trigger,
 // SidebarRail, mobile Sheet focus, default body portals, no custom host.
 
 test("desktop expanded: identity lives in the sidebar footer, not the header", async ({
@@ -136,7 +136,7 @@ test("desktop expanded: identity lives in the sidebar footer, not the header", a
         borderBottomWidth: style.borderBottomWidth,
       };
     });
-  expect(headerSize.height).toBe("64px");
+  expect(headerSize.height).toBe("48px");
   expect(headerSize.borderBottomWidth).toBe("1px");
 
   await page.screenshot({

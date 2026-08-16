@@ -8,7 +8,6 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Separator } from "../components/ui/separator.js";
 import {
   Sidebar,
   SidebarContent,
@@ -83,10 +82,6 @@ export function AdminShell({
   onLogout,
   logoutError,
 }: AdminShellProps) {
-  const label = sections.find(
-    ({ section }) => section === activeSection,
-  )?.label;
-
   return (
     <TooltipProvider>
       <SidebarProvider data-testid="admin-shell" className="min-h-svh w-full">
@@ -214,20 +209,14 @@ export function AdminShell({
         </Sidebar>
 
         <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger
-                className="-ml-1"
-                aria-label="Alternar barra lateral de administración"
-              />
-              <Separator orientation="vertical" className="mr-2 h-12" />
-              <div className="min-w-0">
-                <p className="truncate text-xs text-muted-foreground">
-                  Administración
-                </p>
-                <h1 className="truncate text-sm font-semibold">{label}</h1>
-              </div>
-            </div>
+          <header
+            className="flex h-12 shrink-0 items-center border-b border-border px-4"
+            data-testid="admin-shell-header"
+          >
+            <SidebarTrigger
+              className="-ml-1"
+              aria-label="Alternar barra lateral de administración"
+            />
           </header>
 
           <main

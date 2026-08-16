@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // AdminShell — authenticated sidebar shell composition tests.
 //
-// Canonical Sidebar 07 closure: identity in footer, header trigger/title,
+// Canonical Sidebar 07 closure: identity in footer, compact header trigger,
 // SidebarRail, and mobile Sheet focus restoration. Routes, auth, callbacks,
 // test IDs, accessible names, and content are preserved.
 // ---------------------------------------------------------------------------
@@ -13,6 +13,7 @@ import {
   screen,
   waitFor,
   cleanup,
+  within,
 } from "@testing-library/react";
 import { AdminShell, type AdminSection } from "./AdminShell.js";
 
@@ -162,10 +163,24 @@ describe("AdminShell", () => {
     expect(screen.getByTestId("nav-landing-settings")).toBeTruthy();
   });
 
+  it("keeps only the sidebar trigger in the compact header", () => {
+    renderShell("verses");
+    const header = screen.getByTestId("admin-shell-header");
+
+    expect(header.className).toContain("h-12");
+    expect(within(header).getAllByRole("button")).toHaveLength(1);
+    expect(
+      within(header).getByRole("button", {
+        name: /alternar barra lateral de administración/i,
+      }),
+    ).toBeTruthy();
+    expect(header.querySelector('[data-slot="separator"]')).toBeNull();
+    expect(within(header).queryByText("Administración")).toBeNull();
+    expect(within(header).queryByText("Versículos")).toBeNull();
+  });
+
   // ---------------------------------------------------------------------------
-  // Sidebar 07 canonical closure. RED tests below assert application
-  // composition that the prior shell did not implement. They run against the
-  // current source and are expected to fail.
+  // Sidebar 07 canonical closure.
   // ---------------------------------------------------------------------------
 
   it("places the authenticated identity inside the sidebar footer (not the header)", () => {
