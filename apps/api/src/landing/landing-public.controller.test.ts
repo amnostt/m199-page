@@ -36,7 +36,6 @@ const FULL_PAYLOAD: LandingPublicPayload = {
   currentVerse: {
     text: "Todo lo puedo en Cristo que me fortalece",
     reference: "Filipenses 4:13",
-    date: "2026-07-01T00:00:00.000Z",
   } as CurrentVersePayload,
 };
 

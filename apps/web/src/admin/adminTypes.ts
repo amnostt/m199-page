@@ -88,25 +88,6 @@ export interface CreateMissionInput {
 
 export type UpdateMissionInput = Partial<CreateMissionInput>;
 
-export type VerseStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
-
-export interface VerseAdmin {
-  id: string;
-  text: string;
-  reference: string;
-  date: string;
-  publishedAt: string | null;
-  status: VerseStatus;
-  createdById: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateVerseInput {
-  text: string;
-  reference: string;
-}
-
 /** LP-01 base landing settings fields used by the admin editor. */
 export interface LandingSettings {
   heroTitle: string | null;
@@ -118,6 +99,8 @@ export interface LandingSettings {
   featuredVideoUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  verseText: string | null;
+  verseReference: string | null;
 }
 
 /** Normalized form values — every field is a non-null string. */
@@ -129,6 +112,8 @@ export interface LandingSettingsForm {
   featuredVideoUrl: string;
   contactEmail: string;
   contactPhone: string;
+  verseText: string;
+  verseReference: string;
 }
 
 export interface FileAssetResponse {

@@ -49,6 +49,8 @@ const EMPTY: LandingSettingsForm = {
   featuredVideoUrl: "",
   contactEmail: "",
   contactPhone: "",
+  verseText: "",
+  verseReference: "",
 };
 
 const fields: Array<keyof LandingSettingsForm> = [
@@ -59,6 +61,8 @@ const fields: Array<keyof LandingSettingsForm> = [
   "featuredVideoUrl",
   "contactEmail",
   "contactPhone",
+  "verseText",
+  "verseReference",
 ];
 
 // ---------------------------------------------------------------------------
@@ -81,6 +85,8 @@ export function normalizeLandingSettings(
     featuredVideoUrl: data.featuredVideoUrl ?? "",
     contactEmail: data.contactEmail ?? "",
     contactPhone: data.contactPhone ?? "",
+    verseText: data.verseText ?? "",
+    verseReference: data.verseReference ?? "",
   };
 }
 
@@ -157,13 +163,21 @@ export function LandingSettingsPage({
     setSaving(true);
 
     try {
-      const { heroImageId, featuredVideoUrl, ...copySettings } = settings;
+      const {
+        heroImageId,
+        featuredVideoUrl,
+        verseText,
+        verseReference,
+        ...copySettings
+      } = settings;
       const response = await adminFetch<LandingSettings>("/landing/admin", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...copySettings,
           featuredVideoUrl: featuredVideoUrl.trim() || null,
+          verseText: verseText.trim(),
+          verseReference: verseReference.trim(),
           ...(heroImageId ? { heroImageId } : {}),
         }),
       });
@@ -345,6 +359,46 @@ export function LandingSettingsPage({
                         /* disassociation is out of scope */
                       }}
                       data-testid="landing-hero-upload-widget"
+                    />
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <FieldSet>
+                <FieldLegend>Versículo de la página de inicio</FieldLegend>
+                <FieldDescription>
+                  Muestra un versículo en la landing pública. Deja ambos campos
+                  vacíos para ocultar esta sección.
+                </FieldDescription>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="ls-verse-text">Texto</FieldLabel>
+                    <Textarea
+                      id="ls-verse-text"
+                      value={settings.verseText}
+                      onChange={(e) =>
+                        handleChange("verseText", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="ls-verse-reference">
+                      Referencia
+                    </FieldLabel>
+                    <Input
+                      id="ls-verse-reference"
+                      type="text"
+                      className="min-h-10"
+                      value={settings.verseReference}
+                      onChange={(e) =>
+                        handleChange("verseReference", e.target.value)
+                      }
+                      disabled={saving}
                     />
                   </Field>
                 </FieldGroup>

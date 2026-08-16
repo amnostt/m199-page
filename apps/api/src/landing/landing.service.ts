@@ -3,7 +3,7 @@
  *
  * LP-01: getSettings() reads the singleton LandingSettings row.
  *        updateSettings(dto) upserts with id:1, applying only provided fields.
- * LP-02: getPublicPayload() assembles hero, current verse, and the public
+ * LP-02: getPublicPayload() assembles hero, landing verse, and the public
  *        contract — no featured-outing/featured-posts keys (Slice 1 of the
  *        Mission/Publication domain reset removed those payloads).
  *
@@ -30,15 +30,8 @@ export interface LandingSettingsRow {
   featuredVideoUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
-}
-
-interface VerseRow {
-  id: string;
-  text: string;
-  reference: string;
-  date: Date;
-  publishedAt: Date | null;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  verseText: string | null;
+  verseReference: string | null;
 }
 
 interface FileAssetRow {
@@ -60,13 +53,6 @@ interface LandingPrismaClient {
   fileAsset: {
     findUnique(args: { where: { id: string } }): Promise<FileAssetRow | null>;
   };
-  verse: {
-    findFirst(args?: {
-      where?: { status?: string };
-      orderBy?:
-        { publishedAt?: string } | { publishedAt?: string; id?: string }[];
-    }): Promise<VerseRow | null>;
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -76,7 +62,6 @@ interface LandingPrismaClient {
 export interface CurrentVersePayload {
   text: string;
   reference: string;
-  date: string;
 }
 
 /**
@@ -166,6 +151,9 @@ export class LandingService {
       data.featuredVideoUrl = dto.featuredVideoUrl;
     if (dto.contactEmail !== undefined) data.contactEmail = dto.contactEmail;
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
+    if (dto.verseText !== undefined) data.verseText = dto.verseText;
+    if (dto.verseReference !== undefined)
+      data.verseReference = dto.verseReference;
 
     return this.client.landingSettings.upsert({
       where: { id: 1 },
@@ -179,7 +167,7 @@ export class LandingService {
   // -----------------------------------------------------------------------
 
   /**
-   * Assembles the public landing payload from multiple Prisma queries.
+   * Assembles the public landing payload from the singleton settings row.
    *
    * Never throws — missing or null sections return null/empty arrays so the
    * web renderer degrades gracefully (LP-02, LP-03).
@@ -190,12 +178,8 @@ export class LandingService {
   async getPublicPayload(): Promise<LandingPublicPayload> {
     const settings = await this.client.landingSettings.findFirst();
 
-    // Fetch the most recent published verse by publishedAt (server UTC instant),
-    // with id desc as deterministic tiebreaker.
-    const verse = await this.client.verse.findFirst({
-      where: { status: "PUBLISHED" },
-      orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-    });
+    const verseText = settings?.verseText?.trim() ?? "";
+    const verseReference = settings?.verseReference?.trim() ?? "";
 
     return {
       heroTitle: settings?.heroTitle ?? null,
@@ -207,14 +191,10 @@ export class LandingService {
       featuredVideoUrl: settings?.featuredVideoUrl ?? null,
       contactEmail: settings?.contactEmail ?? null,
       contactPhone: settings?.contactPhone ?? null,
-
-      currentVerse: verse
-        ? {
-            text: verse.text,
-            reference: verse.reference,
-            date: verse.date.toISOString(),
-          }
-        : null,
+      currentVerse:
+        verseText && verseReference
+          ? { text: verseText, reference: verseReference }
+          : null,
     };
   }
 }

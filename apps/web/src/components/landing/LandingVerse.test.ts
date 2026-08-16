@@ -16,7 +16,6 @@ describe("LandingVerse.astro — dynamic verse block", () => {
         verse: {
           text: "Porque el Hijo del Hombre vino a buscar y a salvar lo que se había perdido.",
           reference: "Lucas 19:10",
-          date: "2025-01-01T00:00:00.000Z",
         },
       },
     });
@@ -47,7 +46,6 @@ describe("LandingVerse.astro — dynamic verse block", () => {
         verse: {
           text: "Versículo real",
           reference: "Mateo 28:19",
-          date: "2025-01-01T00:00:00.000Z",
         },
       },
     });

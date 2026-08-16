@@ -62,13 +62,6 @@ export type DevelopmentSeedClient = {
       update: Record<string, unknown>;
     }): Promise<SeedRow>;
   };
-  verse: {
-    upsert(args: {
-      where: { id: string };
-      create: Record<string, unknown>;
-      update: Record<string, unknown>;
-    }): Promise<SeedRow>;
-  };
   landingSettings: {
     findUnique(args: {
       where: { id: 1 };
@@ -183,15 +176,6 @@ const SEED_PUBLICATION_EVENT = {
   publishedAt: SEEDED_PUBLISHED_AT,
 } as const;
 
-const LATEST_VERSE = {
-  id: "seed-verse-latest",
-  text: "Let us not grow weary of doing good.",
-  reference: "Galatians 6:9",
-  date: new Date("2026-07-24T00:00:00.000Z"),
-  publishedAt: SEEDED_PUBLISHED_AT,
-  status: "PUBLISHED",
-};
-
 async function seedData(client: DevelopmentSeedClient): Promise<void> {
   const passwordHash = await bcrypt.hash(
     DEVELOPMENT_ADMIN_PASSWORD,
@@ -292,17 +276,11 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
   }
 
   await seedLandingSettings(client);
-
-  await client.verse.upsert({
-    where: { id: LATEST_VERSE.id },
-    create: { ...LATEST_VERSE, createdById: admin.id },
-    update: { ...LATEST_VERSE, createdById: admin.id },
-  });
 }
 
 /**
  * Seeds one coherent local graph in a transaction. No legacy Post/Outing
- * rows, featuredOutingId wiring, or sessions/likes/revisions/downloads are
+ * rows, featuredOutingId wiring, or sessions/likes/downloads are
  * created. FileAsset rows are limited to the deterministic Mission/Publication
  * featured images.
  */

@@ -74,17 +74,17 @@ afterEach(() => {
 
 describe("AdminShell", () => {
   it("renders the canonical navigation with active state, identity, and disabled Files", () => {
-    renderShell("verses");
+    renderShell("missions");
 
     expect(screen.getByTestId("admin-sidebar")).toBeTruthy();
     expect(screen.getByTestId("admin-user-name").textContent).toBe(
       USER.displayName,
     );
-    expect(screen.getByTestId("nav-verses").getAttribute("aria-current")).toBe(
-      "page",
-    );
     expect(
-      (screen.getByTestId("nav-verses") as HTMLButtonElement).disabled,
+      screen.getByTestId("nav-missions").getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      (screen.getByTestId("nav-missions") as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(
       (screen.getByTestId("nav-placeholder-files") as HTMLButtonElement)
@@ -106,10 +106,10 @@ describe("AdminShell", () => {
       />,
     );
 
-    fireEvent.click(screen.getByTestId("nav-verses"));
+    fireEvent.click(screen.getByTestId("nav-missions"));
     fireEvent.click(screen.getByTestId("admin-logout"));
 
-    expect(onNavigate).toHaveBeenCalledWith("verses");
+    expect(onNavigate).toHaveBeenCalledWith("missions");
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
 
@@ -164,7 +164,7 @@ describe("AdminShell", () => {
   });
 
   it("keeps only the sidebar trigger in the compact header", () => {
-    renderShell("verses");
+    renderShell("missions");
     const header = screen.getByTestId("admin-shell-header");
 
     expect(header.className).toContain("h-12");
@@ -176,7 +176,6 @@ describe("AdminShell", () => {
     ).toBeTruthy();
     expect(header.querySelector('[data-slot="separator"]')).toBeNull();
     expect(within(header).queryByText("Administración")).toBeNull();
-    expect(within(header).queryByText("Versículos")).toBeNull();
   });
 
   // ---------------------------------------------------------------------------
@@ -229,19 +228,11 @@ describe("AdminShell", () => {
   });
 
   it("only marks the active section as aria-current and disabled", () => {
-    renderShell("verses");
-    const allNav = [
-      "nav-landing-settings",
-      "nav-verses",
-      "nav-responsibles",
-      "nav-missions",
-    ];
-    expect(screen.getByTestId("nav-verses").getAttribute("aria-current")).toBe(
-      "page",
-    );
+    renderShell("missions");
+    const allNav = ["nav-landing-settings", "nav-responsibles", "nav-missions"];
     for (const id of allNav) {
       const btn = screen.getByTestId(id);
-      if (id === "nav-verses") {
+      if (id === "nav-missions") {
         expect((btn as HTMLButtonElement).disabled).toBe(true);
       } else {
         expect(btn.getAttribute("aria-current")).toBeNull();
@@ -251,7 +242,7 @@ describe("AdminShell", () => {
   });
 
   it("does not render the legacy posts or outings nav items (WU3 cleanup)", () => {
-    renderShell("verses");
+    renderShell("missions");
     expect(screen.queryByTestId("nav-posts")).toBeNull();
     expect(screen.queryByTestId("nav-outings")).toBeNull();
   });

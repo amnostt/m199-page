@@ -1,5 +1,4 @@
 import {
-  BookOpenText,
   Files,
   Flag,
   Newspaper,
@@ -28,12 +27,11 @@ import { TooltipProvider } from "../components/ui/tooltip.js";
 import type { AuthUser } from "./adminTypes.js";
 import { LandingSettingsPage } from "./LandingSettingsPage.js";
 import { ResponsiblesPage } from "./ResponsiblesPage.js";
-import { VersesPage } from "./VersesPage.js";
 import { MissionsPage } from "./MissionsPage.js";
 import { PublicationsPage } from "./PublicationsPage.js";
 
 export type AdminSection =
-  "landing" | "responsibles" | "verses" | "missions" | "publications";
+  "landing" | "responsibles" | "missions" | "publications";
 
 type AdminNavItem = {
   section: AdminSection;
@@ -48,7 +46,6 @@ const sections: AdminNavItem[] = [
     icon: Settings2,
   },
   { section: "responsibles", label: "Responsables", icon: UsersRound },
-  { section: "verses", label: "Versículos", icon: BookOpenText },
   { section: "missions", label: "Misiones", icon: Flag },
   { section: "publications", label: "Publicaciones", icon: Newspaper },
 ];
@@ -73,7 +70,6 @@ function SectionContent({
 }) {
   if (section === "landing")
     return <LandingSettingsPage onDirtyChange={onLandingDirtyChange} />;
-  if (section === "verses") return <VersesPage />;
   if (section === "missions") return <MissionsPage />;
   if (section === "publications") return <PublicationsPage />;
   return <ResponsiblesPage currentUserId={user.id} />;

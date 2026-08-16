@@ -25,7 +25,6 @@ export interface LandingFailure {
 export interface LandingVerse {
   text: string;
   reference: string;
-  date: string;
 }
 
 export interface LandingPayloadShape {

@@ -17,7 +17,6 @@ function localizeMessage(message: string): string {
     [/^Session expired$/i, "La sesión expiró. Inicia sesión nuevamente."],
     [/^Session refresh failed$/i, "No se pudo renovar la sesión."],
     [/^Delete failed$/i, "No se pudo eliminar el elemento."],
-    [/^Create failed$/i, "No se pudo crear el versículo."],
     [/^Cannot change$/i, "No se pudo cambiar el estado."],
     [
       /^Cannot archive an outing that has dependent content$/i,
@@ -80,8 +79,6 @@ function localizeMessage(message: string): string {
     [/^title is required$/i, "El título es obligatorio."],
     [/^slug must be unique$/i, "El slug debe ser único."],
     [/^Title is required\.$/i, "El título es obligatorio."],
-    [/^Reference is required\.$/i, "La referencia es obligatoria."],
-    [/^Text is required\.$/i, "El texto es obligatorio."],
     [/^Email is required\.$/i, "El correo electrónico es obligatorio."],
     [/^Display name is required\.$/i, "El nombre visible es obligatorio."],
     [
@@ -99,7 +96,6 @@ function localizeMessage(message: string): string {
   }
 
   for (const [pattern, translation] of [
-    [/^Verse "(.+)" not found$/i, 'No se encontró el versículo "$1".'],
     [
       /^FileAsset with id "(.+)" not found$/i,
       'No se encontró el archivo "$1".',

@@ -45,4 +45,12 @@ export class UpdateLandingSettingsDto {
   @IsOptional()
   @IsString()
   contactPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  verseText?: string;
+
+  @IsOptional()
+  @IsString()
+  verseReference?: string;
 }

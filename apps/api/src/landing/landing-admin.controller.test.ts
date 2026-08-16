@@ -29,6 +29,8 @@ export interface LandingSettingsRow {
   featuredVideoUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  verseText: string | null;
+  verseReference: string | null;
 }
 
 const FULL_SETTINGS: LandingSettingsRow = {
@@ -42,6 +44,8 @@ const FULL_SETTINGS: LandingSettingsRow = {
   featuredVideoUrl: "https://youtube.com/watch?v=abc",
   contactEmail: "info@m199.org",
   contactPhone: "+54 11 1234-5678",
+  verseText: "Todo lo puedo en Cristo que me fortalece",
+  verseReference: "Filipenses 4:13",
 };
 
 const UPDATED_SETTINGS: LandingSettingsRow = {
@@ -119,6 +123,8 @@ describe("LandingAdminController", () => {
         mission: "Nueva misión",
         vision: "Nueva visión",
         contactEmail: "nuevo@test.com",
+        verseText: "Nuevo texto",
+        verseReference: "Juan 3:16",
       } as UpdateLandingSettingsDto;
 
       await controller.updateSettings(dto);

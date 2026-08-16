@@ -10,7 +10,7 @@
 // WU3 / Slice 1 — the Posts and Outings admin sections were removed
 // from the shell. Tests that exercised clicking those nav items were
 // removed in lockstep; surviving navigation tests cover Landing
-// Settings, Responsibles, and Verses.
+// Settings and Responsibles.
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -431,8 +431,8 @@ describe("AdminApp shell navigation", () => {
   it("renders placeholder nav items for out-of-scope sections as disabled", async () => {
     await renderShell();
 
-    // The only remaining placeholder is Files — Posts/Outings were
-    // removed in WU3, and the Legacy Post/Outing placeholders are gone.
+    // The only remaining placeholder is Files. Legacy content sections were
+    // removed from the admin shell.
     const placeholders = [{ label: "Archivos", testId: "files" }];
 
     for (const { label, testId: placeholderId } of placeholders) {
@@ -462,17 +462,6 @@ describe("AdminApp shell navigation", () => {
     expect(
       (screen.getByTestId("nav-responsibles") as HTMLButtonElement).disabled,
     ).toBe(true);
-  });
-
-  it("renders Verses as an enabled section and initiates its list", async () => {
-    await renderShell();
-    fireEvent.click(screen.getByTestId("nav-verses"));
-    await waitFor(() => expect(screen.getByTestId("verses-page")).toBeTruthy());
-    expect(screen.getByText(/todos los versículos/i)).toBeTruthy();
-    expect(
-      (screen.getByTestId("nav-verses") as HTMLButtonElement).disabled,
-    ).toBe(true);
-    expect(screen.queryByTestId("nav-placeholder-verses")).toBeNull();
   });
 
   it("renders logout button", async () => {

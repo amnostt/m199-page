@@ -26,12 +26,11 @@ Las fronteras obligatorias —dirección de dependencias, uso de `DbService`, DT
 | Área          | Estado actual                                                                                                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Autenticación | Login, access token y refresh token en cookies `httpOnly`, rotación, logout, revocación y bloqueo de responsables `INACTIVE`.                                                         |
-| Sitio público | Landing, listado y detalle de publicaciones, listado y detalle de salidas, 404 y likes como rutas Astro explícitas; no existe una ruta pública para el historial de versículos.       |
-| Landing       | Lectura pública y edición administrativa de texto, contacto, video, héroe y salida destacada. La imagen del héroe se puede cargar o reemplazar, pero no desasociar desde la interfaz. |
+| Sitio público | Landing, listado y detalle de publicaciones, listado y detalle de salidas, 404 y likes como rutas Astro explícitas.                                                               |
+| Landing       | Lectura pública y edición administrativa de texto, contacto, video, héroe y versículo. La imagen del héroe se puede cargar o reemplazar, pero no desasociar desde la interfaz. |
 | Publicaciones | CRUD administrativo, transiciones de publicación y archivo, portada, descargas etiquetadas y ordenadas, hasta tres destacados y lectura pública sanitizada.                           |
 | Salidas       | Gestión administrativa, publicación, archivo, lectura pública, likes anónimos y archivos asociados. La interfaz permite cargar o reemplazar archivos, pero no desasociarlos.          |
 | Responsables  | La API permite crear, listar, editar `displayName`, cambiar estado y restablecer contraseña. La interfaz solo crea, lista y cambia estado.                                            |
-| Versículos    | API pública y administrativa con historial; el panel permite crear, listar y eliminar. La landing muestra el publicado más reciente.                                                  |
 | Archivos      | Carga autenticada, validación por categoría y firma, miniaturas, entrega pública y eliminación. No hay listado general ni pantalla independiente.                                     |
 
 ## Invariantes vigentes
@@ -42,7 +41,6 @@ Las fronteras obligatorias —dirección de dependencias, uso de `DbService`, DT
 | Publicaciones destacadas | Existen tres lugares fijos; un cuarto intento se rechaza y no reemplaza contenido automáticamente.                                        |
 | Contenido público        | Las consultas públicas filtran contenido `PUBLISHED`; las publicaciones también requieren `publishedAt`.                                  |
 | Likes de salidas         | La combinación `outingId` + `visitorHash` es única y no guarda la IP sin procesar.                                                        |
-| Versículo vigente        | Es el último `PUBLISHED` por `publishedAt`; la fecha de negocio usa `America/Lima`.                                                       |
 | Archivos                 | `FileService` controla categoría, tamaño, firma, rutas, metadatos, rollback y eliminación. Los binarios de `GET /files/:id` son públicos. |
 | Contenido enriquecido    | El HTML de publicaciones se sanitiza en servidor y cliente.                                                                               |
 | Responsable inactivo     | No puede iniciar ni refrescar sesión; al desactivarlo se revocan sus sesiones.                                                            |

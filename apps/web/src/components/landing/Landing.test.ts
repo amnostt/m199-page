@@ -29,7 +29,6 @@ function fullPayload(): LandingPayloadShape {
     currentVerse: {
       text: "Id por todo el mundo",
       reference: "Marcos 16:15",
-      date: "2025-01-01T00:00:00.000Z",
     },
   };
 }

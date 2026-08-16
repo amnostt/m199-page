@@ -25,6 +25,8 @@ describe("landing settings seed defaults", () => {
       description: DEFAULT_LANDING_SETTINGS.description,
       contactEmail: DEFAULT_LANDING_SETTINGS.contactEmail,
       contactPhone: DEFAULT_LANDING_SETTINGS.contactPhone,
+      verseText: DEFAULT_LANDING_SETTINGS.verseText,
+      verseReference: DEFAULT_LANDING_SETTINGS.verseReference,
     });
   });
 });
@@ -64,6 +66,8 @@ describe("seedLandingSettings", () => {
           description: null,
           contactEmail: "admin@example.com",
           contactPhone: "",
+          verseText: null,
+          verseReference: "Custom reference",
         }),
         create: vi.fn().mockResolvedValue({}),
         update: vi.fn().mockResolvedValue({}),
@@ -78,6 +82,7 @@ describe("seedLandingSettings", () => {
       data: {
         mission: DEFAULT_LANDING_SETTINGS.mission,
         description: DEFAULT_LANDING_SETTINGS.description,
+        verseText: DEFAULT_LANDING_SETTINGS.verseText,
       },
     });
   });
@@ -93,6 +98,8 @@ describe("seedLandingSettings", () => {
           description: "Custom description",
           contactEmail: "admin@example.com",
           contactPhone: "",
+          verseText: "Custom verse",
+          verseReference: "Custom reference",
         }),
         create: vi.fn().mockResolvedValue({}),
         update: vi.fn().mockResolvedValue({}),

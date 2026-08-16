@@ -50,6 +50,8 @@ const SAMPLE_SETTINGS = {
   featuredVideoUrl: "https://video.example.com/embed",
   contactEmail: "contact@example.com",
   contactPhone: "+54 11 1234-5678",
+  verseText: "Todo lo puedo en Cristo que me fortalece",
+  verseReference: "Filipenses 4:13",
 };
 
 // ---------------------------------------------------------------------------
@@ -125,6 +127,16 @@ describe("LandingSettingsPage load", () => {
     expect((screen.getByLabelText(/teléfono/i) as HTMLInputElement).value).toBe(
       SAMPLE_SETTINGS.contactPhone,
     );
+    expect(
+      (
+        screen.getByLabelText("Texto", {
+          selector: "textarea",
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toBe(SAMPLE_SETTINGS.verseText);
+    expect(
+      (screen.getByLabelText("Referencia") as HTMLInputElement).value,
+    ).toBe(SAMPLE_SETTINGS.verseReference);
   });
 
   it("normalizes null API response to empty form values", async () => {
@@ -152,6 +164,13 @@ describe("LandingSettingsPage load", () => {
     expect((screen.getByLabelText(/teléfono/i) as HTMLInputElement).value).toBe(
       "",
     );
+    expect(
+      (
+        screen.getByLabelText("Texto", {
+          selector: "textarea",
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toBe("");
   });
 
   it("shows error banner on GET failure", async () => {
@@ -271,6 +290,12 @@ describe("LandingSettingsPage edit and save", () => {
     expect((videoField as HTMLInputElement).value).toBe(
       "https://new-video.example.com",
     );
+
+    const verseText = screen.getByLabelText("Texto", {
+      selector: "textarea",
+    });
+    fireEvent.change(verseText, { target: { value: "Nuevo texto" } });
+    expect((verseText as HTMLTextAreaElement).value).toBe("Nuevo texto");
   });
 
   it("opens the shadcn confirmation before save", async () => {
@@ -385,6 +410,8 @@ describe("LandingSettingsPage edit and save", () => {
     expect(body.featuredVideoUrl).toBe(SAMPLE_SETTINGS.featuredVideoUrl);
     expect(body.contactEmail).toBe(SAMPLE_SETTINGS.contactEmail);
     expect(body.contactPhone).toBe(SAMPLE_SETTINGS.contactPhone);
+    expect(body.verseText).toBe(SAMPLE_SETTINGS.verseText);
+    expect(body.verseReference).toBe(SAMPLE_SETTINGS.verseReference);
   });
 
   it("sends an empty featured video URL as null", async () => {

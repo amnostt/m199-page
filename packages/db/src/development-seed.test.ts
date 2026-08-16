@@ -67,7 +67,6 @@ function createFakeClient(): FakeClient {
       ),
     },
     publicationMission: { upsert: upsert("publicationMission", linkKey) },
-    verse: { upsert: upsert("verse", idKey) },
     landingSettings: {
       findUnique: vi.fn().mockResolvedValue(null),
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
@@ -175,7 +174,6 @@ describe("development database seed", () => {
     expect(client.calls.mission).toHaveLength(2);
     expect(client.calls.publication).toHaveLength(6);
     expect(client.calls.publicationMission).toHaveLength(4);
-    expect(client.calls.verse).toHaveLength(2);
   });
 
   it("does not seed legacy Post/Outing/featuredOuting wiring and runs in one transaction", async () => {
@@ -190,6 +188,7 @@ describe("development database seed", () => {
       "postDownload",
       "outingLike",
       "refreshSession",
+      "verse",
     ]) {
       expect(client.calls).not.toHaveProperty(legacy);
     }

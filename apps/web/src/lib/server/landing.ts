@@ -6,7 +6,7 @@
  *    allowlist for the iframe URL. Invalid values are omitted
  *    (returns null) rather than rendered. Never throws.
  *  - `validateLandingPublicPayload`: typed schema validation for the
- *    unchanged `GET /landing/public` contract defined in
+ *    `GET /landing/public` contract defined in
  *    `apps/api/src/landing/landing.service.ts`. Runs the video-URL
  *    policy on the way in.
  *  - `fetchLandingPublicPayload`: bounded fetch with AbortSignal +
@@ -30,7 +30,6 @@ import { type ApiBaseUrl, resolveLandingPublicEndpoint } from "./env.js";
 export interface CurrentVersePayload {
   text: string;
   reference: string;
-  date: string;
 }
 
 export interface LandingPublicPayload {
@@ -138,7 +137,6 @@ function validateCurrentVerse(raw: unknown): CurrentVersePayload | null {
   return {
     text: requireString(c, "text"),
     reference: requireString(c, "reference"),
-    date: requireString(c, "date"),
   };
 }
 

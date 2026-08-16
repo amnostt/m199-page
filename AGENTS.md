@@ -10,7 +10,7 @@ historical implementation notes.
 | Path          | Responsibility                                                                                           |
 | ------------- | -------------------------------------------------------------------------------------------------------- |
 | `apps/web`    | Astro web runtime with React 19 public/admin islands; Vitest uses jsdom and Testing Library.             |
-| `apps/api`    | NestJS API organized by feature modules: auth, responsibles, files, landing, outings, posts, and verses. |
+| `apps/api`    | NestJS API organized by feature modules: auth, responsibles, files, landing, missions, and publications. |
 | `packages/db` | Prisma schema, config, migrations, seed, and the shared Prisma client factory.                           |
 | `docs`        | Brand identity, technical foundation, and development roadmap (including MVP scope and actors).          |
 | `compose.yml` | Local PostgreSQL 16 service and persistent named volume.                                                 |

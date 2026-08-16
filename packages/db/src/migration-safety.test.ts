@@ -150,3 +150,35 @@ describe("FU-08: FileAsset migration data preservation", () => {
     });
   });
 });
+
+describe("Landing verse migration", () => {
+  const sql = readFileSync(
+    resolve(
+      import.meta.dirname,
+      "../prisma/migrations/20260816140000_move_verse_to_landing_settings/migration.sql",
+    ),
+    "utf-8",
+  );
+
+  it("adds nullable verse settings and selects the latest published verse", () => {
+    expect(sql).toContain('ADD COLUMN "verseText" TEXT');
+    expect(sql).toContain('ADD COLUMN "verseReference" TEXT');
+    expect(sql).toContain("WHERE \"status\" = 'PUBLISHED'");
+    expect(sql).toContain('ORDER BY "publishedAt" DESC NULLS LAST, "id" DESC');
+  });
+
+  it("preserves existing settings values during the backfill", () => {
+    expect(sql).toContain(
+      'landing_settings."verseText",\n    EXCLUDED."verseText"',
+    );
+    expect(sql).toContain(
+      'landing_settings."verseReference",\n    EXCLUDED."verseReference"',
+    );
+  });
+
+  it("drops revision rows before the verse table", () => {
+    expect(sql.indexOf('DROP TABLE IF EXISTS "VerseRevision"')).toBeLessThan(
+      sql.indexOf('DROP TABLE IF EXISTS "Verse"'),
+    );
+  });
+});
