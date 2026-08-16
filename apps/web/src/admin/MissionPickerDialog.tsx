@@ -44,7 +44,7 @@ export function MissionPickerDialog({
         <DialogHeader>
           <DialogTitle>Elegir misiones</DialogTitle>
           <DialogDescription>
-            Seleccioná las misiones activas relacionadas con esta publicación.
+            Selecciona las misiones activas relacionadas con esta publicación.
           </DialogDescription>
         </DialogHeader>
         {missions.length === 0 ? (

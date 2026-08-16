@@ -233,6 +233,14 @@ describe("LandingSettingsPage edit and save", () => {
   }
 
   async function confirmSave() {
+    const saveButton = screen.getByRole("button", {
+      name: "Guardar configuración",
+    }) as HTMLButtonElement;
+    if (saveButton.disabled) {
+      fireEvent.change(screen.getByLabelText("Título principal"), {
+        target: { value: `${SAMPLE_SETTINGS.heroTitle} editado` },
+      });
+    }
     fireEvent.click(
       screen.getByRole("button", { name: "Guardar configuración" }),
     );
@@ -268,6 +276,10 @@ describe("LandingSettingsPage edit and save", () => {
   it("opens the shadcn confirmation before save", async () => {
     await renderWithSettings();
 
+    fireEvent.change(screen.getByLabelText("Título principal"), {
+      target: { value: "Título modificado" },
+    });
+
     fireEvent.click(
       screen.getByRole("button", { name: "Guardar configuración" }),
     );
@@ -283,6 +295,10 @@ describe("LandingSettingsPage edit and save", () => {
     // Clear fetch calls from load so we can assert only on save
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockClear();
 
+    fireEvent.change(screen.getByLabelText("Título principal"), {
+      target: { value: "Título modificado" },
+    });
+
     fireEvent.click(
       screen.getByRole("button", { name: "Guardar configuración" }),
     );
@@ -291,6 +307,36 @@ describe("LandingSettingsPage edit and save", () => {
 
     // No PUT request should have been made after cancel
     expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("shows a sticky dirty-state toolbar and restores saved values on discard", async () => {
+    await renderWithSettings();
+    const toolbar = screen.getByTestId("landing-settings-toolbar");
+    const save = screen.getByRole("button", { name: "Guardar configuración" });
+
+    expect(toolbar.className).toContain("sticky");
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByTestId("landing-settings-dirty")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Título principal"), {
+      target: { value: "Título modificado" },
+    });
+    expect(screen.getByTestId("landing-settings-dirty").textContent).toContain(
+      "cambios sin guardar",
+    );
+    expect((save as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Descartar cambios" }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Descartar" }));
+
+    await waitFor(() => {
+      expect(
+        (screen.getByLabelText("Título principal") as HTMLInputElement).value,
+      ).toBe(SAMPLE_SETTINGS.heroTitle);
+    });
+    expect(screen.queryByTestId("landing-settings-dirty")).toBeNull();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("sends only active fields on confirmed save", async () => {
@@ -513,6 +559,14 @@ describe("LandingSettingsPage edit and save", () => {
         { toasterId: "admin" },
       );
     });
+    expect(screen.queryByTestId("landing-settings-dirty")).toBeNull();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Guardar configuración",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
   });
 
   it("shows an error toast with retry on save failure", async () => {

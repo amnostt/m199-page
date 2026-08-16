@@ -20,6 +20,7 @@ import {
 } from "./session.js";
 import { AdminProviders } from "./AdminProviders.js";
 import { AdminShell, type AdminSection } from "./AdminShell.js";
+import { ConfirmDialog } from "./ConfirmDialog.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -175,6 +176,10 @@ export function AdminApp() {
   const [loading, setLoading] = useState(true);
   const [logoutError, setLogoutError] = useState(false);
   const [activeSection, setActiveSection] = useState<AdminSection>("landing");
+  const [landingDirty, setLandingDirty] = useState(false);
+  const [pendingExit, setPendingExit] = useState<
+    AdminSection | "logout" | null
+  >(null);
 
   // Bootstrap: attempt refresh on mount with bounded timeout.
   // If the auth endpoint hangs the timeout clears the loading state
@@ -206,6 +211,16 @@ export function AdminApp() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!landingDirty) return;
+    const preventUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", preventUnload);
+    return () => window.removeEventListener("beforeunload", preventUnload);
+  }, [landingDirty]);
+
   const handleLogout = async () => {
     setLogoutError(false);
     try {
@@ -213,6 +228,36 @@ export function AdminApp() {
       setUser(null);
     } catch {
       setLogoutError(true);
+    }
+  };
+
+  const handleNavigate = (section: AdminSection) => {
+    if (section === activeSection) return;
+    if (activeSection === "landing" && landingDirty) {
+      setPendingExit(section);
+      return;
+    }
+    setActiveSection(section);
+  };
+
+  const requestLogout = () => {
+    if (activeSection === "landing" && landingDirty) {
+      setPendingExit("logout");
+      return;
+    }
+    void handleLogout();
+  };
+
+  const discardAndExit = async () => {
+    const destination = pendingExit;
+    setPendingExit(null);
+    if (destination === "logout") {
+      await handleLogout();
+      return;
+    }
+    if (destination) {
+      setLandingDirty(false);
+      setActiveSection(destination);
     }
   };
 
@@ -239,9 +284,20 @@ export function AdminApp() {
       <AdminShell
         user={user}
         activeSection={activeSection}
-        onNavigate={setActiveSection}
-        onLogout={handleLogout}
+        onNavigate={handleNavigate}
+        onLandingDirtyChange={setLandingDirty}
+        onLogout={requestLogout}
         logoutError={logoutError}
+      />
+      <ConfirmDialog
+        open={pendingExit !== null}
+        title="Cambios sin guardar"
+        description="Si sales ahora, se descartarán los cambios de la configuración de inicio."
+        confirmLabel="Descartar y salir"
+        cancelLabel="Seguir editando"
+        destructive
+        onConfirm={discardAndExit}
+        onCancel={() => setPendingExit(null)}
       />
     </AdminProviders>
   );

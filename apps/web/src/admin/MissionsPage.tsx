@@ -107,7 +107,7 @@ export function MissionsPage() {
       !values.heroImageId ||
       !values.heroPhrase
     ) {
-      setFormError("Completá título, slug, imagen y frase.");
+      setFormError("Completa el título, el slug, la imagen y la frase.");
       return;
     }
     setPending(true);
@@ -231,7 +231,7 @@ export function MissionsPage() {
             ? "Archivar misión"
             : "Reactivar misión"
         }
-        description={`¿Querés ${statusTarget?.status === "ACTIVE" ? "archivar" : "reactivar"} ${statusTarget?.title ?? "esta misión"}?`}
+        description={`¿Quieres ${statusTarget?.status === "ACTIVE" ? "archivar" : "reactivar"} ${statusTarget?.title ?? "esta misión"}?`}
         confirmLabel={
           statusTarget?.status === "ACTIVE" ? "Archivar" : "Reactivar"
         }

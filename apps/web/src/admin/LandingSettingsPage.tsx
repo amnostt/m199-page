@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { FileUploadWidget } from "./FileUploadWidget.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 import { useAdminToast } from "./AdminProviders.js";
@@ -50,6 +51,16 @@ const EMPTY: LandingSettingsForm = {
   contactPhone: "",
 };
 
+const fields: Array<keyof LandingSettingsForm> = [
+  "heroTitle",
+  "heroSubtitle",
+  "heroImageId",
+  "description",
+  "featuredVideoUrl",
+  "contactEmail",
+  "contactPhone",
+];
+
 // ---------------------------------------------------------------------------
 // Pure helpers
 // ---------------------------------------------------------------------------
@@ -73,23 +84,46 @@ export function normalizeLandingSettings(
   };
 }
 
+export function landingSettingsAreEqual(
+  current: LandingSettingsForm,
+  saved: LandingSettingsForm,
+): boolean {
+  return fields.every((field) => current[field] === saved[field]);
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function LandingSettingsPage() {
+export function LandingSettingsPage({
+  onDirtyChange,
+}: {
+  onDirtyChange?: (dirty: boolean) => void;
+}) {
   const [settings, setSettings] = useState<LandingSettingsForm | null>(null);
+  const [savedSettings, setSavedSettings] =
+    useState<LandingSettingsForm | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const toast = useAdminToast();
+  const dirty = Boolean(
+    settings &&
+    savedSettings &&
+    !landingSettingsAreEqual(settings, savedSettings),
+  );
 
   // Load on mount
   useEffect(() => {
     let cancelled = false;
     adminFetch<LandingSettings | null>("/landing/admin")
       .then((data) => {
-        if (!cancelled) setSettings(normalizeLandingSettings(data));
+        if (!cancelled) {
+          const normalized = normalizeLandingSettings(data);
+          setSettings(normalized);
+          setSavedSettings(normalized);
+        }
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -98,6 +132,10 @@ export function LandingSettingsPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   // ------------------------------------------------------------------
   // Handlers
@@ -120,7 +158,7 @@ export function LandingSettingsPage() {
 
     try {
       const { heroImageId, featuredVideoUrl, ...copySettings } = settings;
-      await adminFetch("/landing/admin", {
+      const response = await adminFetch<LandingSettings>("/landing/admin", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -129,6 +167,9 @@ export function LandingSettingsPage() {
           ...(heroImageId ? { heroImageId } : {}),
         }),
       });
+      const normalized = normalizeLandingSettings(response);
+      setSettings(normalized);
+      setSavedSettings(normalized);
       setConfirmOpen(false);
       toast.success("Configuración guardada correctamente.");
     } catch (error) {
@@ -140,6 +181,12 @@ export function LandingSettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const discardChanges = () => {
+    if (!savedSettings) return;
+    setSettings(savedSettings);
+    setDiscardOpen(false);
   };
 
   // ------------------------------------------------------------------
@@ -179,33 +226,70 @@ export function LandingSettingsPage() {
   // Loaded — render editable form
   return (
     <div
-      className="mx-auto flex w-full max-w-3xl flex-col gap-6"
+      className="mx-auto w-full max-w-3xl"
       data-testid="landing-settings-form"
     >
-      <header className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight">
-          Configuración de la página de inicio
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Editá el contenido que se muestra en la landing pública.
-        </p>
-      </header>
-
       <form
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          setConfirmOpen(true);
+          if (dirty) setConfirmOpen(true);
         }}
         aria-busy={saving}
       >
+        <header
+          className="sticky top-0 z-20 -mx-4 mb-6 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/80"
+          data-testid="landing-settings-toolbar"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Configuración de la página de inicio
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Edita el contenido que se muestra en la landing pública.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {dirty && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => setDiscardOpen(true)}
+                >
+                  Descartar cambios
+                </Button>
+              )}
+              <Button
+                type="submit"
+                className="min-h-10"
+                disabled={!dirty || saving}
+                aria-busy={saving}
+              >
+                {saving ? "Guardando…" : "Guardar configuración"}
+              </Button>
+            </div>
+          </div>
+          {dirty && (
+            <Alert
+              className="mt-3 border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-100"
+              data-testid="landing-settings-dirty"
+            >
+              <TriangleAlert aria-hidden="true" />
+              <AlertDescription className="text-current">
+                Tienes cambios sin guardar
+              </AlertDescription>
+            </Alert>
+          )}
+        </header>
         <div className="flex flex-col gap-6">
           <Card className="shadow-none">
             <CardContent className="pt-6">
               <FieldSet>
                 <FieldLegend>Encabezado principal</FieldLegend>
                 <FieldDescription>
-                  Presentá la organización desde el primer vistazo de la
+                  Presenta la organización desde el primer vistazo de la
                   landing.
                 </FieldDescription>
                 <FieldGroup>
@@ -299,8 +383,8 @@ export function LandingSettingsPage() {
               <FieldSet>
                 <FieldLegend>Video destacado</FieldLegend>
                 <FieldDescription>
-                  Mostrá un video en una sección independiente de la landing. Si
-                  no cargás una URL, la sección permanecerá oculta.
+                  Muestra un video en una sección independiente de la landing.
+                  Si no cargas una URL, la sección permanecerá oculta.
                 </FieldDescription>
                 <FieldGroup>
                   <Field>
@@ -368,26 +452,6 @@ export function LandingSettingsPage() {
               </FieldSet>
             </CardContent>
           </Card>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button
-              type="submit"
-              className="min-h-11"
-              disabled={saving}
-              aria-busy={saving}
-            >
-              Guardar configuración
-            </Button>
-            {saving && (
-              <span
-                role="status"
-                aria-live="polite"
-                className="text-sm text-muted-foreground"
-              >
-                Guardando cambios…
-              </span>
-            )}
-          </div>
         </div>
       </form>
       <ConfirmDialog
@@ -397,6 +461,15 @@ export function LandingSettingsPage() {
         confirmLabel="Guardar cambios"
         onConfirm={saveSettings}
         onCancel={() => setConfirmOpen(false)}
+      />
+      <ConfirmDialog
+        open={discardOpen}
+        title="Descartar cambios"
+        description="Se restaurará la última configuración guardada."
+        confirmLabel="Descartar"
+        destructive
+        onConfirm={discardChanges}
+        onCancel={() => setDiscardOpen(false)}
       />
     </div>
   );

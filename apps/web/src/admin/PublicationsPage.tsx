@@ -141,7 +141,7 @@ export function PublicationsPage() {
         description={
           action === "delete"
             ? "Esta acción no se puede deshacer."
-            : "¿Querés cambiar el estado de esta publicación?"
+            : "¿Quieres cambiar el estado de esta publicación?"
         }
         confirmLabel={action === "delete" ? "Eliminar" : "Confirmar"}
         destructive={action === "delete"}

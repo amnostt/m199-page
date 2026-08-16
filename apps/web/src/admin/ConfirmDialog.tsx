@@ -14,6 +14,7 @@ export interface ConfirmDialogProps {
   title: string;
   description: string;
   confirmLabel: string;
+  cancelLabel?: string;
   destructive?: boolean;
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
@@ -25,6 +26,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  cancelLabel = "Cancelar",
   destructive,
   onConfirm,
   onCancel,
@@ -68,7 +70,7 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter className="-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end">
           <AlertDialogCancel ref={cancelRef} disabled={busy}>
-            Cancelar
+            {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             type="button"

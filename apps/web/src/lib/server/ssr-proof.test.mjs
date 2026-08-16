@@ -451,7 +451,7 @@ describe("PR4 SSR proof — built Astro standalone server", () => {
     // Generic failure markup is rendered; no classified reason leaks.
     expect(body).toContain('data-testid="landing-error"');
     expect(body).toContain(
-      "La página no se puede cargar en este momento. Intentá nuevamente en unos minutos.",
+      "La página no se puede cargar en este momento. Intenta nuevamente en unos minutos.",
     );
     const lower = body.toLowerCase();
     for (const leak of [
@@ -515,7 +515,7 @@ describe("PR4 SSR proof — built Astro standalone server", () => {
     const body = await response.text();
     expect(body).toContain('data-testid="landing-error"');
     expect(body).toContain(
-      "La página no se puede cargar en este momento. Intentá nuevamente en unos minutos.",
+      "La página no se puede cargar en este momento. Intenta nuevamente en unos minutos.",
     );
     expect(body.toLowerCase()).not.toContain("invalid_payload");
     expect(body).not.toContain("{not-json");

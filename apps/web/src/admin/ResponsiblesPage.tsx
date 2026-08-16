@@ -163,7 +163,7 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
                     Crear responsable
                   </FieldLegend>
                   <FieldDescription>
-                    Completá los datos para habilitar un nuevo acceso al área de
+                    Completa los datos para habilitar un nuevo acceso al área de
                     administración.
                   </FieldDescription>
                   <FieldGroup>
@@ -290,7 +290,7 @@ export function ResponsiblesPage({ currentUserId }: { currentUserId: string }) {
                   Personas responsables
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Revisá y actualizá el estado de acceso de cada responsable.
+                  Revisa y actualiza el estado de acceso de cada responsable.
                 </p>
               </div>
 

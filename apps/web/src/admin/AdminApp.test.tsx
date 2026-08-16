@@ -374,6 +374,60 @@ describe("AdminApp shell navigation", () => {
     expect(screen.getByRole("button", { name: /cerrar sesión/i })).toBeTruthy();
   });
 
+  it("guards navigation and beforeunload while landing changes are unsaved", async () => {
+    await renderShell();
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText("Título principal"), {
+      target: { value: "Título sin guardar" },
+    });
+    expect(screen.getByTestId("landing-settings-dirty")).toBeTruthy();
+
+    const beforeUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(true);
+
+    fireEvent.click(screen.getByTestId("nav-responsibles"));
+    expect(
+      await screen.findByRole("alertdialog", { name: "Cambios sin guardar" }),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("responsibles-page")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Seguir editando" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("nav-responsibles"));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Descartar y salir" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("responsibles-page")).toBeTruthy();
+    });
+  });
+
+  it("guards logout while landing changes are unsaved", async () => {
+    await renderShell();
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+    fireEvent.change(screen.getByLabelText("Título principal"), {
+      target: { value: "Título sin guardar" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /cerrar sesión/i }));
+    expect(
+      await screen.findByRole("alertdialog", { name: "Cambios sin guardar" }),
+    ).toBeTruthy();
+    expect(
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.some(
+        ([url]) => url === "/auth/logout",
+      ),
+    ).toBe(false);
+  });
+
   it("renders placeholder nav items for out-of-scope sections as disabled", async () => {
     await renderShell();
 

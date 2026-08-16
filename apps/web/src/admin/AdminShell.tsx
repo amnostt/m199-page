@@ -57,6 +57,7 @@ export interface AdminShellProps {
   user: AuthUser;
   activeSection: AdminSection;
   onNavigate: (section: AdminSection) => void;
+  onLandingDirtyChange?: (dirty: boolean) => void;
   onLogout: () => void;
   logoutError: boolean;
 }
@@ -64,11 +65,14 @@ export interface AdminShellProps {
 function SectionContent({
   section,
   user,
+  onLandingDirtyChange,
 }: {
   section: AdminSection;
   user: AuthUser;
+  onLandingDirtyChange?: (dirty: boolean) => void;
 }) {
-  if (section === "landing") return <LandingSettingsPage />;
+  if (section === "landing")
+    return <LandingSettingsPage onDirtyChange={onLandingDirtyChange} />;
   if (section === "verses") return <VersesPage />;
   if (section === "missions") return <MissionsPage />;
   if (section === "publications") return <PublicationsPage />;
@@ -79,6 +83,7 @@ export function AdminShell({
   user,
   activeSection,
   onNavigate,
+  onLandingDirtyChange,
   onLogout,
   logoutError,
 }: AdminShellProps) {
@@ -223,7 +228,11 @@ export function AdminShell({
             className="min-w-0 flex-1 p-[clamp(1rem,3vw,2rem)]"
             data-testid="admin-content"
           >
-            <SectionContent section={activeSection} user={user} />
+            <SectionContent
+              section={activeSection}
+              user={user}
+              onLandingDirtyChange={onLandingDirtyChange}
+            />
           </main>
         </SidebarInset>
       </SidebarProvider>

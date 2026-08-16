@@ -253,7 +253,7 @@ export function PublicationForm({
       <ConfirmDialog
         open={typeChange !== null}
         title="Cambiar tipo de publicación"
-        description="Los campos de actividad cambiarán según el nuevo tipo. ¿Querés continuar?"
+        description="Los campos de actividad cambiarán según el nuevo tipo. ¿Quieres continuar?"
         confirmLabel="Cambiar tipo"
         onConfirm={() => {
           if (typeChange)

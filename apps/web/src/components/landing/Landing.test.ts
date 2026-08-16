@@ -289,7 +289,7 @@ describe("Landing.astro — failure markup", () => {
   it("emits a generic, user-facing copy regardless of the reason", async () => {
     const html = await render(null, { reason: "network" });
     expect(html).toContain("La página no se puede cargar en este momento");
-    expect(html).toContain("Intentá nuevamente en unos minutos");
+    expect(html).toContain("Intenta nuevamente en unos minutos");
   });
 
   it.each([
