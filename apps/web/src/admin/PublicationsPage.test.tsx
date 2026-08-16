@@ -147,7 +147,7 @@ describe("PublicationsPage", () => {
       screen.getByTestId("publication-p1").querySelector("button:last-child")!,
     );
     fireEvent.click(
-      screen.getByRole("dialog").querySelector("button:last-child")!,
+      screen.getByRole("alertdialog").querySelector("button:last-child")!,
     );
     await waitFor(() => expect(api.remove).toHaveBeenCalledWith("p1"));
     await waitFor(() => expect(api.list).toHaveBeenCalledTimes(2));

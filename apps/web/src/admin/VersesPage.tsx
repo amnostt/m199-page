@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { CreateVerseInput, VerseAdmin } from "./adminTypes.js";
 import { createVerse, deleteVerse, listVerses } from "./versesApi.js";
 import { mapAdminError } from "./adminErrors.js";
+import { ConfirmDialog } from "./ConfirmDialog.js";
 
 type FormErrors = Partial<Record<keyof CreateVerseInput, string>>;
 
@@ -25,6 +26,7 @@ export function VersesPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [deletePending, setDeletePending] = useState<Set<string>>(new Set());
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
+  const [deleteTarget, setDeleteTarget] = useState<VerseAdmin | null>(null);
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -71,16 +73,11 @@ export function VersesPage() {
     }
   };
 
-  const handleDelete = async (row: VerseAdmin) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const row = deleteTarget;
     if (deletePending.has(row.id)) return;
-    if (
-      !window.confirm(
-        `¿Eliminar este versículo de forma permanente?\n\n${row.reference}`,
-      )
-    ) {
-      return;
-    }
-
+    setDeleteTarget(null);
     setDeleteErrors((current) => {
       const next = { ...current };
       delete next[row.id];
@@ -188,7 +185,7 @@ export function VersesPage() {
                       <button
                         type="button"
                         disabled={pending}
-                        onClick={() => void handleDelete(row)}
+                        onClick={() => setDeleteTarget(row)}
                       >
                         {pending ? "Eliminando…" : "Eliminar"}
                       </button>
@@ -203,6 +200,15 @@ export function VersesPage() {
           </table>
         )}
       </section>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Eliminar versículo"
+        description={`Esta acción eliminará de forma permanente ${deleteTarget?.reference ?? "el versículo seleccionado"}.`}
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   );
 }

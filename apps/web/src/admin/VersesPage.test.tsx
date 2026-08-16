@@ -36,7 +36,6 @@ beforeEach(() => {
   vi.mocked(listVerses).mockResolvedValue([]);
   vi.mocked(createVerse).mockReset();
   vi.mocked(deleteVerse).mockReset();
-  vi.spyOn(window, "confirm");
 });
 
 afterEach(() => cleanup());
@@ -154,19 +153,19 @@ describe("VersesPage creation", () => {
 describe("VersesPage deletion", () => {
   it("cancels without a request and confirms with an irreversible warning", async () => {
     vi.mocked(listVerses).mockResolvedValue([verse("1", "DRAFT")]);
-    vi.mocked(window.confirm)
-      .mockReturnValueOnce(false)
-      .mockReturnValueOnce(true);
     vi.mocked(deleteVerse).mockResolvedValue(undefined);
     render(<VersesPage />);
     await waitFor(() => expect(screen.getByTestId("verse-row-1")).toBeTruthy());
     const button = screen.getByRole("button", { name: "Eliminar" });
     fireEvent.click(button);
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog.textContent).toContain("permanente");
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(deleteVerse).not.toHaveBeenCalled();
-    fireEvent.click(button);
-    expect(window.confirm).toHaveBeenLastCalledWith(
-      expect.stringContaining("permanente"),
-    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
     await waitFor(() => expect(screen.queryByTestId("verse-row-1")).toBeNull());
   });
 
@@ -176,7 +175,6 @@ describe("VersesPage deletion", () => {
       verse("1", "DRAFT"),
       verse("2", "PUBLISHED"),
     ]);
-    vi.mocked(window.confirm).mockReturnValue(true);
     vi.mocked(deleteVerse).mockReturnValueOnce(
       new Promise((_, r) => (reject = r)),
     );
@@ -184,7 +182,9 @@ describe("VersesPage deletion", () => {
     await waitFor(() => expect(screen.getByTestId("verse-row-1")).toBeTruthy());
     const deleteButtons = screen.getAllByRole("button", { name: "Eliminar" });
     fireEvent.click(deleteButtons[0]!);
-    fireEvent.click(deleteButtons[0]!);
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
     expect(deleteVerse).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Eliminando…" })).toBeTruthy();
     reject(new Error("Delete failed"));

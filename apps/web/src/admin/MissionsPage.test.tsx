@@ -132,13 +132,14 @@ describe("MissionsPage", () => {
     vi.mocked(updateMissionStatus).mockResolvedValue(
       mission("active", "ARCHIVED"),
     );
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<MissionsPage />);
     await waitFor(() =>
       expect(screen.getByText("Mission active")).toBeTruthy(),
     );
     fireEvent.click(screen.getByRole("button", { name: "Editar" }));
     expect(screen.getByDisplayValue("Mission active")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
     await waitFor(() =>
       expect(updateMissionStatus).toHaveBeenCalledWith("active", "ARCHIVED"),
@@ -175,13 +176,15 @@ describe("MissionsPage", () => {
       mission("old", "ARCHIVED"),
     ]);
     vi.mocked(updateMissionStatus).mockResolvedValue(mission("old", "ACTIVE"));
-    vi.spyOn(window, "confirm")
-      .mockReturnValueOnce(false)
-      .mockReturnValueOnce(true);
     render(<MissionsPage />);
     await waitFor(() => expect(screen.getByText("Mission old")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(updateMissionStatus).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
     await waitFor(() =>
       expect(updateMissionStatus).toHaveBeenCalledWith("old", "ACTIVE"),
@@ -196,9 +199,10 @@ describe("MissionsPage", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([mission("m", "ARCHIVED")]);
     vi.mocked(updateMissionStatus).mockResolvedValue(mission("m", "ARCHIVED"));
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<MissionsPage />);
     await waitFor(() => expect(screen.getByText("Mission m")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
     await waitFor(() =>
       expect(screen.getByTestId("archived-missions").textContent).toContain(

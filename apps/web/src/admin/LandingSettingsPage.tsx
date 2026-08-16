@@ -3,10 +3,9 @@
 //
 // - GET /landing/admin on mount via adminFetch
 // - Normalizes null response to empty string form values
-// - Editable form for mission, vision, description, featuredVideoUrl,
-//   contactEmail, contactPhone
-// - window.confirm gate before every PUT /landing/admin save
-// - Loading, error, and success states
+// - Editable form for active landing fields
+// - shadcn AlertDialog gate before every PUT /landing/admin save
+// - Persistent loading errors and Sonner mutation feedback
 //
 // WU3 / Slice 1 — the legacy featured-outing wiring was removed. The
 // admin no longer issues `/outings/admin?status=PUBLISHED` lookups,
@@ -17,6 +16,9 @@
 
 import { useEffect, useState } from "react";
 import { FileUploadWidget } from "./FileUploadWidget.js";
+import { ConfirmDialog } from "./ConfirmDialog.js";
+import { useAdminToast } from "./AdminProviders.js";
+import { mapAdminError } from "./adminErrors.js";
 import type { LandingSettings, LandingSettingsForm } from "./adminTypes.js";
 import { adminFetch } from "./session.js";
 import { Alert, AlertDescription } from "../components/ui/alert.js";
@@ -79,8 +81,8 @@ export function LandingSettingsPage() {
   const [settings, setSettings] = useState<LandingSettingsForm | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const toast = useAdminToast();
 
   // Load on mount
   useEffect(() => {
@@ -106,28 +108,15 @@ export function LandingSettingsPage() {
     value: string,
   ) => {
     setSettings((prev) => (prev ? { ...prev, [field]: value } : null));
-    setSaveError(false);
-    setSaveSuccess(false);
   };
 
   const handleHeroUploaded = (asset: { id: string }) => {
     setSettings((prev) => (prev ? { ...prev, heroImageId: asset.id } : null));
-    setSaveError(false);
-    setSaveSuccess(false);
   };
 
-  const handleSave = async () => {
+  const saveSettings = async () => {
     if (!settings || saving) return;
-    if (
-      !window.confirm(
-        "¿Guardar los cambios de la configuración de la página de inicio?",
-      )
-    )
-      return;
-
     setSaving(true);
-    setSaveError(false);
-    setSaveSuccess(false);
 
     try {
       const { heroImageId, featuredVideoUrl, ...copySettings } = settings;
@@ -140,9 +129,14 @@ export function LandingSettingsPage() {
           ...(heroImageId ? { heroImageId } : {}),
         }),
       });
-      setSaveSuccess(true);
-    } catch {
-      setSaveError(true);
+      setConfirmOpen(false);
+      toast.success("Configuración guardada correctamente.");
+    } catch (error) {
+      toast.error("No se pudo guardar la configuración.", {
+        description: mapAdminError(error).root,
+        retry: () => void saveSettings(),
+      });
+      throw error;
     } finally {
       setSaving(false);
     }
@@ -201,7 +195,7 @@ export function LandingSettingsPage() {
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          void handleSave();
+          setConfirmOpen(true);
         }}
         aria-busy={saving}
       >
@@ -394,27 +388,16 @@ export function LandingSettingsPage() {
               </span>
             )}
           </div>
-          {saveSuccess && (
-            <p
-              className="text-sm text-foreground"
-              data-testid="landing-settings-save-success"
-              role="status"
-            >
-              Configuración guardada correctamente.
-            </p>
-          )}
-          {saveError && (
-            <Alert
-              data-testid="landing-settings-save-error"
-              variant="destructive"
-            >
-              <AlertDescription>
-                No se pudo guardar la configuración. Intenta de nuevo.
-              </AlertDescription>
-            </Alert>
-          )}
         </div>
       </form>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Guardar configuración"
+        description="Los cambios se publicarán en la página de inicio."
+        confirmLabel="Guardar cambios"
+        onConfirm={saveSettings}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

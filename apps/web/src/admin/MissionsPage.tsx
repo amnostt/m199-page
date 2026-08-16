@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MissionAdmin } from "./adminTypes.js";
 import { FileUploadWidget } from "./FileUploadWidget.js";
+import { ConfirmDialog } from "./ConfirmDialog.js";
 import { mapAdminError } from "./adminErrors.js";
 import {
   createMission,
@@ -62,6 +63,7 @@ export function MissionsPage() {
   const [editing, setEditing] = useState<MissionAdmin | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [statusTarget, setStatusTarget] = useState<MissionAdmin | null>(null);
   const load = useCallback(() => {
     setError(null);
     setActive(null);
@@ -121,16 +123,11 @@ export function MissionsPage() {
       setPending(false);
     }
   };
-  const changeStatus = async (mission: MissionAdmin) => {
+  const changeStatus = async () => {
+    if (!statusTarget) return;
+    const mission = statusTarget;
     const next = mission.status === "ACTIVE" ? "ARCHIVED" : "ACTIVE";
-    if (
-      !window.confirm(
-        next === "ARCHIVED"
-          ? "¿Archivar esta misión?"
-          : "¿Reactivar esta misión?",
-      )
-    )
-      return;
+    setStatusTarget(null);
     setPending(true);
     setFormError(null);
     try {
@@ -215,7 +212,7 @@ export function MissionsPage() {
             missions={active}
             testId="active-missions"
             onEdit={edit}
-            onStatus={changeStatus}
+            onStatus={setStatusTarget}
           />
           <MissionList
             heading="Misiones anteriores"
@@ -223,10 +220,25 @@ export function MissionsPage() {
             missions={archived}
             testId="archived-missions"
             onEdit={edit}
-            onStatus={changeStatus}
+            onStatus={setStatusTarget}
           />
         </div>
       ) : null}
+      <ConfirmDialog
+        open={Boolean(statusTarget)}
+        title={
+          statusTarget?.status === "ACTIVE"
+            ? "Archivar misión"
+            : "Reactivar misión"
+        }
+        description={`¿Querés ${statusTarget?.status === "ACTIVE" ? "archivar" : "reactivar"} ${statusTarget?.title ?? "esta misión"}?`}
+        confirmLabel={
+          statusTarget?.status === "ACTIVE" ? "Archivar" : "Reactivar"
+        }
+        destructive={statusTarget?.status === "ACTIVE"}
+        onConfirm={changeStatus}
+        onCancel={() => setStatusTarget(null)}
+      />
     </section>
   );
 }

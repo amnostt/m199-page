@@ -1,13 +1,14 @@
 import { useRef, useState, type RefObject } from "react";
-import { Button } from "../components/ui/button.js";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../components/ui/dialog.js";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog.js";
 export interface ConfirmDialogProps {
   open: boolean;
   title: string;
@@ -45,44 +46,40 @@ export function ConfirmDialog({
     }
   };
   return (
-    <Dialog
+    <AlertDialog
       open={open}
-      disablePointerDismissal
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onCancel();
       }}
     >
-      <DialogContent
-        showCloseButton={false}
+      <AlertDialogContent
         initialFocus={cancelRef}
         finalFocus={() =>
           triggerRef?.current ?? fallbackFocusRef?.current ?? true
         }
       >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            ref={cancelRef}
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={busy}
-          >
+        <AlertDialogHeader className="flex flex-col gap-2">
+          <AlertDialogTitle className="font-heading text-base leading-none font-medium">
+            {title}
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-sm text-muted-foreground">
+            {description}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end">
+          <AlertDialogCancel ref={cancelRef} disabled={busy}>
             Cancelar
-          </Button>
-          <Button
+          </AlertDialogCancel>
+          <AlertDialogAction
             type="button"
             variant={destructive ? "destructive" : "default"}
             onClick={() => void confirm()}
             disabled={busy}
           >
             {busy ? "Procesando…" : confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

@@ -6,7 +6,7 @@
 // - Null response normalizes to empty form values
 // - Load error shows error banner
 // - Editable fields for the active landing controls
-// - window.confirm gate before every PUT save
+// - shadcn AlertDialog gate before every PUT save
 // - Confirm cancelled → no PUT sent
 // - Save success → success message shown
 // - Save error → error message shown
@@ -26,8 +26,15 @@ import {
   waitFor,
   cleanup,
   fireEvent,
+  within,
 } from "@testing-library/react";
+import { toast } from "sonner";
 import { LandingSettingsPage } from "./LandingSettingsPage.js";
+
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+  Toaster: () => null,
+}));
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -51,6 +58,7 @@ const SAMPLE_SETTINGS = {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 afterEach(() => {
@@ -224,6 +232,18 @@ describe("LandingSettingsPage edit and save", () => {
     });
   }
 
+  async function confirmSave() {
+    fireEvent.click(
+      screen.getByRole("button", { name: "Guardar configuración" }),
+    );
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "Guardar configuración",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Guardar cambios" }),
+    );
+  }
+
   it("allows editing each field", async () => {
     await renderWithSettings();
 
@@ -245,15 +265,16 @@ describe("LandingSettingsPage edit and save", () => {
     );
   });
 
-  it("calls window.confirm before save", async () => {
+  it("opens the shadcn confirmation before save", async () => {
     await renderWithSettings();
 
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Guardar configuración" }),
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
-
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/guardar/i));
+    expect(
+      await screen.findByRole("alertdialog", { name: "Guardar configuración" }),
+    ).toBeTruthy();
   });
 
   it("does NOT send PUT when confirm is cancelled", async () => {
@@ -262,9 +283,11 @@ describe("LandingSettingsPage edit and save", () => {
     // Clear fetch calls from load so we can assert only on save
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockClear();
 
-    vi.spyOn(window, "confirm").mockReturnValue(false);
-
-    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Guardar configuración" }),
+    );
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
 
     // No PUT request should have been made after cancel
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -283,13 +306,11 @@ describe("LandingSettingsPage edit and save", () => {
       json: () => Promise.resolve(updatedSettings),
     } as unknown as Response);
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
     fireEvent.change(screen.getByLabelText(/descripción/i), {
       target: { value: "Saved description" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    await confirmSave();
 
     await waitFor(() => {
       // PUT should have been called with the LP-01 base fields
@@ -337,8 +358,7 @@ describe("LandingSettingsPage edit and save", () => {
       expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
     });
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    await confirmSave();
 
     await waitFor(() => {
       const putCall = (
@@ -396,8 +416,7 @@ describe("LandingSettingsPage edit and save", () => {
       "new-hero",
     );
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    await confirmSave();
 
     await waitFor(() => {
       const putCall = (
@@ -435,11 +454,13 @@ describe("LandingSettingsPage edit and save", () => {
     fireEvent.change(screen.getByLabelText("Subtítulo principal"), {
       target: { value: "Retry this subtitle" },
     });
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    await confirmSave();
 
     await waitFor(() => {
-      expect(screen.getByTestId("landing-settings-save-error")).toBeTruthy();
+      expect(toast.error).toHaveBeenCalledWith(
+        "No se pudo guardar la configuración.",
+        expect.objectContaining({ description: "Error de red." }),
+      );
     });
     const putCall = (
       globalThis.fetch as ReturnType<typeof vi.fn>
@@ -476,7 +497,7 @@ describe("LandingSettingsPage edit and save", () => {
     );
   });
 
-  it("shows success message after save", async () => {
+  it("shows a success toast after save", async () => {
     await renderWithSettings();
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -484,33 +505,33 @@ describe("LandingSettingsPage edit and save", () => {
       json: () => Promise.resolve(SAMPLE_SETTINGS),
     } as unknown as Response);
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
-    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    await confirmSave();
 
     await waitFor(() => {
-      expect(screen.getByTestId("landing-settings-save-success")).toBeTruthy();
+      expect(toast.success).toHaveBeenCalledWith(
+        "Configuración guardada correctamente.",
+        { toasterId: "admin" },
+      );
     });
-
-    expect(
-      screen.getByText(/configuración guardada|guardada correctamente/i),
-    ).toBeTruthy();
   });
 
-  it("shows error message on save failure", async () => {
+  it("shows an error toast with retry on save failure", async () => {
     await renderWithSettings();
 
     globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
-    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    await confirmSave();
 
     await waitFor(() => {
-      expect(screen.getByTestId("landing-settings-save-error")).toBeTruthy();
+      expect(toast.error).toHaveBeenCalledWith(
+        "No se pudo guardar la configuración.",
+        expect.objectContaining({
+          toasterId: "admin",
+          description: "Error de red.",
+          action: expect.objectContaining({ label: "Reintentar" }),
+        }),
+      );
     });
-
-    expect(screen.getByText(/no se pudo guardar/i)).toBeTruthy();
   });
 
   it("disables save button while submitting", async () => {
@@ -523,15 +544,13 @@ describe("LandingSettingsPage edit and save", () => {
         () => new Promise<Response>(() => {}),
       ) as unknown as typeof globalThis.fetch;
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-
-    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+    await confirmSave();
 
     await waitFor(() => {
-      const saveButton = screen.getByRole("button", { name: /guardar/i });
-      expect((saveButton as HTMLButtonElement).disabled).toBe(true);
-      expect(saveButton.getAttribute("aria-busy")).toBe("true");
-      expect(screen.getByText(/guardando cambios/i)).toBeTruthy();
+      const confirmButton = screen.getByRole("button", {
+        name: "Procesando…",
+      });
+      expect((confirmButton as HTMLButtonElement).disabled).toBe(true);
     });
   });
 });
