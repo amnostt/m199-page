@@ -1,0 +1,34 @@
+---
+interface Props {
+  featuredVideoUrl: string | null;
+}
+
+const { featuredVideoUrl } = Astro.props;
+---
+
+{featuredVideoUrl && (
+  <section
+    class="landing-featured-video"
+    id="video-destacado"
+    data-testid="video-section"
+    aria-labelledby="featured-video-title"
+  >
+    <div class="landing-featured-video__inner">
+      <header class="landing-featured-video__header">
+        <p class="landing-featured-video__eyebrow">En acción</p>
+        <h2 id="featured-video-title">Video destacado</h2>
+      </header>
+      <div class="public-media public-media--cover landing-featured-video__media">
+        <iframe
+          src={featuredVideoUrl}
+          title="Misión 1-99 en acción"
+          data-testid="featured-video"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+  </section>
+)}

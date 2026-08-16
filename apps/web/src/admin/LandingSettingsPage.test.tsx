@@ -5,7 +5,7 @@
 // - GET /landing/admin on mount via adminFetch
 // - Null response normalizes to empty form values
 // - Load error shows error banner
-// - Editable fields for all LP-01 base fields
+// - Editable fields for the active landing controls
 // - window.confirm gate before every PUT save
 // - Confirm cancelled → no PUT sent
 // - Save success → success message shown
@@ -92,10 +92,7 @@ describe("LandingSettingsPage load", () => {
       expect.objectContaining({ credentials: "include" }),
     );
 
-    // All fields are populated with API values
-    expect(
-      (screen.getByLabelText(/misión/i) as HTMLTextAreaElement).value,
-    ).toBe(SAMPLE_SETTINGS.mission);
+    // Active fields are populated; historical fields are not editable.
     expect(
       (screen.getByLabelText("Título principal") as HTMLInputElement).value,
     ).toBe(SAMPLE_SETTINGS.heroTitle);
@@ -106,9 +103,8 @@ describe("LandingSettingsPage load", () => {
     expect(screen.getByTestId("landing-hero-asset-link").textContent).toBe(
       SAMPLE_SETTINGS.heroImageId,
     );
-    expect(
-      (screen.getByLabelText(/visión/i) as HTMLTextAreaElement).value,
-    ).toBe(SAMPLE_SETTINGS.vision);
+    expect(screen.queryByLabelText(/^misión$/i)).toBeNull();
+    expect(screen.queryByLabelText(/^visión$/i)).toBeNull();
     expect(
       (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).value,
     ).toBe(SAMPLE_SETTINGS.description);
@@ -136,12 +132,6 @@ describe("LandingSettingsPage load", () => {
     });
 
     // All fields must be empty strings, never "null"
-    expect(
-      (screen.getByLabelText(/misión/i) as HTMLTextAreaElement).value,
-    ).toBe("");
-    expect(
-      (screen.getByLabelText(/visión/i) as HTMLTextAreaElement).value,
-    ).toBe("");
     expect(
       (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).value,
     ).toBe("");
@@ -188,7 +178,7 @@ describe("LandingSettingsPage load", () => {
   // TRIANGULATE — partial data: some fields null, some populated
   // -----------------------------------------------------------------------
 
-  it("handles partial API response — null fields become empty strings", async () => {
+  it("ignores historical fields and normalizes active null fields", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () =>
@@ -208,11 +198,10 @@ describe("LandingSettingsPage load", () => {
       expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
     });
 
+    expect(screen.queryByLabelText(/^misión$/i)).toBeNull();
+    expect(screen.queryByLabelText(/^visión$/i)).toBeNull();
     expect(
-      (screen.getByLabelText(/misión/i) as HTMLTextAreaElement).value,
-    ).toBe("Only mission set");
-    expect(
-      (screen.getByLabelText(/visión/i) as HTMLTextAreaElement).value,
+      (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).value,
     ).toBe("");
   });
 });
@@ -238,12 +227,13 @@ describe("LandingSettingsPage edit and save", () => {
   it("allows editing each field", async () => {
     await renderWithSettings();
 
-    // Mission field is editable (textarea)
-    const missionField = screen.getByLabelText(/misión/i);
-    fireEvent.change(missionField, {
-      target: { value: "Updated mission" },
+    const descriptionField = screen.getByLabelText(/descripción/i);
+    fireEvent.change(descriptionField, {
+      target: { value: "Updated description" },
     });
-    expect((missionField as HTMLTextAreaElement).value).toBe("Updated mission");
+    expect((descriptionField as HTMLTextAreaElement).value).toBe(
+      "Updated description",
+    );
 
     // Video URL field is editable (input)
     const videoField = screen.getByLabelText(/video destacado/i);
@@ -280,11 +270,14 @@ describe("LandingSettingsPage edit and save", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
-  it("sends PUT with LP-01 base fields on confirmed save", async () => {
+  it("sends only active fields on confirmed save", async () => {
     await renderWithSettings();
 
     // Set up fetch mock for the PUT response
-    const updatedSettings = { ...SAMPLE_SETTINGS, mission: "Saved mission" };
+    const updatedSettings = {
+      ...SAMPLE_SETTINGS,
+      description: "Saved description",
+    };
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(updatedSettings),
@@ -292,9 +285,8 @@ describe("LandingSettingsPage edit and save", () => {
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
-    // Edit the mission field
-    fireEvent.change(screen.getByLabelText(/misión/i), {
-      target: { value: "Saved mission" },
+    fireEvent.change(screen.getByLabelText(/descripción/i), {
+      target: { value: "Saved description" },
     });
 
     fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
@@ -320,12 +312,45 @@ describe("LandingSettingsPage edit and save", () => {
     const body = JSON.parse(
       (putCall![1] as RequestInit).body as string,
     ) as Record<string, string | null>;
-    expect(body.mission).toBe("Saved mission");
-    expect(body.vision).toBe(SAMPLE_SETTINGS.vision);
-    expect(body.description).toBe(SAMPLE_SETTINGS.description);
+    expect(body).not.toHaveProperty("mission");
+    expect(body).not.toHaveProperty("vision");
+    expect(body.description).toBe("Saved description");
     expect(body.featuredVideoUrl).toBe(SAMPLE_SETTINGS.featuredVideoUrl);
     expect(body.contactEmail).toBe(SAMPLE_SETTINGS.contactEmail);
     expect(body.contactPhone).toBe(SAMPLE_SETTINGS.contactPhone);
+  });
+
+  it("sends an empty featured video URL as null", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ ...SAMPLE_SETTINGS, featuredVideoUrl: null }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(SAMPLE_SETTINGS),
+      });
+    render(<LandingSettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.click(screen.getByRole("button", { name: /guardar/i }));
+
+    await waitFor(() => {
+      const putCall = (
+        globalThis.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+      );
+      const body = JSON.parse(
+        (putCall![1] as RequestInit).body as string,
+      ) as Record<string, unknown>;
+      expect(body.featuredVideoUrl).toBeNull();
+    });
   });
 
   it("stages a LANDING_HERO upload and saves its ID with hero copy", async () => {
@@ -542,7 +567,7 @@ describe("LandingSettingsPage triangulation", () => {
 
     // After load, fields should be editable (not disabled)
     expect(
-      (screen.getByLabelText(/misión/i) as HTMLTextAreaElement).disabled,
+      (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).disabled,
     ).toBe(false);
     expect(
       (screen.getByLabelText(/correo electrónico/i) as HTMLInputElement)

@@ -42,8 +42,6 @@ const EMPTY: LandingSettingsForm = {
   heroTitle: "",
   heroSubtitle: "",
   heroImageId: null,
-  mission: "",
-  vision: "",
   description: "",
   featuredVideoUrl: "",
   contactEmail: "",
@@ -66,8 +64,6 @@ export function normalizeLandingSettings(
     heroTitle: data.heroTitle ?? "",
     heroSubtitle: data.heroSubtitle ?? "",
     heroImageId: data.heroImageId,
-    mission: data.mission ?? "",
-    vision: data.vision ?? "",
     description: data.description ?? "",
     featuredVideoUrl: data.featuredVideoUrl ?? "",
     contactEmail: data.contactEmail ?? "",
@@ -134,12 +130,13 @@ export function LandingSettingsPage() {
     setSaveSuccess(false);
 
     try {
-      const { heroImageId, ...copySettings } = settings;
+      const { heroImageId, featuredVideoUrl, ...copySettings } = settings;
       await adminFetch("/landing/admin", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...copySettings,
+          featuredVideoUrl: featuredVideoUrl.trim() || null,
           ...(heroImageId ? { heroImageId } : {}),
         }),
       });
@@ -214,7 +211,8 @@ export function LandingSettingsPage() {
               <FieldSet>
                 <FieldLegend>Encabezado principal</FieldLegend>
                 <FieldDescription>
-                  Presentá la misión desde el primer vistazo de la landing.
+                  Presentá la organización desde el primer vistazo de la
+                  landing.
                 </FieldDescription>
                 <FieldGroup>
                   <Field>
@@ -281,28 +279,9 @@ export function LandingSettingsPage() {
               <FieldSet>
                 <FieldLegend>Contenido institucional</FieldLegend>
                 <FieldDescription>
-                  Estos textos alimentan las secciones institucionales de la
-                  landing.
+                  Este texto alimenta la sección Nosotros de la landing.
                 </FieldDescription>
                 <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="ls-mission">Misión</FieldLabel>
-                    <Textarea
-                      id="ls-mission"
-                      value={settings.mission}
-                      onChange={(e) => handleChange("mission", e.target.value)}
-                      disabled={saving}
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="ls-vision">Visión</FieldLabel>
-                    <Textarea
-                      id="ls-vision"
-                      value={settings.vision}
-                      onChange={(e) => handleChange("vision", e.target.value)}
-                      disabled={saving}
-                    />
-                  </Field>
                   <Field>
                     <FieldLabel htmlFor="ls-description">
                       Descripción
@@ -316,6 +295,20 @@ export function LandingSettingsPage() {
                       disabled={saving}
                     />
                   </Field>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <FieldSet>
+                <FieldLegend>Video destacado</FieldLegend>
+                <FieldDescription>
+                  Mostrá un video en una sección independiente de la landing. Si
+                  no cargás una URL, la sección permanecerá oculta.
+                </FieldDescription>
+                <FieldGroup>
                   <Field>
                     <FieldLabel htmlFor="ls-video">
                       URL del video destacado

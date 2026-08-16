@@ -139,6 +139,16 @@ describe("LandingAdminController", () => {
       }
     });
 
+    it("accepts null to clear the optional featured video", async () => {
+      const pipe = new ValidationPipe({ whitelist: true, transform: true });
+      const result = await pipe.transform(
+        { featuredVideoUrl: null },
+        { type: "body", metatype: UpdateLandingSettingsDto },
+      );
+
+      expect(result.featuredVideoUrl).toBeNull();
+    });
+
     it("rejects unsafe video URLs through the real Nest route", async () => {
       const landingService = mockLandingService();
       const module = await Test.createTestingModule({

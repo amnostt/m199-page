@@ -16,10 +16,10 @@
  *   6. Real missions (omitted for null/empty).
  *   7. Honest static publications entry linking /publicaciones
  *      (no fake href/anchor, no restored legacy payload).
- *   8. About (CMS narrative precedence + local gallery + featured
- *      video + optional contact CTA).
- *   9. Contact (conditional channels; never placeholder values).
- *  10. Footer (always present).
+ *   8. About (CMS narrative precedence + local gallery + optional contact CTA).
+ *   9. Featured video (omitted when no safe URL is configured).
+ *  10. Contact (conditional channels; never placeholder values).
+ *  11. Footer (always present).
  *
  * The failure branch is intentionally generic and NEVER includes
  * the failure reason, the API host, the stack, or any driver
@@ -39,6 +39,7 @@ import LandingBanner from "./LandingBanner.astro";
 import LandingMissions from "./LandingMissions.astro";
 import LandingPublications from "./LandingPublications.astro";
 import LandingAbout from "./LandingAbout.astro";
+import LandingFeaturedVideo from "./LandingFeaturedVideo.astro";
 import LandingContact from "./LandingContact.astro";
 import type { MissionListItem } from "../../lib/server/missions.js";
 
@@ -55,8 +56,7 @@ const hasAbout = Boolean(
   payload &&
     (payload.mission?.trim() ||
       payload.vision?.trim() ||
-      payload.description?.trim() ||
-      payload.featuredVideoUrl),
+      payload.description?.trim()),
 );
 const hasContact = Boolean(
   payload && (payload.contactEmail?.trim() || payload.contactPhone?.trim()),
@@ -118,9 +118,10 @@ const publicationsHref = "/publicaciones";
       mission={payload.mission}
       vision={payload.vision}
       description={payload.description}
-      featuredVideoUrl={payload.featuredVideoUrl}
       hasContact={hasContact}
     />
+
+    <LandingFeaturedVideo featuredVideoUrl={payload.featuredVideoUrl} />
 
     <LandingContact
       contactEmail={payload.contactEmail}

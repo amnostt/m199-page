@@ -317,6 +317,15 @@ describe("public.css landing OpenDesign blocks contract", () => {
       /\.public-ui\s+\.landing-about\s*\{[^}]*margin-block:\s*0;/s,
     );
     expect(css).toMatch(
+      /\.public-ui\s+\.landing-featured-video\s*\{[^}]*background:\s*var\(--card\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-featured-video__inner\s*\{[^}]*width:\s*min\([^;]+var\(--public-shell-max\)\);[^}]*margin-inline:\s*auto/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-featured-video__media\s+iframe\s*\{[^}]*height:\s*100%/s,
+    );
+    expect(css).toMatch(
       /\.public-ui\s+\.landing-publications__link\s*\{[^}]*display:\s*inline-flex/s,
     );
     expect(css).toMatch(

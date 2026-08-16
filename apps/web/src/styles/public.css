@@ -808,7 +808,7 @@ body[data-theme="public"].landing-body {
   }
 
   /* ---------------------------------------------------------------------------
-   * About — narrative precedence + gallery + featured video + CTA
+   * About — narrative precedence + gallery + CTA
    * ------------------------------------------------------------------------- */
 
   .public-ui .landing-about {
@@ -909,10 +909,6 @@ body[data-theme="public"].landing-body {
     object-fit: cover;
   }
 
-  .public-ui .landing-about__video {
-    border-radius: var(--radius);
-  }
-
   .public-ui .landing-about__action {
     align-self: flex-start;
     display: inline-flex;
@@ -935,6 +931,50 @@ body[data-theme="public"].landing-body {
   .public-ui .landing-about__action:hover,
   .public-ui .landing-about__action:focus-visible {
     background: var(--primary-hover);
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Featured video — conditional standalone section
+   * ------------------------------------------------------------------------- */
+
+  .public-ui .landing-featured-video {
+    padding-block: clamp(4rem, 8vw, 7rem);
+    background: var(--card);
+  }
+
+  .public-ui .landing-featured-video__inner {
+    width: min(100% - var(--public-page-gutter) * 2, var(--public-shell-max));
+    margin-inline: auto;
+  }
+
+  .public-ui .landing-featured-video__header {
+    margin-block-end: 2rem;
+  }
+
+  .public-ui .landing-featured-video__eyebrow {
+    margin: 0 0 0.75rem;
+    color: var(--secondary);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .public-ui .landing-featured-video h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2.75rem, 6vw, 4.5rem);
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
+  .public-ui .landing-featured-video__media {
+    border: 1px solid var(--border);
+    box-shadow: var(--elevation-raised);
+  }
+
+  .public-ui .landing-featured-video__media iframe {
+    height: 100%;
   }
 
   /* ---------------------------------------------------------------------------

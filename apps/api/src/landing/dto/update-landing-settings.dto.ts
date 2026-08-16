@@ -36,7 +36,7 @@ export class UpdateLandingSettingsDto {
     { protocols: ["http", "https"] },
     { message: "featuredVideoUrl must be a valid http or https URL" },
   )
-  featuredVideoUrl?: string;
+  featuredVideoUrl?: string | null;
 
   @IsOptional()
   @IsString()

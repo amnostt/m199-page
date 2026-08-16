@@ -8,7 +8,7 @@
  *   3. `vision`
  *
  * Visual composition (back-to-front):
- *   - Editorial copy + headline + (optional) featured video.
+ *   - Editorial copy + headline.
  *   - Local gallery figures (ours-1, ours-2, ours-3) using the
  *     bundled OpenDesign assets at `/assets/redesign/ours-*.png`.
  *   - Optional "Quiero ser parte" CTA, only rendered when the
@@ -17,16 +17,13 @@
  */
 import type { LandingPayloadShape } from "./landing-shape.js";
 
-interface Props extends Pick<
-  LandingPayloadShape,
-  "mission" | "vision" | "description" | "featuredVideoUrl"
-> {
+interface Props extends Pick<LandingPayloadShape, "mission" | "vision" | "description"> {
   hasContact: boolean;
 }
 
-const { mission, vision, description, featuredVideoUrl, hasContact } = Astro.props;
+const { mission, vision, description, hasContact } = Astro.props;
 const narrative = description?.trim() || mission?.trim() || vision?.trim();
-const hasContent = Boolean(narrative || featuredVideoUrl);
+const hasContent = Boolean(narrative);
 const galleryImages = [
   {
     src: "/assets/redesign/ours-1.png",
@@ -76,22 +73,6 @@ const galleryImages = [
             </figure>
           ))}
         </div>
-
-        {featuredVideoUrl && (
-          <div
-            class="public-media public-media--cover landing-about__video"
-            data-testid="video-section"
-          >
-            <iframe
-              src={featuredVideoUrl}
-              title="Misión 1-99 en acción"
-              data-testid="featured-video"
-              loading="lazy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerpolicy="strict-origin-when-cross-origin"
-            ></iframe>
-          </div>
-        )}
 
         {hasContact && (
           <a class="landing-about__action" href="#contacto" data-testid="about-cta">

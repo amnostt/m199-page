@@ -9,14 +9,13 @@ beforeAll(async () => {
   container = await AstroContainer.create();
 });
 
-describe("LandingAbout.astro — narrative precedence + local gallery + video + CTA", () => {
+describe("LandingAbout.astro — narrative precedence + local gallery + CTA", () => {
   it("uses the description field when it has priority over mission and vision", async () => {
     const html = await container.renderToString(LandingAbout, {
       props: {
         mission: "Misión narrativa",
         vision: "Visión narrativa",
         description: "Descripción narrativa prioritaria",
-        featuredVideoUrl: null,
         hasContact: false,
       },
     });
@@ -33,7 +32,6 @@ describe("LandingAbout.astro — narrative precedence + local gallery + video + 
         mission: "Misión narrativa",
         vision: "Visión narrativa",
         description: null,
-        featuredVideoUrl: null,
         hasContact: false,
       },
     });
@@ -44,7 +42,6 @@ describe("LandingAbout.astro — narrative precedence + local gallery + video + 
         mission: null,
         vision: "Visión narrativa",
         description: null,
-        featuredVideoUrl: null,
         hasContact: false,
       },
     });
@@ -55,7 +52,6 @@ describe("LandingAbout.astro — narrative precedence + local gallery + video + 
         mission: "   ",
         vision: "Visión narrativa",
         description: null,
-        featuredVideoUrl: null,
         hasContact: false,
       },
     });
@@ -69,7 +65,6 @@ describe("LandingAbout.astro — narrative precedence + local gallery + video + 
         mission: "Historia",
         vision: null,
         description: null,
-        featuredVideoUrl: null,
         hasContact: false,
       },
     });
@@ -83,40 +78,12 @@ describe("LandingAbout.astro — narrative precedence + local gallery + video + 
     expect(html).not.toContain("/api/projects/");
   });
 
-  it("renders the iframe only when featuredVideoUrl is provided", async () => {
-    const noVideo = await container.renderToString(LandingAbout, {
-      props: {
-        mission: "Historia",
-        vision: null,
-        description: null,
-        featuredVideoUrl: null,
-        hasContact: false,
-      },
-    });
-    expect(noVideo).not.toContain("<iframe");
-    expect(noVideo).not.toContain('data-testid="featured-video"');
-
-    const withVideo = await container.renderToString(LandingAbout, {
-      props: {
-        mission: "Historia",
-        vision: null,
-        description: null,
-        featuredVideoUrl: "https://www.youtube.com/embed/abc",
-        hasContact: false,
-      },
-    });
-    expect(withVideo).toContain("<iframe");
-    expect(withVideo).toContain('data-testid="featured-video"');
-    expect(withVideo).toContain('src="https://www.youtube.com/embed/abc"');
-  });
-
   it("shows the participation CTA only when hasContact is true", async () => {
     const cta = await container.renderToString(LandingAbout, {
       props: {
         mission: "Historia",
         vision: null,
         description: null,
-        featuredVideoUrl: null,
         hasContact: true,
       },
     });
@@ -129,7 +96,6 @@ describe("LandingAbout.astro — narrative precedence + local gallery + video + 
         mission: "Historia",
         vision: null,
         description: null,
-        featuredVideoUrl: null,
         hasContact: false,
       },
     });
@@ -137,13 +103,12 @@ describe("LandingAbout.astro — narrative precedence + local gallery + video + 
     expect(noCta).not.toContain("Quiero ser parte");
   });
 
-  it("hides the section entirely when no narrative and no video exist", async () => {
+  it("hides the section entirely when no narrative exists", async () => {
     const html = await container.renderToString(LandingAbout, {
       props: {
         mission: null,
         vision: null,
         description: null,
-        featuredVideoUrl: null,
         hasContact: true,
       },
     });

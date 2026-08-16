@@ -125,8 +125,6 @@ export interface LandingSettingsForm {
   heroTitle: string;
   heroSubtitle: string;
   heroImageId: string | null;
-  mission: string;
-  vision: string;
   description: string;
   featuredVideoUrl: string;
   contactEmail: string;
