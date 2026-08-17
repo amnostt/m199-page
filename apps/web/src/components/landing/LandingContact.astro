@@ -15,8 +15,8 @@
  *
  * Footer:
  *   - The footer is always present on the public landing root and
- *     carries the brand wordmark, an editorial line, and the
- *     obligatory copyright.
+ *     carries the brand wordmark, responsible access, an editorial
+ *     line, and the obligatory copyright.
  */
 import type { LandingPayloadShape } from "./landing-shape.js";
 
@@ -78,16 +78,26 @@ const phoneHref = phone?.replace(/[^+\d]/g, "");
 )}
 
 <footer class="landing-footer" data-testid="landing-footer">
-  <div class="landing-footer__brand">
-    <span class="landing-footer__logo-frame">
-      <img
-        src="/assets/brand/logo-horizontal.png"
-        alt="Misión 1-99"
-        class="landing-footer__logo"
-        data-testid="landing-footer-logo"
-      />
-    </span>
-    <p class="landing-footer__tagline">Evangelismo sin límites. Vamos por el uno.</p>
+  <div class="landing-footer__inner">
+    <div class="landing-footer__brand">
+      <span class="landing-footer__logo-frame">
+        <img
+          src="/assets/brand/logo-horizontal.png"
+          alt="Misión 1-99"
+          class="landing-footer__logo"
+          data-testid="landing-footer-logo"
+        />
+      </span>
+      <p class="landing-footer__tagline">Evangelismo sin límites. Vamos por el uno.</p>
+    </div>
+
+    <div class="landing-footer__actions">
+      <a class="landing-footer__access" href="/admin" data-testid="landing-footer-access">
+        <span class="landing-footer__access-label">Para responsables</span>
+        <strong>Acceso para responsables</strong>
+        <span aria-hidden="true" class="landing-footer__access-arrow">↗</span>
+      </a>
+      <p class="landing-footer__meta">© Misión 1-99</p>
+    </div>
   </div>
-  <p class="landing-footer__meta">© Misión 1-99</p>
 </footer>

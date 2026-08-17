@@ -1,20 +1,31 @@
 ---
 import PublicLayout from "../../layouts/PublicLayout.astro";
 import MissionCard from "../../components/misiones/MissionCard.astro";
+import MissionPageNav from "../../components/misiones/MissionPageNav.astro";
 import MissionsPagination from "../../components/misiones/MissionsPagination.astro";
 import { fetchMissionsList, MissionsFetchError } from "../../lib/server/missions.js";
 import type { MissionListItem } from "../../lib/server/missions.js";
-const result = await fetchMissionsList(Astro.url).catch((error) => error);
+const MISSION_PAGE_SIZE = 4;
+const requestUrl = new URL(Astro.url);
+requestUrl.searchParams.set("limit", String(MISSION_PAGE_SIZE));
+const result = await fetchMissionsList(requestUrl).catch((error) => error);
 if (result instanceof MissionsFetchError) Astro.response.status = 503;
 const missions = result instanceof MissionsFetchError ? null : result;
 ---
 <PublicLayout title="Misiones | Misión 1-99">
   <main class="public-ui public-page public-missions-list" data-testid="missions-page">
-    <h1>Misiones</h1>
+    <MissionPageNav current="list" />
     {missions ? <>
-      <p>{missions.total} misiones</p>
-      <section class="public-card-list" aria-label="Misiones">
-        {missions.items.map((mission: MissionListItem) => <MissionCard mission={mission} />)}
+      <header class="public-missions-list__header">
+        <h1>Misiones</h1>
+        <p class="public-missions-list__count">
+          {missions.total} {missions.total === 1 ? "misión activa" : "misiones activas"}
+        </p>
+      </header>
+      <section class="public-missions-list__gallery" aria-label="Misiones activas">
+        <div class="public-missions-list__grid">
+          {missions.items.map((mission: MissionListItem) => <MissionCard mission={mission} />)}
+        </div>
       </section>
       <MissionsPagination {...missions} />
     </> : <div class="public-state public-state--error" role="alert"><p>No pudimos cargar las misiones.</p></div>}

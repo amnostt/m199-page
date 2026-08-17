@@ -2,15 +2,47 @@
 import MissionFinishedBadge from "./MissionFinishedBadge.astro";
 import MissionGallery from "./MissionGallery.astro";
 import MissionPublicationItem from "./MissionPublicationItem.astro";
+import MissionPageNav from "./MissionPageNav.astro";
 const { mission } = Astro.props;
 ---
 <main class="public-ui public-page public-mission-detail" data-testid="mission-detail">
-  <img src={mission.heroImageUrl} alt="" />
-  <h1>{mission.title}</h1>
-  {mission.finished && <MissionFinishedBadge />}
-  <p>{mission.heroPhrase}</p>
+  <MissionPageNav current="detail" />
+
+  <section class="public-mission-detail__hero" aria-labelledby="mission-title">
+    <div class="public-mission-detail__hero-media">
+      <img src={mission.heroImageUrl} alt="" />
+    </div>
+    <div class="public-mission-detail__hero-copy">
+      {mission.finished && <MissionFinishedBadge />}
+      <h1 id="mission-title">{mission.title}</h1>
+      <p class="public-mission-detail__phrase">{mission.heroPhrase}</p>
+      {mission.publications.length > 0 && (
+        <a class="public-mission-detail__hero-link" href="#mission-publications">
+          Explorar publicaciones
+        </a>
+      )}
+    </div>
+  </section>
+
   <MissionGallery gallery={mission.gallery} />
-  <section data-testid="mission-publications" aria-label="Publicaciones relacionadas">
-    {mission.publications.length > 0 ? mission.publications.map((publication: object) => <MissionPublicationItem publication={publication} />) : <p>No hay publicaciones relacionadas.</p>}
+
+  <section
+    class="public-mission-detail__publications"
+    id="mission-publications"
+    data-testid="mission-publications"
+    aria-labelledby="mission-publications-title"
+  >
+    <div class="public-mission-detail__section-heading">
+      <h2 id="mission-publications-title">Publicaciones relacionadas</h2>
+    </div>
+    {mission.publications.length > 0 ? (
+      <div class="public-mission-detail__publication-list">
+        {mission.publications.map((publication: object) => (
+          <MissionPublicationItem publication={publication} />
+        ))}
+      </div>
+    ) : (
+      <p class="public-mission-detail__empty">No hay publicaciones relacionadas.</p>
+    )}
   </section>
 </main>

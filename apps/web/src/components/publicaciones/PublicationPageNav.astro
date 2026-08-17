@@ -1,0 +1,16 @@
+---
+interface Props {
+  current: "list" | "detail";
+}
+
+const { current } = Astro.props;
+---
+
+<nav class="public-publication-page-nav" aria-label="Navegación de Publicaciones">
+  <a class="public-publication-page-nav__link" href="/">Volver al inicio</a>
+  {current === "detail" && (
+    <a class="public-publication-page-nav__link" href="/publicaciones">
+      Todas las publicaciones
+    </a>
+  )}
+</nav>

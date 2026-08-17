@@ -1,6 +1,7 @@
 ---
 import PublicLayout from "../../layouts/PublicLayout.astro";
 import MissionDetail from "../../components/misiones/MissionDetail.astro";
+import MissionPageNav from "../../components/misiones/MissionPageNav.astro";
 import { fetchMissionBySlug, MissionsFetchError } from "../../lib/server/missions.js";
 
 const result = await fetchMissionBySlug(Astro.params.slug ?? "").catch((error) => error);
@@ -11,6 +12,7 @@ const mission = result instanceof MissionsFetchError ? null : result;
 <PublicLayout title={mission ? `${mission.title} | Misión 1-99` : "Misión no encontrada | Misión 1-99"}>
   {mission ? <MissionDetail mission={mission} /> :
     <main class="public-ui public-page public-state" data-testid="mission-detail-error" role="alert">
+      <MissionPageNav current="detail" />
       <h1>{result instanceof MissionsFetchError && result.reason === "not_found" ? "Misión no encontrada" : "No pudimos cargar la misión"}</h1>
     </main>}
 </PublicLayout>

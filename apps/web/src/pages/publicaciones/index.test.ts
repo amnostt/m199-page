@@ -37,7 +37,12 @@ describe("publications SSR", () => {
       ),
     });
     expect(html).toContain("One");
+    expect(html).toContain("Archivo público");
+    expect(html).toContain('class="public-publications-list__gallery"');
+    expect(html).toContain('class="public-publication-card__media"');
+    expect(html).toContain("Leer publicación");
     expect(html).toContain('value="OUTING" aria-pressed="true"');
+    expect(html).toContain("Página 1 de 2");
     expect(html).toContain(
       "/publicaciones?page=2&#38;limit=25&#38;type=OUTING",
     );

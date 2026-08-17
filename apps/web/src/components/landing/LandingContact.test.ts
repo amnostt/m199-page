@@ -86,6 +86,9 @@ describe("LandingContact.astro — conditional channels + unconditional footer",
 
     expect(html).toContain('data-testid="landing-footer"');
     expect(html).toContain('src="/assets/brand/logo-horizontal.png"');
+    expect(html).toContain('data-testid="landing-footer-access"');
+    expect(html).toContain('href="/admin"');
+    expect(html).toContain("Acceso para responsables");
     expect(html).toContain("© Misión 1-99");
   });
 });

@@ -287,7 +287,7 @@ describe("public.css landing scroll-snap missions contract", () => {
 });
 
 describe("public.css landing OpenDesign blocks contract", () => {
-  it("defines the verse, banner, about gallery, publications entry, and unconditional footer", () => {
+  it("defines the verse, banner, about gallery, publications entry, and footer access", () => {
     const css = readPublic();
     expect(css).toMatch(
       /\.public-ui\s+\.landing-verse\s*\{[^}]*background:\s*var\(--secondary\);[^}]*border-block:\s*1px\s+solid\s+var\(--secondary-foreground\)/s,
@@ -340,12 +340,48 @@ describe("public.css landing OpenDesign blocks contract", () => {
     expect(css).toMatch(
       /\.public-ui\s+\.landing-footer\s*\{[^}]*display:\s*flex;[^}]*background:\s*#111;/s,
     );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-footer__inner\s*\{[^}]*display:\s*flex;[^}]*width:\s*min\([^;]+var\(--public-shell-max\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-footer__access\s*\{[^}]*display:\s*grid;[^}]*border:\s*1px\s+solid\s+#4a403d/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui\s+\.landing-footer__actions\s*\{[^}]*flex-direction:\s*column/s,
+    );
     expect(css).not.toMatch(/\.public-ui\s+\.landing-footer\s*\{[^}]*50vw/s);
     expect(css).toMatch(
       /\.public-ui\s+\.landing-contact__inner\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.35fr\)\s+minmax\(20rem,\s*1fr\);[^}]*width:\s*min\([^;]+var\(--public-shell-max\)\)/s,
     );
     expect(css).toMatch(
       /\.public-ui\s+\.landing-contact\s*\{[^}]*margin-block:\s*0;/s,
+    );
+  });
+});
+
+describe("public.css publications editorial contract", () => {
+  it("defines the archive gallery, filters, pagination, and detail composition", () => {
+    const css = readPublic();
+    expect(css).toMatch(
+      /\.public-ui\.public-publications-list\s*\{[^}]*max-width:\s*var\(--public-shell-max\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-publications-list__grid\s*\{[^}]*grid-template-columns:\s*repeat\(12,/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-publication-card__media\s*\{[^}]*aspect-ratio:\s*5\s*\/\s*3/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-publication-filter\.list-active\s*\{[^}]*background:\s*var\(--secondary\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-publications-pagination__link\s*\{[^}]*min-height:\s*44px/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-publication-detail__hero\s*\{[^}]*grid-template-columns:/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-publication-missions__list\s*\{[^}]*border-block-start:/s,
     );
   });
 });

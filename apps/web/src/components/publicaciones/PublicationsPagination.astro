@@ -1,13 +1,100 @@
 ---
 const { page, limit, hasMore, type } = Astro.props;
+const total = Number(Astro.props.total ?? 0);
+const totalPages = Math.max(
+  1,
+  Math.ceil(total / limit),
+  page,
+  page + (hasMore ? 1 : 0),
+);
+const pageTokens: Array<number | "start-ellipsis" | "end-ellipsis"> =
+  totalPages <= 7
+    ? Array.from({ length: totalPages }, (_, index) => index + 1)
+    : page <= 4
+      ? [1, 2, 3, 4, 5, "end-ellipsis", totalPages]
+      : page >= totalPages - 3
+        ? [
+            1,
+            "start-ellipsis",
+            ...Array.from({ length: 5 }, (_, index) => totalPages - 4 + index),
+          ]
+        : [
+            1,
+            "start-ellipsis",
+            page - 1,
+            page,
+            page + 1,
+            "end-ellipsis",
+            totalPages,
+          ];
 const link = (next: number) => {
   const params = new URLSearchParams({ page: String(next), limit: String(limit) });
   if (type) params.set("type", type);
   return `/publicaciones?${params}`;
 };
 ---
-<nav class="public-publications-pagination" aria-label="Paginación">
-  {page > 1 && <a class="public-action" href={link(page - 1)}>Anterior</a>}
-  <span>Página {page}</span>
-  {hasMore && <a class="public-action" href={link(page + 1)}>Siguiente</a>}
+<nav class="public-publications-pagination" aria-label="Paginación de Publicaciones">
+  <p class="public-publications-pagination__summary">
+    Página {page} de {totalPages}
+  </p>
+  <div class="public-publications-pagination__controls">
+    {page > 1 && (
+      <a
+        class="public-publications-pagination__link public-publications-pagination__link--wide"
+        href={link(1)}
+      >
+        Primera
+      </a>
+    )}
+    {page > 1 && (
+      <a
+        class="public-publications-pagination__link public-publications-pagination__link--wide"
+        href={link(page - 1)}
+      >
+        Anterior
+      </a>
+    )}
+    <ol class="public-publications-pagination__pages" aria-label="Páginas">
+      {pageTokens.map((token) =>
+        token === "start-ellipsis" || token === "end-ellipsis" ? (
+          <li class="public-publications-pagination__ellipsis" aria-hidden="true">
+            ...
+          </li>
+        ) : (
+          <li>
+            <a
+              class:list={[
+                "public-publications-pagination__link",
+                "public-publications-pagination__page",
+                {
+                  "public-publications-pagination__page--current": token === page,
+                },
+              ]}
+              href={link(token)}
+              aria-current={token === page ? "page" : undefined}
+              aria-label={`Ir a la página ${token}`}
+            >
+              {token}
+            </a>
+          </li>
+        ),
+      )}
+    </ol>
+    {page < totalPages && (
+      <a
+        class="public-publications-pagination__link public-publications-pagination__link--wide"
+        href={link(page + 1)}
+      >
+        Siguiente
+      </a>
+    )}
+    {page < totalPages && (
+      <a
+        class="public-publications-pagination__link public-publications-pagination__link--wide"
+        href={link(totalPages)}
+      >
+        Última
+      </a>
+    )}
+  </div>
 </nav>

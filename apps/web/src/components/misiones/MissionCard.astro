@@ -1,8 +1,15 @@
 ---
 const { mission } = Astro.props;
 ---
-<article class="public-mission-card public-card">
-  <img src={mission.heroImageUrl} alt="" />
-  <h2><a href={`/misiones/${mission.slug}`}>{mission.title}</a></h2>
-  <p>{mission.heroPhrase}</p>
+<article class="public-mission-card">
+  <a class="public-mission-card__link" href={`/misiones/${mission.slug}`}>
+    <div class="public-mission-card__media">
+      <img src={mission.heroImageUrl} alt="" loading="lazy" decoding="async" />
+    </div>
+    <div class="public-mission-card__body">
+      <h2>{mission.title}</h2>
+      <p>{mission.heroPhrase}</p>
+      <span class="public-mission-card__action">Ver misión</span>
+    </div>
+  </a>
 </article>

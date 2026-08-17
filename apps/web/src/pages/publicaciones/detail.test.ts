@@ -38,6 +38,11 @@ describe("publication detail SSR", () => {
     expect(html.includes('data-testid="publication-badges"')).toBe(
       type !== "POST",
     );
+    expect(html).toContain('class="public-publication-page-nav"');
+    expect(html).toContain("Todas las publicaciones");
+    expect(html).toContain('class="public-publication-detail__hero"');
+    expect(html).toContain("Leer publicación");
+    expect(html).toContain("La historia continúa");
     expect(html).not.toContain("<script>");
     expect(html).not.toContain('data-testid="publication-missions"');
   });

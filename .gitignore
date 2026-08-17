@@ -39,3 +39,18 @@ uploads/
 
 # Local code-navigation index
 .codegraph/
+
+# Local OpenCode project tooling
+.opencode/
+
+# Impeccable ephemeral runtime state and local overrides
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.impeccable/*.png
+.impeccable/live/server.json
+.impeccable/live/sessions/
+.impeccable/live/previews/
+.impeccable/live/annotations/
+.impeccable/live/cache/
+.impeccable/live/*.png

@@ -6,12 +6,28 @@ interface Mission {
 }
 const { missions } = Astro.props as { missions: Mission[] };
 ---
-{missions.length > 0 && <section data-testid="publication-missions" aria-label="Misiones asociadas">
-  <h2>Misiones asociadas</h2>
-  <ul>
-    {missions.map((mission) => <li>
-      <a href={`/misiones/${mission.slug}`}>{mission.title}</a>
-      {mission.status === "ARCHIVED" && <span> (Misión finalizada)</span>}
-    </li>)}
-  </ul>
-</section>}
+{missions.length > 0 && (
+  <section
+    class="public-publication-missions"
+    data-testid="publication-missions"
+    aria-label="Misiones asociadas"
+  >
+    <div class="public-publication-detail__section-heading">
+      <p>En contexto</p>
+      <h2>Misiones asociadas</h2>
+    </div>
+    <ul class="public-publication-missions__list">
+      {missions.map((mission) => (
+        <li class="public-publication-missions__item">
+          <a class="public-publication-missions__link" href={`/misiones/${mission.slug}`}>
+            <span>{mission.title}</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          {mission.status === "ARCHIVED" && (
+            <span class="public-publication-missions__status">Misión finalizada</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  </section>
+)}

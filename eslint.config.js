@@ -18,6 +18,7 @@ export default tseslint.config(
       "**/build/**",
       "**/.output/**",
       "**/coverage/**",
+      ".opencode/skills/impeccable/**",
       "packages/db/prisma/**",
       "apps/web/astro.config.mjs",
       "apps/web/server-entry.mjs",

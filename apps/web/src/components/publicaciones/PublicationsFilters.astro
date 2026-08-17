@@ -7,10 +7,21 @@ const options = [
   ["EVENT", "Eventos"],
 ] as const;
 ---
-<form class="public-publication-filters" method="get" aria-label="Filtrar publicaciones">
+<form
+  class="public-publication-filters"
+  method="get"
+  aria-label="Filtrar publicaciones"
+>
   <input type="hidden" name="limit" value={Astro.url.searchParams.get("limit") ?? "10"} />
   {options.map(([value, label]) => (
-    <button type="submit" name="type" value={value} aria-pressed={type === value} class:list-active={type === value}>
+    <button
+      class="public-publication-filter"
+      type="submit"
+      name="type"
+      value={value}
+      aria-pressed={type === value}
+      class:list-active={type === value}
+    >
       {label}
     </button>
   ))}

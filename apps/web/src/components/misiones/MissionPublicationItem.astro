@@ -1,7 +1,25 @@
 ---
+import { formatPublicDate } from "../../lib/server/public-content.js";
 const { publication } = Astro.props;
 ---
-<article data-testid="mission-publication">
-  <a href={`/publicaciones/${publication.slug}`}><h3>{publication.title}</h3></a>
-  <p>{publication.excerpt}</p>
+<article class="public-mission-publication" data-testid="mission-publication">
+  <div class="public-mission-publication__content">
+    <p class="public-mission-publication__type">{publication.type}</p>
+    <h3>
+      <a href={`/publicaciones/${publication.slug}`}>{publication.title}</a>
+    </h3>
+    <p class="public-mission-publication__excerpt">{publication.excerpt}</p>
+    <time datetime={publication.publishedAt}>
+      {formatPublicDate(publication.publishedAt)}
+    </time>
+  </div>
+  {publication.featuredImageUrl && (
+    <img
+      class="public-mission-publication__image"
+      src={publication.featuredImageUrl}
+      alt=""
+      loading="lazy"
+      decoding="async"
+    />
+  )}
 </article>

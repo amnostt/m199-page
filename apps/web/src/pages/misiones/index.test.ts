@@ -21,8 +21,8 @@ describe("missions SSR", () => {
             },
           ],
           page: 2,
-          limit: 2,
-          total: 3,
+          limit: 4,
+          total: 12,
           hasMore: true,
         }),
         { status: 200 },
@@ -37,9 +37,19 @@ describe("missions SSR", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain("One");
+    const html = await response.text();
+    expect(html).toContain("One");
+    expect(html).toContain("12 misiones activas");
+    expect(html).toContain('class="public-missions-list__gallery"');
+    expect(html).toContain('class="public-mission-card"');
+    expect(html).toContain('href="/misiones/one"');
+    expect(html).toContain('href="/"');
+    expect(html).toContain("Página 2 de 3");
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('href="/misiones?page=1&#38;limit=4"');
+    expect(html).toContain('href="/misiones?page=3&#38;limit=4"');
     expect(fetch).toHaveBeenCalledWith(
-      expect.objectContaining({ search: "?page=2&limit=2" }),
+      expect.objectContaining({ search: "?page=2&limit=4" }),
     );
   });
 

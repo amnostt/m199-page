@@ -1,0 +1,15 @@
+---
+interface Props {
+  current: "list" | "detail";
+}
+
+const { current } = Astro.props;
+---
+<nav class="public-mission-page-nav" aria-label="Navegación de Misiones">
+  <a class="public-mission-page-nav__link" href="/">Volver al inicio</a>
+  {current === "detail" && (
+    <a class="public-mission-page-nav__link" href="/misiones">
+      Todas las misiones
+    </a>
+  )}
+</nav>
