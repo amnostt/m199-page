@@ -38,8 +38,8 @@ export const DEFAULT_LANDING_SETTINGS: NullableLandingSeedText = {
     "Somos una misión comprometida con acercar ayuda concreta, acompañamiento espiritual y oportunidades de encuentro para quienes más lo necesitan.",
   contactEmail: "contacto@mision199.org",
   contactPhone: "+54 9 11 0000-0000",
-  verseText: "Let us not grow weary of doing good.",
-  verseReference: "Galatians 6:9",
+  verseText: "No nos cansemos de hacer el bien.",
+  verseReference: "Gálatas 6:9",
 };
 
 export function buildMissingLandingSettingsDefaults(

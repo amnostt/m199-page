@@ -96,6 +96,7 @@ describe("development database seed", () => {
     const adminCreate = (client.calls.responsibleUser?.[0]?.create ??
       {}) as Record<string, unknown>;
     expect(adminCreate.email).toBe(DEVELOPMENT_ADMIN_EMAIL);
+    expect(adminCreate.displayName).toBe("Administrador de desarrollo local");
     expect(adminCreate.passwordHash).not.toBe(DEVELOPMENT_ADMIN_PASSWORD);
     await expect(
       bcrypt.compare(
@@ -105,14 +106,44 @@ describe("development database seed", () => {
     ).resolves.toBe(true);
 
     expect(client.calls.fileAsset).toHaveLength(4);
-    expect(
-      (client.calls.mission?.[0]?.create ?? {}) as Record<string, unknown>,
-    ).toMatchObject({
-      id: "seed-mission-1",
-      slug: "seed-mission-1",
-      status: "ACTIVE",
-      heroImageId: "seed-file-asset-mission-hero",
-    });
+    const missions = (client.calls.mission ?? []).map(
+      (call) => call.create as Record<string, unknown>,
+    );
+    expect(missions).toHaveLength(4);
+    expect(missions).toEqual([
+      {
+        id: "seed-mission-1",
+        slug: "seed-mission-1",
+        title: "Misión 1-99 — Primera comunidad",
+        heroImageId: "seed-file-asset-mission-hero",
+        heroPhrase: "Acompañamos con esperanza, servicio y fe.",
+        status: "ACTIVE",
+      },
+      {
+        id: "seed-mission-2",
+        slug: "seed-mission-2",
+        title: "Red de apoyo barrial",
+        heroImageId: "seed-file-asset-mission-hero",
+        heroPhrase: "Fortalecemos redes cercanas para cuidar a cada familia.",
+        status: "ACTIVE",
+      },
+      {
+        id: "seed-mission-3",
+        slug: "seed-mission-3",
+        title: "Puentes de esperanza",
+        heroImageId: "seed-file-asset-mission-hero",
+        heroPhrase: "Creamos encuentros que abren caminos de colaboración.",
+        status: "ACTIVE",
+      },
+      {
+        id: "seed-mission-4",
+        slug: "seed-mission-4",
+        title: "Acompañamiento familiar",
+        heroImageId: "seed-file-asset-mission-hero",
+        heroPhrase: "Caminamos junto a las familias en cada etapa.",
+        status: "ARCHIVED",
+      },
+    ]);
 
     expect(client.calls.publication).toHaveLength(3);
     const byType = (type: string): Record<string, unknown> => {
@@ -167,11 +198,15 @@ describe("development database seed", () => {
     expect(client.rows.has("fileAsset:seed-file-asset-mission-hero")).toBe(
       true,
     );
-    expect(client.rows.has("mission:seed-mission-1")).toBe(true);
+    expect(
+      [1, 2, 3, 4].every((number) =>
+        client.rows.has(`mission:seed-mission-${number}`),
+      ),
+    ).toBe(true);
     expect(client.rows.has("publication:seed-publication-post-1")).toBe(true);
     expect(client.calls.responsibleUser).toHaveLength(2);
     expect(client.calls.fileAsset).toHaveLength(8);
-    expect(client.calls.mission).toHaveLength(2);
+    expect(client.calls.mission).toHaveLength(8);
     expect(client.calls.publication).toHaveLength(6);
     expect(client.calls.publicationMission).toHaveLength(4);
   });

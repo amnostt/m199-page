@@ -7,6 +7,22 @@ import {
 } from "./landing-seed.js";
 
 describe("landing settings seed defaults", () => {
+  it("keeps user-readable defaults in Spanish", () => {
+    expect(DEFAULT_LANDING_SETTINGS).toMatchObject({
+      heroTitle: "Misión 1-99",
+      heroSubtitle:
+        "Acompañamos a comunidades y familias con esperanza, servicio y fe.",
+      mission:
+        "Servir con amor, construir vínculos y compartir recursos que transformen vidas.",
+      vision:
+        "Ver comunidades fortalecidas, unidas y activas en el cuidado de cada persona.",
+      description:
+        "Somos una misión comprometida con acercar ayuda concreta, acompañamiento espiritual y oportunidades de encuentro para quienes más lo necesitan.",
+      verseText: "No nos cansemos de hacer el bien.",
+      verseReference: "Gálatas 6:9",
+    });
+  });
+
   it("fills every default text field when the settings row is missing values", () => {
     expect(buildMissingLandingSettingsDefaults({})).toEqual(
       DEFAULT_LANDING_SETTINGS,

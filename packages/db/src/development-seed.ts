@@ -115,14 +115,40 @@ const SEED_FILE_ASSETS_LIST = Object.values(SEED_FILE_ASSETS).map((asset) => ({
   fileSize: 4096,
 }));
 
-const SEED_MISSION = {
-  id: "seed-mission-1",
-  slug: "seed-mission-1",
-  title: "Misión 1-99 — Primera comunidad",
-  heroImageId: SEED_FILE_ASSETS.missionHero.id,
-  heroPhrase: "Acompañamos con esperanza, servicio y fe.",
-  status: "ACTIVE",
-} as const;
+const SEED_MISSIONS = [
+  {
+    id: "seed-mission-1",
+    slug: "seed-mission-1",
+    title: "Misión 1-99 — Primera comunidad",
+    heroImageId: SEED_FILE_ASSETS.missionHero.id,
+    heroPhrase: "Acompañamos con esperanza, servicio y fe.",
+    status: "ACTIVE",
+  },
+  {
+    id: "seed-mission-2",
+    slug: "seed-mission-2",
+    title: "Red de apoyo barrial",
+    heroImageId: SEED_FILE_ASSETS.missionHero.id,
+    heroPhrase: "Fortalecemos redes cercanas para cuidar a cada familia.",
+    status: "ACTIVE",
+  },
+  {
+    id: "seed-mission-3",
+    slug: "seed-mission-3",
+    title: "Puentes de esperanza",
+    heroImageId: SEED_FILE_ASSETS.missionHero.id,
+    heroPhrase: "Creamos encuentros que abren caminos de colaboración.",
+    status: "ACTIVE",
+  },
+  {
+    id: "seed-mission-4",
+    slug: "seed-mission-4",
+    title: "Acompañamiento familiar",
+    heroImageId: SEED_FILE_ASSETS.missionHero.id,
+    heroPhrase: "Caminamos junto a las familias en cada etapa.",
+    status: "ARCHIVED",
+  },
+] as const;
 
 const SEED_PUBLICATION_POST = {
   id: "seed-publication-post-1",
@@ -186,12 +212,12 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
     where: { email: DEVELOPMENT_ADMIN_EMAIL },
     create: {
       email: DEVELOPMENT_ADMIN_EMAIL,
-      displayName: "Local Development Administrator",
+      displayName: "Administrador de desarrollo local",
       passwordHash,
       status: "ACTIVE",
     },
     update: {
-      displayName: "Local Development Administrator",
+      displayName: "Administrador de desarrollo local",
       passwordHash,
       status: "ACTIVE",
     },
@@ -205,11 +231,13 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
     });
   }
 
-  await client.mission.upsert({
-    where: { id: SEED_MISSION.id },
-    create: { ...SEED_MISSION },
-    update: { ...SEED_MISSION },
-  });
+  for (const mission of SEED_MISSIONS) {
+    await client.mission.upsert({
+      where: { id: mission.id },
+      create: { ...mission },
+      update: { ...mission },
+    });
+  }
 
   await client.publication.upsert({
     where: { id: SEED_PUBLICATION_POST.id },
@@ -238,10 +266,13 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
       where: {
         publicationId_missionId: {
           publicationId: publication.id,
-          missionId: SEED_MISSION.id,
+          missionId: SEED_MISSIONS[0].id,
         },
       },
-      create: { publicationId: publication.id, missionId: SEED_MISSION.id },
+      create: {
+        publicationId: publication.id,
+        missionId: SEED_MISSIONS[0].id,
+      },
       update: {},
     });
 
