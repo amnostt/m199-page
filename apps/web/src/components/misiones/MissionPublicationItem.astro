@@ -1,6 +1,12 @@
 ---
 import { formatPublicDate } from "../../lib/server/public-content.js";
+import {
+  PUBLIC_IMAGE_FALLBACK_HANDLER,
+  resolvePublicImageUrl,
+} from "../../lib/public-image.js";
+
 const { publication } = Astro.props;
+const imageSrc = resolvePublicImageUrl(publication.featuredImageUrl);
 ---
 <article class="public-mission-publication" data-testid="mission-publication">
   <div class="public-mission-publication__content">
@@ -13,13 +19,12 @@ const { publication } = Astro.props;
       {formatPublicDate(publication.publishedAt)}
     </time>
   </div>
-  {publication.featuredImageUrl && (
-    <img
-      class="public-mission-publication__image"
-      src={publication.featuredImageUrl}
-      alt=""
-      loading="lazy"
-      decoding="async"
-    />
-  )}
+  <img
+    class="public-mission-publication__image"
+    src={imageSrc}
+    alt=""
+    loading="lazy"
+    decoding="async"
+    onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+  />
 </article>

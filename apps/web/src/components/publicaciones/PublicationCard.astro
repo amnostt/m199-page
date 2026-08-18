@@ -1,23 +1,23 @@
 ---
 import { formatPublicDate } from "../../lib/server/public-content.js";
+import {
+  PUBLIC_IMAGE_FALLBACK_HANDLER,
+  resolvePublicImageUrl,
+} from "../../lib/public-image.js";
 
 const { publication } = Astro.props;
+const imageSrc = resolvePublicImageUrl(publication.featuredImageUrl);
 ---
 <article class="public-publication-card">
   <a class="public-publication-card__link" href={`/publicaciones/${publication.slug}`}>
     <div class="public-publication-card__media">
-      {publication.featuredImageUrl ? (
-        <img
-          src={publication.featuredImageUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
-      ) : (
-        <span class="public-publication-card__media-placeholder" aria-hidden="true">
-          Misión 1-99
-        </span>
-      )}
+      <img
+        src={imageSrc}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+      />
     </div>
     <div class="public-publication-card__body">
       <div class="public-publication-card__meta">

@@ -1,4 +1,9 @@
 ---
+import {
+  PUBLIC_IMAGE_FALLBACK_HANDLER,
+  resolvePublicImageUrl,
+} from "../../lib/public-image.js";
+
 const { gallery = [] } = Astro.props;
 ---
 {gallery.length > 0 && (
@@ -13,7 +18,13 @@ const { gallery = [] } = Astro.props;
     <div class="public-mission-detail__gallery-grid">
       {gallery.map((image: { imageUrl: string }) => (
         <figure class="public-mission-detail__gallery-item">
-          <img src={image.imageUrl} alt="" loading="lazy" decoding="async" />
+          <img
+            src={resolvePublicImageUrl(image.imageUrl)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+          />
         </figure>
       ))}
     </div>

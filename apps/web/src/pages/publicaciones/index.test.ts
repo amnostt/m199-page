@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Page from "./index.astro";
+import { PUBLIC_IMAGE_FALLBACK_HANDLER } from "../../lib/public-image.js";
 
 describe("publications SSR", () => {
   it("renders list cards", async () => {
@@ -17,7 +18,7 @@ describe("publications SSR", () => {
                 excerpt: "Text",
                 type: "POST",
                 publishedAt: "2026-01-01T00:00:00.000Z",
-                featuredImageUrl: null,
+                featuredImageUrl: "",
               },
             ],
             page: 1,
@@ -40,6 +41,8 @@ describe("publications SSR", () => {
     expect(html).toContain("Archivo público");
     expect(html).toContain('class="public-publications-list__gallery"');
     expect(html).toContain('class="public-publication-card__media"');
+    expect(html).toContain('src="/assets/template-picture.png"');
+    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
     expect(html).toContain("Leer publicación");
     expect(html).toContain('value="OUTING" aria-pressed="true"');
     expect(html).toContain("Página 1 de 2");

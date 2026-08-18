@@ -20,6 +20,10 @@
  *     wires button disabled-state and keyboard scroll support.
  */
 import type { MissionListItem } from "../../lib/server/missions.js";
+import {
+  PUBLIC_IMAGE_FALLBACK_HANDLER,
+  resolvePublicImageUrl,
+} from "../../lib/public-image.js";
 
 interface Props {
   missions: MissionListItem[] | null;
@@ -100,11 +104,12 @@ const trackId = "missions-track";
             >
               <div class="landing-mission-card__media">
                 <img
-                  src={mission.heroImageUrl}
+                  src={resolvePublicImageUrl(mission.heroImageUrl)}
                   alt=""
                   loading="lazy"
                   decoding="async"
                   class="landing-mission-card__image"
+                  onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
                 />
               </div>
               <div class="landing-mission-card__body">

@@ -1,10 +1,22 @@
 ---
+import {
+  PUBLIC_IMAGE_FALLBACK_HANDLER,
+  resolvePublicImageUrl,
+} from "../../lib/public-image.js";
+
 const { mission } = Astro.props;
+const imageSrc = resolvePublicImageUrl(mission.heroImageUrl);
 ---
 <article class="public-mission-card">
   <a class="public-mission-card__link" href={`/misiones/${mission.slug}`}>
     <div class="public-mission-card__media">
-      <img src={mission.heroImageUrl} alt="" loading="lazy" decoding="async" />
+      <img
+        src={imageSrc}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+      />
     </div>
     <div class="public-mission-card__body">
       <h2>{mission.title}</h2>

@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Page from "./[slug].astro";
+import { PUBLIC_IMAGE_FALLBACK_HANDLER } from "../../lib/public-image.js";
 
 const detail = (type: string, missions: object[] = []) => ({
   slug: "demo",
@@ -37,6 +38,8 @@ describe("publication detail SSR", () => {
     expect(html).toContain('class="public-publication-page-nav"');
     expect(html).toContain("Todas las publicaciones");
     expect(html).toContain('class="public-publication-detail__hero"');
+    expect(html).toContain('src="/assets/template-picture.png"');
+    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
     expect(html).toContain(
       type === "POST" ? "Historia" : type === "OUTING" ? "Salida" : "Evento",
     );
@@ -96,6 +99,8 @@ describe("publication detail SSR", () => {
     expect(html.indexOf("public-publication-detail__hero-media")).toBeLessThan(
       html.indexOf("public-publication-detail__hero-copy"),
     );
+    expect(html).toContain('src="/files/cover"');
+    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
   });
   it("renders a controlled failure", async () => {
     for (const failure of [

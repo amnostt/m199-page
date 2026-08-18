@@ -1,16 +1,21 @@
 ---
+import {
+  PUBLIC_IMAGE_FALLBACK_HANDLER,
+  resolvePublicImageUrl,
+} from "../../lib/public-image.js";
 import MissionFinishedBadge from "./MissionFinishedBadge.astro";
 import MissionGallery from "./MissionGallery.astro";
 import MissionPublicationItem from "./MissionPublicationItem.astro";
 import MissionPageNav from "./MissionPageNav.astro";
 const { mission } = Astro.props;
+const imageSrc = resolvePublicImageUrl(mission.heroImageUrl);
 ---
 <main class="public-ui public-page public-mission-detail" data-testid="mission-detail">
   <MissionPageNav current="detail" />
 
   <section class="public-mission-detail__hero" aria-labelledby="mission-title">
     <div class="public-mission-detail__hero-media">
-      <img src={mission.heroImageUrl} alt="" />
+      <img src={imageSrc} alt="" onerror={PUBLIC_IMAGE_FALLBACK_HANDLER} />
     </div>
     <div class="public-mission-detail__hero-copy">
       {mission.finished && <MissionFinishedBadge />}

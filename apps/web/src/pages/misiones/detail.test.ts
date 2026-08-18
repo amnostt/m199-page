@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Page from "./[slug].astro";
+import { PUBLIC_IMAGE_FALLBACK_HANDLER } from "../../lib/public-image.js";
 
 const activeDetail = {
   id: "m-1",
@@ -46,10 +47,62 @@ describe("mission detail SSR", () => {
     expect(html).toContain('href="/"');
     expect(html).toContain("Todas las misiones");
     expect(html).toContain('data-testid="mission-gallery"');
+    expect(html).toContain('src="/files/f-1"');
+    expect(html).toContain('src="/files/f-2"');
+    expect(
+      html.match(new RegExp(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}`, "g")),
+    ).toHaveLength(3);
     expect(html).toContain("La Misión en imágenes");
     expect(html).toContain("Story One");
     expect(html).toContain("Explorar publicaciones");
     expect(html).not.toContain('data-testid="mission-detail-error"');
+  });
+
+  it("uses the public image fallback for an empty mission hero image", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ ...activeDetail, heroImageUrl: "" })),
+        ),
+    );
+
+    const html = await (
+      await AstroContainer.create()
+    ).renderToString(Page, {
+      params: { slug: "one" },
+      request: new Request("http://localhost/misiones/one"),
+    });
+
+    expect(html).toContain('src="/assets/template-picture.png"');
+    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
+  });
+
+  it("uses the public image fallback for a related publication without an image", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ...activeDetail,
+            publications: [
+              { ...activeDetail.publications[0], featuredImageUrl: null },
+            ],
+          }),
+        ),
+      ),
+    );
+
+    const html = await (
+      await AstroContainer.create()
+    ).renderToString(Page, {
+      params: { slug: "one" },
+      request: new Request("http://localhost/misiones/one"),
+    });
+
+    expect(html).toContain('src="/assets/template-picture.png"');
+    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
   });
 
   it("omits the gallery and hero action when optional content is empty", async () => {

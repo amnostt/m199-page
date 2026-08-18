@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import LandingMissions from "./LandingMissions.astro";
 import type { MissionListItem } from "../../lib/server/missions.js";
+import { PUBLIC_IMAGE_FALLBACK_HANDLER } from "../../lib/public-image.js";
 
 let container: Awaited<ReturnType<typeof AstroContainer.create>>;
 
@@ -51,6 +52,7 @@ describe("LandingMissions.astro — loaded cards", () => {
     expect(html).toContain("Alpha mission");
     expect(html).toContain("Alpha phrase");
     expect(html).toContain('src="/files/m-1-hero"');
+    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
 
     expect(html).toContain('href="/misiones/beta"');
     expect(html).toContain("Beta mission");
@@ -76,6 +78,18 @@ describe("LandingMissions.astro — loaded cards", () => {
       .map((match) => match[1])
       .sort();
     expect(indices).toEqual(["01", "02"]);
+  });
+
+  it("uses the public image fallback for an empty mission image", async () => {
+    const html = await container.renderToString(LandingMissions, {
+      props: {
+        missions: [{ ...sampleMissions[0]!, heroImageUrl: "" }],
+      },
+    });
+
+    expect(html).toContain('src="/assets/template-picture.png"');
+    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
+    expect(html).not.toContain('src="/files/m-1-hero"');
   });
 });
 
@@ -110,6 +124,7 @@ describe("LandingMissions.astro — empty and failure states", () => {
       const html = await container.renderToString(LandingMissions, {
         props: { missions: value },
       });
+      const visitorCopy = html.replace(/<[^>]*>/g, " ").toLowerCase();
       for (const leak of [
         "error",
         "fallo",
@@ -120,7 +135,7 @@ describe("LandingMissions.astro — empty and failure states", () => {
         "invalid_payload",
         "503",
       ]) {
-        expect(html.toLowerCase()).not.toContain(leak);
+        expect(visitorCopy).not.toContain(leak);
       }
     }
   });
