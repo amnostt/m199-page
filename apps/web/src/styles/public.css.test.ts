@@ -378,7 +378,10 @@ describe("public.css publications editorial contract", () => {
       /\.public-ui\s+\.public-publications-pagination__link\s*\{[^}]*min-height:\s*44px/s,
     );
     expect(css).toMatch(
-      /\.public-ui\s+\.public-publication-detail__hero\s*\{[^}]*grid-template-columns:/s,
+      /\.public-ui\s+\.public-publication-detail__hero\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.15fr\)\s+minmax\(18rem,\s*0\.85fr\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-publication-badge\s*\{[^}]*background:\s*var\(--secondary\)/s,
     );
     expect(css).toMatch(
       /\.public-ui\s+\.public-publication-missions__list\s*\{[^}]*border-block-start:/s,

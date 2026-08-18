@@ -40,7 +40,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 describe("MissionsPage", () => {
-  it("loads both lists in parallel and keeps separate sections without delete", async () => {
+  it("loads both lists and filters them with status tabs without delete", async () => {
     vi.mocked(listActiveMissions).mockResolvedValue([
       mission("active", "ACTIVE"),
     ]);
@@ -58,6 +58,8 @@ describe("MissionsPage", () => {
     expect(screen.getByTestId("active-missions").textContent).not.toContain(
       "Mission old",
     );
+    fireEvent.click(screen.getByRole("tab", { name: /Archivadas/ }));
+    expect(await screen.findByTestId("archived-missions")).toBeTruthy();
     expect(screen.getByTestId("archived-missions").textContent).toContain(
       "Mission old",
     );
@@ -76,8 +78,9 @@ describe("MissionsPage", () => {
     await waitFor(() =>
       expect(screen.getByText("Todavía no hay misiones activas.")).toBeTruthy(),
     );
+    fireEvent.click(screen.getByRole("tab", { name: /Archivadas/ }));
     expect(
-      screen.getByText("Todavía no hay misiones anteriores."),
+      screen.getByText("Todavía no hay misiones archivadas."),
     ).toBeTruthy();
   });
 
@@ -89,6 +92,8 @@ describe("MissionsPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("active-missions")).toBeTruthy(),
     );
+    fireEvent.click(screen.getByRole("button", { name: "Nueva misión" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Crear misión" }));
     expect(screen.getByRole("alert")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Título"), {
@@ -136,9 +141,16 @@ describe("MissionsPage", () => {
     await waitFor(() =>
       expect(screen.getByText("Mission active")).toBeTruthy(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Mission active" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
     expect(screen.getByDisplayValue("Mission active")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Mission active" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Archivar" }));
     expect(await screen.findByRole("alertdialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
     await waitFor(() =>
@@ -156,7 +168,10 @@ describe("MissionsPage", () => {
     await waitFor(() =>
       expect(screen.getByText("Mission active")).toBeTruthy(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Mission active" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
     fireEvent.change(screen.getByLabelText("Título"), {
       target: { value: "Updated" },
     });
@@ -167,7 +182,7 @@ describe("MissionsPage", () => {
         expect.objectContaining({ title: "Updated" }),
       ),
     );
-    expect(screen.getByRole("button", { name: "Crear misión" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Nueva misión" })).toBeTruthy();
   });
 
   it("rejects confirmation and reactivates an archived mission", async () => {
@@ -177,13 +192,23 @@ describe("MissionsPage", () => {
     ]);
     vi.mocked(updateMissionStatus).mockResolvedValue(mission("old", "ACTIVE"));
     render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: /Archivadas/ })).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("tab", { name: /Archivadas/ }));
     await waitFor(() => expect(screen.getByText("Mission old")).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Mission old" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Reactivar" }));
     expect(await screen.findByRole("alertdialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(updateMissionStatus).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-    fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Mission old" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Reactivar" }));
     expect(await screen.findByRole("alertdialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
     await waitFor(() =>
@@ -201,9 +226,13 @@ describe("MissionsPage", () => {
     vi.mocked(updateMissionStatus).mockResolvedValue(mission("m", "ARCHIVED"));
     render(<MissionsPage />);
     await waitFor(() => expect(screen.getByText("Mission m")).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Mission m" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Archivar" }));
     expect(await screen.findByRole("alertdialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    fireEvent.click(screen.getByRole("tab", { name: /Archivadas/ }));
     await waitFor(() =>
       expect(screen.getByTestId("archived-missions").textContent).toContain(
         "Mission m",

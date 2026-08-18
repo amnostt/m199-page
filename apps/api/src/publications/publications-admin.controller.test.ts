@@ -9,7 +9,7 @@ import { AuthInterceptor } from "../auth/auth.interceptor.js";
 import { PublicationsAdminController } from "./publications-admin.controller.js";
 import { PublicationsService } from "./publications.service.js";
 
-const row = { id: "pub-1", slug: "hello", missions: [] };
+const row = { id: "pub-1", slug: "hello", missionIds: [] };
 
 async function createApp(canActivate: () => boolean | Promise<boolean>) {
   const service = {

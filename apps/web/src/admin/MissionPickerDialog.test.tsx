@@ -3,31 +3,30 @@ import { describe, expect, it, vi } from "vitest";
 import { MissionPickerDialog } from "./MissionPickerDialog.js";
 import type { MissionAdmin } from "./adminTypes.js";
 
-const mission = (id: string, status: MissionAdmin["status"]): MissionAdmin => ({
+const mission = (id: string): MissionAdmin => ({
   id,
   slug: id,
   title: `Mission ${id}`,
   heroImageId: "file",
   heroPhrase: "Phrase",
-  status,
+  status: "ACTIVE",
   createdAt: "2026-01-01",
   updatedAt: "2026-01-01",
 });
 
 describe("MissionPickerDialog", () => {
-  it("lists only active missions and confirms selected ids", () => {
+  it("lists the active missions supplied by its data contract", () => {
     const onConfirm = vi.fn();
     render(
       <MissionPickerDialog
         open
-        missions={[mission("active", "ACTIVE"), mission("old", "ARCHIVED")]}
+        missions={[mission("active")]}
         selectedIds={[]}
         onConfirm={onConfirm}
         onCancel={vi.fn()}
       />,
     );
     expect(screen.getByText("Mission active")).toBeTruthy();
-    expect(screen.queryByText("Mission old")).toBeNull();
     screen.getByRole("checkbox").click();
     screen.getByRole("button", { name: "Confirmar" }).click();
     expect(onConfirm).toHaveBeenCalledWith(["active"]);

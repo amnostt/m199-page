@@ -30,8 +30,8 @@ describe("PublicationBadges SSR", () => {
         props: { publication: publication(type) },
       });
       expect(html).toContain('data-testid="publication-badges"');
-      expect(html).toContain("COMPLETED");
-      expect(html).toContain("DOCUMENTED");
+      expect(html).toContain("Actividad realizada");
+      expect(html).toContain("Documentada");
       expect(html).toContain("2026");
     },
   );

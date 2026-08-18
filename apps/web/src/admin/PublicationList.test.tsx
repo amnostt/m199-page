@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PublicationList } from "./PublicationList.js";
 import type { PublicationAdmin } from "./adminTypes.js";
@@ -29,15 +29,16 @@ describe("PublicationList", () => {
   it("shows an accessible empty state", () => {
     render(
       <PublicationList
+        heading="Publicaciones en borrador"
+        empty="Todavía no hay borradores."
         publications={[]}
+        testId="draft-publications"
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onStatus={vi.fn()}
       />,
     );
-    expect(screen.getByTestId("publications-empty").textContent).toContain(
-      "Todavía no hay publicaciones.",
-    );
+    expect(screen.getByText("Todavía no hay borradores.")).toBeTruthy();
   });
 
   it("renders publication metadata and sends row actions to the owner", async () => {
@@ -46,16 +47,23 @@ describe("PublicationList", () => {
     const onStatus = vi.fn();
     render(
       <PublicationList
+        heading="Publicaciones en borrador"
+        empty="Todavía no hay borradores."
         publications={[publication()]}
+        testId="draft-publications"
         onEdit={onEdit}
         onDelete={onDelete}
         onStatus={onStatus}
       />,
     );
     expect(screen.getByText("First")).toBeTruthy();
-    screen.getByRole("button", { name: "Editar" }).click();
-    screen.getByRole("button", { name: "Publicar" }).click();
-    screen.getByRole("button", { name: "Eliminar" }).click();
+    const actions = screen.getByRole("button", { name: "Acciones para First" });
+    fireEvent.click(actions);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
+    fireEvent.click(actions);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Publicar" }));
+    fireEvent.click(actions);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: "p1" }));
     expect(onStatus).toHaveBeenCalledWith(
       expect.objectContaining({ id: "p1" }),

@@ -1,10 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
-vi.mock("../../lib/sanitize.js", () => ({
-  sanitizeAndMakeSafe: (html: string) =>
-    html.replace(/<script[^>]*>.*?<\/script>/gs, ""),
-}));
 import Page from "./[slug].astro";
 
 const detail = (type: string, missions: object[] = []) => ({
@@ -41,6 +37,9 @@ describe("publication detail SSR", () => {
     expect(html).toContain('class="public-publication-page-nav"');
     expect(html).toContain("Todas las publicaciones");
     expect(html).toContain('class="public-publication-detail__hero"');
+    expect(html).toContain(
+      type === "POST" ? "Historia" : type === "OUTING" ? "Salida" : "Evento",
+    );
     expect(html).toContain("Leer publicación");
     expect(html).toContain("La historia continúa");
     expect(html).not.toContain("<script>");
@@ -74,6 +73,29 @@ describe("publication detail SSR", () => {
     expect(html).toContain("Beta mission");
     expect(html).toContain("Misión finalizada");
     expect(html).toContain("Body");
+  });
+
+  it("places the featured image before the editorial copy", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ...detail("POST"),
+            featuredImageUrl: "/files/cover",
+          }),
+        ),
+      ),
+    );
+    const html = await (
+      await AstroContainer.create()
+    ).renderToString(Page, {
+      params: { slug: "demo" },
+      request: new Request("http://localhost/publicaciones/demo"),
+    });
+    expect(html.indexOf("public-publication-detail__hero-media")).toBeLessThan(
+      html.indexOf("public-publication-detail__hero-copy"),
+    );
   });
   it("renders a controlled failure", async () => {
     for (const failure of [

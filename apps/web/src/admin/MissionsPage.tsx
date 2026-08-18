@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type SyntheticEvent } from "react";
+import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import type { MissionAdmin } from "./adminTypes.js";
 import { FileUploadWidget } from "./FileUploadWidget.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
@@ -10,6 +11,49 @@ import {
   updateMission,
   updateMissionStatus,
 } from "./missionsApi.js";
+import { Alert, AlertDescription } from "../components/ui/alert.js";
+import { Badge } from "../components/ui/badge.js";
+import { Button } from "../components/ui/button.js";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog.js";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu.js";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from "../components/ui/field.js";
+import { Input } from "../components/ui/input.js";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table.js";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs.js";
+import { Textarea } from "../components/ui/textarea.js";
 
 const EMPTY = { title: "", slug: "", heroImageId: "", heroPhrase: "" };
 type Form = typeof EMPTY;
@@ -31,26 +75,97 @@ function MissionList({
 }) {
   return (
     <section aria-labelledby={`${testId}-heading`} data-testid={testId}>
-      <h2 id={`${testId}-heading`}>{heading}</h2>
-      {missions.length === 0 ? (
-        <p>{empty}</p>
-      ) : (
-        <ul>
-          {missions.map((mission) => (
-            <li key={mission.id} data-testid={`mission-${mission.id}`}>
-              <h3>{mission.title}</h3>
-              <p>{mission.heroPhrase}</p>
-              <p>{mission.slug}</p>
-              <button type="button" onClick={() => onEdit(mission)}>
-                Editar
-              </button>
-              <button type="button" onClick={() => onStatus(mission)}>
-                {mission.status === "ACTIVE" ? "Archivar" : "Reactivar"}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2
+          id={`${testId}-heading`}
+          className="text-lg font-semibold tracking-tight"
+        >
+          {heading}
+        </h2>
+        <span className="text-sm text-muted-foreground">
+          {missions.length} {missions.length === 1 ? "misión" : "misiones"}
+        </span>
+      </div>
+      <div className="overflow-hidden rounded-xl border bg-card shadow-none">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Título</TableHead>
+              <TableHead>Slug</TableHead>
+              <TableHead>Frase</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="w-16 text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {missions.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  {empty}
+                </TableCell>
+              </TableRow>
+            ) : (
+              missions.map((mission) => (
+                <TableRow
+                  key={mission.id}
+                  data-testid={`mission-${mission.id}`}
+                >
+                  <TableCell className="font-medium">{mission.title}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {mission.slug}
+                  </TableCell>
+                  <TableCell className="max-w-[22rem] truncate">
+                    {mission.heroPhrase}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        mission.status === "ACTIVE" ? "secondary" : "outline"
+                      }
+                    >
+                      {mission.status === "ACTIVE" ? "Activa" : "Archivada"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Acciones para ${mission.title}`}
+                          />
+                        }
+                      >
+                        <MoreHorizontalIcon aria-hidden="true" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => onEdit(mission)}>
+                            Editar
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem onClick={() => onStatus(mission)}>
+                            {mission.status === "ACTIVE"
+                              ? "Archivar"
+                              : "Reactivar"}
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </section>
   );
 }
@@ -61,9 +176,11 @@ export function MissionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<Form>(EMPTY);
   const [editing, setEditing] = useState<MissionAdmin | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [statusTarget, setStatusTarget] = useState<MissionAdmin | null>(null);
+
   const load = useCallback(() => {
     setError(null);
     setActive(null);
@@ -75,9 +192,28 @@ export function MissionsPage() {
       })
       .catch((reason: unknown) => setError(mapAdminError(reason).root));
   }, []);
+
   useEffect(() => {
     load();
   }, [load]);
+
+  const resetForm = () => {
+    setEditing(null);
+    setForm(EMPTY);
+    setMutationError(null);
+  };
+
+  const closeForm = () => {
+    if (pending) return;
+    setDialogOpen(false);
+    resetForm();
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
   const edit = (mission: MissionAdmin) => {
     setEditing(mission);
     setForm({
@@ -86,15 +222,13 @@ export function MissionsPage() {
       heroImageId: mission.heroImageId,
       heroPhrase: mission.heroPhrase,
     });
-    setFormError(null);
+    setMutationError(null);
+    setDialogOpen(true);
   };
-  const reset = () => {
-    setEditing(null);
-    setForm(EMPTY);
-    setFormError(null);
-  };
-  const save = async (event: React.FormEvent) => {
+
+  const save = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (pending) return;
     const values = {
       title: form.title.trim(),
       slug: form.slug.trim(),
@@ -107,123 +241,212 @@ export function MissionsPage() {
       !values.heroImageId ||
       !values.heroPhrase
     ) {
-      setFormError("Completa el título, el slug, la imagen y la frase.");
+      setMutationError("Completa el título, el slug, la imagen y la frase.");
       return;
     }
     setPending(true);
-    setFormError(null);
+    setMutationError(null);
     try {
       if (editing) await updateMission(editing.id, values);
       else await createMission(values);
-      reset();
+      setDialogOpen(false);
+      resetForm();
       load();
     } catch (reason) {
-      setFormError(mapAdminError(reason).root);
+      setMutationError(mapAdminError(reason).root);
     } finally {
       setPending(false);
     }
   };
+
   const changeStatus = async () => {
     if (!statusTarget) return;
     const mission = statusTarget;
     const next = mission.status === "ACTIVE" ? "ARCHIVED" : "ACTIVE";
     setStatusTarget(null);
     setPending(true);
-    setFormError(null);
+    setMutationError(null);
     try {
       await updateMissionStatus(mission.id, next);
       load();
     } catch (reason) {
-      setFormError(mapAdminError(reason).root);
+      setMutationError(mapAdminError(reason).root);
     } finally {
       setPending(false);
     }
   };
+
   return (
     <section
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6"
+      className="mx-auto flex min-w-0 w-full max-w-6xl flex-col gap-6"
       data-testid="missions-page"
     >
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Misiones</h1>
-        <p className="text-sm text-muted-foreground">
-          Administra las misiones activas y anteriores.
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Misiones</h1>
+          <p className="text-sm text-muted-foreground">
+            Administra las misiones activas y archivadas.
+          </p>
+        </div>
+        <Button type="button" onClick={openCreate}>
+          <PlusIcon data-icon="inline-start" />
+          Nueva misión
+        </Button>
       </header>
-      <form onSubmit={save} aria-busy={pending}>
-        <h2>{editing ? "Editar misión" : "Crear misión"}</h2>
-        <label>
-          Título
-          <input
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-          />
-        </label>
-        <label>
-          Slug
-          <input
-            value={form.slug}
-            onChange={(e) => setForm({ ...form, slug: e.target.value })}
-          />
-        </label>
-        <label>
-          Frase
-          <input
-            value={form.heroPhrase}
-            onChange={(e) => setForm({ ...form, heroPhrase: e.target.value })}
-          />
-        </label>
-        <FileUploadWidget
-          category="MISSION_HERO"
-          fileId={form.heroImageId || null}
-          onUploaded={(asset) => setForm({ ...form, heroImageId: asset.id })}
-          onRemove={() => setForm({ ...form, heroImageId: "" })}
-          data-testid="mission-hero-upload"
-        />
-        <button type="submit" disabled={pending}>
-          {pending
-            ? "Guardando…"
-            : editing
-              ? "Guardar cambios"
-              : "Crear misión"}
-        </button>
-        {editing && (
-          <button type="button" onClick={reset} disabled={pending}>
-            Cancelar
-          </button>
-        )}
-        {formError && <p role="alert">{formError}</p>}
-      </form>
+
+      {mutationError && !dialogOpen && (
+        <Alert variant="destructive">
+          <AlertDescription>{mutationError}</AlertDescription>
+        </Alert>
+      )}
+
       {active === null || archived === null
-        ? !error && <p>Cargando misiones…</p>
+        ? !error && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Cargando misiones…
+            </p>
+          )
         : null}
+
       {error ? (
-        <div role="alert">
-          <p>{error}</p>
-          <button type="button" onClick={load}>
-            Reintentar
-          </button>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>{error}</span>
+            <Button type="button" variant="outline" onClick={load}>
+              Reintentar
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : active !== null && archived !== null ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <MissionList
-            heading="Misiones activas"
-            empty="Todavía no hay misiones activas."
-            missions={active}
-            testId="active-missions"
-            onEdit={edit}
-            onStatus={setStatusTarget}
-          />
-          <MissionList
-            heading="Misiones anteriores"
-            empty="Todavía no hay misiones anteriores."
-            missions={archived}
-            testId="archived-missions"
-            onEdit={edit}
-            onStatus={setStatusTarget}
-          />
-        </div>
+        <Tabs defaultValue="active" className="min-w-0">
+          <TabsList aria-label="Filtrar misiones por estado">
+            <TabsTrigger value="active">Activas ({active.length})</TabsTrigger>
+            <TabsTrigger value="archived">
+              Archivadas ({archived.length})
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="active" className="mt-4 min-w-0">
+            <MissionList
+              heading="Misiones activas"
+              empty="Todavía no hay misiones activas."
+              missions={active}
+              testId="active-missions"
+              onEdit={edit}
+              onStatus={setStatusTarget}
+            />
+          </TabsContent>
+          <TabsContent value="archived" className="mt-4 min-w-0">
+            <MissionList
+              heading="Misiones archivadas"
+              empty="Todavía no hay misiones archivadas."
+              missions={archived}
+              testId="archived-missions"
+              onEdit={edit}
+              onStatus={setStatusTarget}
+            />
+          </TabsContent>
+        </Tabs>
       ) : null}
+
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) closeForm();
+        }}
+      >
+        <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? "Editar misión" : "Nueva misión"}
+            </DialogTitle>
+            <DialogDescription>
+              {editing
+                ? "Actualiza los datos de la misión y guarda los cambios."
+                : "Completa los datos para publicar una nueva misión activa."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={save} noValidate aria-busy={pending}>
+            <FieldSet>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="mission-title">Título</FieldLabel>
+                  <Input
+                    id="mission-title"
+                    value={form.title}
+                    onChange={(event) =>
+                      setForm({ ...form, title: event.target.value })
+                    }
+                    disabled={pending}
+                    required
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="mission-slug">Slug</FieldLabel>
+                  <Input
+                    id="mission-slug"
+                    value={form.slug}
+                    onChange={(event) =>
+                      setForm({ ...form, slug: event.target.value })
+                    }
+                    disabled={pending}
+                    required
+                  />
+                  <FieldDescription>
+                    Se usará en la URL pública de la misión.
+                  </FieldDescription>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="mission-phrase">Frase</FieldLabel>
+                  <Textarea
+                    id="mission-phrase"
+                    value={form.heroPhrase}
+                    onChange={(event) =>
+                      setForm({ ...form, heroPhrase: event.target.value })
+                    }
+                    disabled={pending}
+                    required
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>Imagen hero</FieldLabel>
+                  <FileUploadWidget
+                    category="MISSION_HERO"
+                    fileId={form.heroImageId || null}
+                    onUploaded={(asset) =>
+                      setForm({ ...form, heroImageId: asset.id })
+                    }
+                    onRemove={() => setForm({ ...form, heroImageId: "" })}
+                    data-testid="mission-hero-upload"
+                  />
+                </Field>
+              </FieldGroup>
+            </FieldSet>
+            {mutationError && (
+              <Alert variant="destructive" className="mt-5">
+                <AlertDescription>{mutationError}</AlertDescription>
+              </Alert>
+            )}
+            <DialogFooter className="mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeForm}
+                disabled={pending}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={pending}>
+                {pending
+                  ? "Guardando…"
+                  : editing
+                    ? "Guardar cambios"
+                    : "Crear misión"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={Boolean(statusTarget)}
         title={

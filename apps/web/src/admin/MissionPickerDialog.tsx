@@ -52,18 +52,16 @@ export function MissionPickerDialog({
         ) : (
           <fieldset>
             <legend className="sr-only">Misiones activas</legend>
-            {missions
-              .filter((mission) => mission.status === "ACTIVE")
-              .map((mission) => (
-                <label key={mission.id} className="flex gap-2">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(mission.id)}
-                    onChange={() => toggle(mission.id)}
-                  />
-                  {mission.title}
-                </label>
-              ))}
+            {missions.map((mission) => (
+              <label key={mission.id} className="flex gap-2">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(mission.id)}
+                  onChange={() => toggle(mission.id)}
+                />
+                {mission.title}
+              </label>
+            ))}
           </fieldset>
         )}
         <DialogFooter>

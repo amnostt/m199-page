@@ -259,7 +259,7 @@ export class PublicationsService {
         "PUBLICATION_FEATURED_IMAGE",
       );
     const missions =
-      dto.scope || dto.missionIds
+      dto.scope !== undefined || dto.missionIds !== undefined
         ? await this.validateMissions(
             dto.scope ?? existing.scope,
             dto.missionIds ?? existing.missionIds,
@@ -267,6 +267,7 @@ export class PublicationsService {
         : undefined;
     try {
       return await this.client.$transaction(async (tx: Client) => {
+        if (missions) await this.syncLinks(tx, id, missions);
         const changingToPost =
           type === PublicationType.POST && existing.type !== type;
         const row = await tx.publication.update({
@@ -281,7 +282,7 @@ export class PublicationsService {
                 : sanitizePublicationContent(dto.content),
             featuredImageId: dto.featuredImageId,
             type: dto.type,
-            scope: undefined,
+            scope: dto.scope,
             startDate: changingToPost ? null : dto.startDate,
             endDate: changingToPost ? null : dto.endDate,
             activityStatus: changingToPost ? null : dto.activityStatus,
@@ -290,7 +291,6 @@ export class PublicationsService {
               : dto.documentationStatus,
           },
         });
-        if (missions) await this.syncLinks(tx, id, missions);
         return this.findIn(tx, row.id);
       });
     } catch (error) {
@@ -299,7 +299,7 @@ export class PublicationsService {
   }
   async updateStatus(id: string, status: PublicationStatus) {
     const row = await this.findOne(id);
-    return this.client.publication.update({
+    const updated = await this.client.publication.update({
       where: { id },
       data: {
         status,
@@ -310,12 +310,14 @@ export class PublicationsService {
       },
       include: { missions: true },
     });
+    return this.normalize(updated);
   }
   async updateScope(id: string, scope: PublicationScope, missionIds: string[]) {
     await this.findOne(id);
     const missions = await this.validateMissions(scope, missionIds);
     return this.client.$transaction(async (tx: Client) => {
       await this.syncLinks(tx, id, missions);
+      await tx.publication.update({ where: { id }, data: { scope } });
       return this.findIn(tx, id);
     });
   }

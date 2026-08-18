@@ -48,6 +48,12 @@ const publication = (overrides = {}) => ({
   ...overrides,
 });
 
+const setLists = (published: unknown[], drafts: unknown[]) => {
+  api.list.mockImplementation((status: string) =>
+    Promise.resolve(status === "PUBLISHED" ? published : drafts),
+  );
+};
+
 describe("PublicationsPage", () => {
   afterEach(cleanup);
   beforeEach(() => {
@@ -60,47 +66,105 @@ describe("PublicationsPage", () => {
     api.scope.mockResolvedValue(undefined);
     api.remove.mockResolvedValue(undefined);
   });
-  it("loads the list and exposes the empty state", async () => {
+
+  it("loads both status lists and exposes the empty state", async () => {
     render(<PublicationsPage />);
     await waitFor(() =>
-      expect(screen.getByTestId("publications-empty")).toBeTruthy(),
+      expect(screen.getByTestId("published-publications")).toBeTruthy(),
     );
-    expect(api.list).toHaveBeenCalled();
+    expect(api.list).toHaveBeenCalledWith("PUBLISHED");
+    expect(api.list).toHaveBeenCalledWith("DRAFT");
+    expect(
+      screen.getByText("Todavía no hay publicaciones publicadas."),
+    ).toBeTruthy();
   });
 
-  it("localizes the initial loading error", async () => {
+  it("localizes the initial loading error and allows retry", async () => {
     api.list.mockRejectedValueOnce(new Error("Network error"));
     render(<PublicationsPage />);
     expect((await screen.findByRole("alert")).textContent).toContain(
       "Error de red.",
     );
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("published-publications")).toBeTruthy(),
+    );
   });
 
-  it("refreshes after editing a publication", async () => {
+  it("opens the reusable dialog and refreshes after editing a publication", async () => {
     const item = publication();
-    api.list.mockResolvedValueOnce([item]).mockResolvedValueOnce([]);
+    setLists([], [item]);
     render(<PublicationsPage />);
+    await screen.findByTestId("published-publications");
+    fireEvent.click(screen.getByRole("tab", { name: /Borradores/ }));
     await screen.findByTestId("publication-p1");
-    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Salida" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Título"), {
       target: { value: "Actualizada" },
     });
     fireEvent.submit(screen.getByTestId("publication-form"));
-    await waitFor(() => expect(api.list).toHaveBeenCalledTimes(2));
-    expect(api.update).toHaveBeenCalledWith(
-      "p1",
-      expect.objectContaining({ title: "Actualizada" }),
+    await waitFor(() =>
+      expect(api.update).toHaveBeenCalledWith(
+        "p1",
+        expect.objectContaining({ title: "Actualizada" }),
+      ),
     );
+    expect(
+      screen.getByRole("button", { name: "Nueva publicación" }),
+    ).toBeTruthy();
+  });
+
+  it("submits fields and mission scope through one update request", async () => {
+    const item = publication({ scope: "MISSION", missionIds: ["m1"] });
+    setLists([], [item]);
+    api.missions.mockResolvedValue([
+      {
+        id: "m1",
+        slug: "mission-1",
+        title: "Mission 1",
+        heroImageId: "file",
+        heroPhrase: "Phrase",
+        status: "ACTIVE",
+        createdAt: "",
+        updatedAt: "",
+      },
+    ]);
+    render(<PublicationsPage />);
+    await screen.findByTestId("published-publications");
+    fireEvent.click(screen.getByRole("tab", { name: /Borradores/ }));
+    await screen.findByTestId("publication-p1");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Salida" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Título"), {
+      target: { value: "Actualizada" },
+    });
+    fireEvent.submit(screen.getByTestId("publication-form"));
+
+    await waitFor(() =>
+      expect(api.update).toHaveBeenCalledWith(
+        "p1",
+        expect.objectContaining({
+          title: "Actualizada",
+          scope: "MISSION",
+          missionIds: ["m1"],
+        }),
+      ),
+    );
+    expect(api.update).toHaveBeenCalledTimes(1);
+    expect(api.scope).not.toHaveBeenCalled();
   });
 
   it("creates and refreshes from the new-publication action", async () => {
-    api.list
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([publication({ title: "Nueva" })]);
+    setLists([], []);
     render(<PublicationsPage />);
-    await waitFor(() =>
-      expect(screen.getByTestId("publications-empty")).toBeTruthy(),
-    );
+    await screen.findByTestId("published-publications");
+    setLists([], [publication({ title: "Nueva" })]);
     fireEvent.click(screen.getByRole("button", { name: "Nueva publicación" }));
     fireEvent.change(screen.getByLabelText("Título"), {
       target: { value: "Nueva" },
@@ -111,45 +175,61 @@ describe("PublicationsPage", () => {
         expect.objectContaining({ title: "Nueva" }),
       ),
     );
-    await waitFor(() => expect(screen.getByText("Nueva")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: /Borradores/ }));
+    expect(await screen.findByText("Nueva")).toBeTruthy();
   });
 
   it.each([
-    ["Publicar", "PUBLISHED"],
-    ["Despublicar", "DRAFT"],
+    ["Publicar", "PUBLISHED", "DRAFT"],
+    ["Despublicar", "DRAFT", "PUBLISHED"],
   ] as const)(
-    "uses the dedicated status client and refreshes when clicking %s",
-    async (label, status) => {
+    "uses the dedicated status client from the action menu when clicking %s",
+    async (label, nextStatus, currentStatus) => {
       const item = publication({
-        status: status === "PUBLISHED" ? "DRAFT" : "PUBLISHED",
+        status: currentStatus,
+        title: currentStatus === "DRAFT" ? "Borrador" : "Publicada",
       });
-      api.list.mockResolvedValueOnce([item]).mockResolvedValueOnce([]);
+      setLists(
+        currentStatus === "PUBLISHED" ? [item] : [],
+        currentStatus === "DRAFT" ? [item] : [],
+      );
       render(<PublicationsPage />);
+      await screen.findByTestId("published-publications");
+      if (currentStatus === "DRAFT") {
+        fireEvent.click(screen.getByRole("tab", { name: /Borradores/ }));
+      }
       await screen.findByTestId("publication-p1");
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: `Acciones para ${item.title}`,
+        }),
+      );
+      fireEvent.click(screen.getByRole("menuitem", { name: label }));
       fireEvent.click(screen.getByRole("button", { name: label }));
-      fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
-      await waitFor(() => expect(api.list).toHaveBeenCalledTimes(2));
-      expect(api.status).toHaveBeenCalledWith("p1", status);
+      await waitFor(() =>
+        expect(api.status).toHaveBeenCalledWith("p1", nextStatus),
+      );
       expect(api.update).not.toHaveBeenCalled();
     },
   );
 
-  it("cancels deletion, then confirms deletion and refreshes", async () => {
-    api.list.mockResolvedValueOnce([publication()]).mockResolvedValueOnce([]);
+  it("cancels deletion, then confirms it from the action menu", async () => {
+    const item = publication();
+    setLists([], [item]);
     render(<PublicationsPage />);
+    await screen.findByTestId("published-publications");
+    fireEvent.click(screen.getByRole("tab", { name: /Borradores/ }));
     await screen.findByTestId("publication-p1");
-    fireEvent.click(
-      screen.getByTestId("publication-p1").querySelector("button:last-child")!,
-    );
+    const actions = screen.getByRole("button", {
+      name: "Acciones para Salida",
+    });
+    fireEvent.click(actions);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(api.remove).not.toHaveBeenCalled();
-    fireEvent.click(
-      screen.getByTestId("publication-p1").querySelector("button:last-child")!,
-    );
-    fireEvent.click(
-      screen.getByRole("alertdialog").querySelector("button:last-child")!,
-    );
+    fireEvent.click(actions);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Eliminar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
     await waitFor(() => expect(api.remove).toHaveBeenCalledWith("p1"));
-    await waitFor(() => expect(api.list).toHaveBeenCalledTimes(2));
   });
 });

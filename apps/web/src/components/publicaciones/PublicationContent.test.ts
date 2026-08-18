@@ -1,12 +1,6 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
-vi.mock("../../lib/sanitize.js", () => ({
-  sanitizeAndMakeSafe: (html: string) =>
-    html
-      .replace(/<script[^>]*>.*?<\/script>/gs, "")
-      .replace(/javascript:/gi, ""),
-}));
 import PublicationContent from "./PublicationContent.astro";
 
 const render = (props: Record<string, string>) =>

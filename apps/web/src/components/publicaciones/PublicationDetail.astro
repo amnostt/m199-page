@@ -1,0 +1,67 @@
+---
+import PublicationBadges from "./PublicationBadges.astro";
+import PublicationContent from "./PublicationContent.astro";
+import PublicationMissionsList from "./PublicationMissionsList.astro";
+import PublicationPageNav from "./PublicationPageNav.astro";
+
+const publicationTypeLabels: Record<string, string> = {
+  POST: "Historia",
+  OUTING: "Salida",
+  EVENT: "Evento",
+};
+
+const { publication } = Astro.props;
+const typeLabel = publicationTypeLabels[publication.type] ?? publication.type;
+---
+
+<main
+  class:list={[
+    "public-ui",
+    "public-page",
+    "public-publication-detail",
+    { "public-publication-detail--without-media": !publication.featuredImageUrl },
+  ]}
+  data-testid="publication-detail"
+>
+  <PublicationPageNav current="detail" />
+
+  <section class="public-publication-detail__hero" aria-labelledby="publication-title">
+    {publication.featuredImageUrl && (
+      <div class="public-publication-detail__hero-media">
+        <img src={publication.featuredImageUrl} alt="" />
+      </div>
+    )}
+    <div class="public-publication-detail__hero-copy">
+      <p class="public-publication-detail__type">{typeLabel}</p>
+      <h1 id="publication-title">{publication.title}</h1>
+      <p class="public-publication-detail__excerpt">{publication.excerpt}</p>
+      <div class="public-publication-detail__meta">
+        <time datetime={publication.publishedAt}>
+          {new Date(publication.publishedAt).toLocaleDateString("es-AR", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </time>
+        <PublicationBadges publication={publication} />
+      </div>
+      <a class="public-publication-detail__hero-link" href="#publication-content">
+        Leer publicación
+      </a>
+    </div>
+  </section>
+
+  <section
+    class="public-publication-detail__content-section"
+    id="publication-content"
+    aria-labelledby="publication-content-title"
+  >
+    <div class="public-publication-detail__section-heading">
+      <p>Contenido</p>
+      <h2 id="publication-content-title">La historia continúa</h2>
+    </div>
+    <PublicationContent {...publication} />
+  </section>
+
+  <PublicationMissionsList missions={publication.missions} />
+</main>

@@ -1,10 +1,22 @@
 ---
 const { publication } = Astro.props;
 const isActivity = publication.type === "OUTING" || publication.type === "EVENT";
+const activityStatusLabels: Record<string, string> = {
+  UPCOMING: "Próxima actividad",
+  COMPLETED: "Actividad realizada",
+  CANCELLED: "Actividad cancelada",
+};
+const documentationStatusLabels: Record<string, string> = {
+  PENDING_DOCUMENTATION: "Documentación pendiente",
+  DOCUMENTED: "Documentada",
+};
 ---
 {isActivity && <div class="public-publication-badges" data-testid="publication-badges">
-  <time datetime={publication.startDate}>{new Date(publication.startDate).toLocaleDateString("es-AR")}</time>
-  {publication.endDate && <time datetime={publication.endDate}> hasta {new Date(publication.endDate).toLocaleDateString("es-AR")}</time>}
-  <span>{publication.activityStatus}</span>
-  <span>{publication.documentationStatus}</span>
+  <span class="public-publication-badge">
+    <span class="public-publication-badge__label">Fecha</span>
+    <time datetime={publication.startDate}>{new Date(publication.startDate).toLocaleDateString("es-AR")}</time>
+    {publication.endDate && <time datetime={publication.endDate}> hasta {new Date(publication.endDate).toLocaleDateString("es-AR")}</time>}
+  </span>
+  <span class="public-publication-badge">{activityStatusLabels[publication.activityStatus] ?? publication.activityStatus}</span>
+  <span class="public-publication-badge">{documentationStatusLabels[publication.documentationStatus] ?? publication.documentationStatus}</span>
 </div>}

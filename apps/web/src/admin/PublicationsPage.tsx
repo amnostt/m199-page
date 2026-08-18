@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { PlusIcon } from "lucide-react";
 import type {
   CreatePublicationInput,
   MissionAdmin,
@@ -11,139 +12,257 @@ import {
   listPublications,
   updatePublication,
   updatePublicationStatus,
-  updatePublicationScope,
 } from "./publicationsApi.js";
 import { listActiveMissions } from "./missionsApi.js";
 import { mapAdminError } from "./adminErrors.js";
 import { PublicationForm } from "./PublicationForm.js";
 import { PublicationList } from "./PublicationList.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
+import { Alert, AlertDescription } from "../components/ui/alert.js";
 import { Button } from "../components/ui/button.js";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog.js";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs.js";
 
 export function PublicationsPage() {
-  const [publications, setPublications] = useState<PublicationAdmin[]>([]);
-  const [missions, setMissions] = useState<MissionAdmin[]>([]);
+  const [published, setPublished] = useState<PublicationAdmin[] | null>(null);
+  const [drafts, setDrafts] = useState<PublicationAdmin[] | null>(null);
+  const [missions, setMissions] = useState<MissionAdmin[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<PublicationAdmin | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [pending, setPending] = useState<PublicationAdmin | null>(null);
   const [action, setAction] = useState<"delete" | "status" | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const refresh = async () => {
-    setLoading(true);
-    try {
-      const [items, active] = await Promise.all([
-        listPublications(),
-        listActiveMissions(),
-      ]);
-      setPublications(items);
-      setMissions(active);
-      setError("");
-    } catch (e) {
-      setError(mapAdminError(e).root);
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    void refresh();
+
+  const load = useCallback(() => {
+    setError(null);
+    setPublished(null);
+    setDrafts(null);
+    setMissions(null);
+    void Promise.all([
+      listPublications("PUBLISHED"),
+      listPublications("DRAFT"),
+      listActiveMissions(),
+    ])
+      .then(([publishedItems, draftItems, activeMissions]) => {
+        setPublished(publishedItems);
+        setDrafts(draftItems);
+        setMissions(activeMissions);
+      })
+      .catch((reason: unknown) => setError(mapAdminError(reason).root));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const closeForm = () => {
+    if (busy) return;
+    setDialogOpen(false);
+    setEditing(null);
+  };
+
+  const openCreate = () => {
+    setError(null);
+    setEditing(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (publication: PublicationAdmin) => {
+    setError(null);
+    setEditing(publication);
+    setDialogOpen(true);
+  };
+
   const save = async (input: UpdatePublicationInput) => {
     setBusy(true);
+    setError(null);
     try {
-      if (editing?.id) {
+      if (editing) {
         const { status: _status, ...update } = input;
-        if (update.scope) {
-          await updatePublicationScope(
-            editing.id,
-            update.scope,
-            update.missionIds ?? [],
-          );
-          delete update.scope;
-          delete update.missionIds;
-        }
-        if (Object.keys(update).length)
+        if (Object.keys(update).length) {
           await updatePublication(editing.id, update);
-      } else await createPublication(input as CreatePublicationInput);
+        }
+      } else {
+        await createPublication(input as CreatePublicationInput);
+      }
+      setDialogOpen(false);
       setEditing(null);
-      await refresh();
-    } catch (e) {
-      setError(mapAdminError(e).root);
+      load();
+    } catch (reason) {
+      setError(mapAdminError(reason).root);
     } finally {
       setBusy(false);
     }
   };
+
   const confirm = async () => {
     if (!pending || !action) return;
     setBusy(true);
     try {
-      if (action === "delete") await deletePublication(pending.id);
-      else
+      if (action === "delete") {
+        await deletePublication(pending.id);
+      } else {
         await updatePublicationStatus(
           pending.id,
           pending.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED",
         );
+      }
       setPending(null);
       setAction(null);
-      await refresh();
-    } catch (e) {
-      setError(mapAdminError(e).root);
+      load();
+    } catch (reason) {
+      setError(mapAdminError(reason).root);
     } finally {
       setBusy(false);
     }
   };
-  if (loading)
-    return (
-      <div data-testid="publications-loading" role="status">
-        Cargando publicaciones…
-      </div>
-    );
+
+  const loaded = published !== null && drafts !== null && missions !== null;
+
   return (
-    <div data-testid="publications-page">
-      <header>
-        <h2>Publicaciones</h2>
-        <Button
-          type="button"
-          onClick={() => setEditing({} as PublicationAdmin)}
-        >
+    <section
+      className="mx-auto flex min-w-0 w-full max-w-6xl flex-col gap-6"
+      data-testid="publications-page"
+    >
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Publicaciones
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Administra las publicaciones publicadas y en borrador.
+          </p>
+        </div>
+        <Button type="button" onClick={openCreate} disabled={!loaded}>
+          <PlusIcon data-icon="inline-start" />
           Nueva publicación
         </Button>
       </header>
-      {error && (
-        <p role="alert" data-testid="publications-error">
-          {error}
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>{error}</span>
+            <Button type="button" variant="outline" onClick={load}>
+              Reintentar
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : !loaded ? (
+        <p
+          role="status"
+          data-testid="publications-loading"
+          className="text-sm text-muted-foreground"
+        >
+          Cargando publicaciones…
         </p>
+      ) : (
+        <Tabs defaultValue="published" className="min-w-0">
+          <TabsList aria-label="Filtrar publicaciones por estado">
+            <TabsTrigger value="published">
+              Publicadas ({published.length})
+            </TabsTrigger>
+            <TabsTrigger value="drafts">
+              Borradores ({drafts.length})
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="published" className="mt-4 min-w-0">
+            <PublicationList
+              heading="Publicaciones publicadas"
+              empty="Todavía no hay publicaciones publicadas."
+              publications={published}
+              testId="published-publications"
+              onEdit={openEdit}
+              onDelete={(publication) => {
+                setPending(publication);
+                setAction("delete");
+              }}
+              onStatus={(publication) => {
+                setPending(publication);
+                setAction("status");
+              }}
+            />
+          </TabsContent>
+          <TabsContent value="drafts" className="mt-4 min-w-0">
+            <PublicationList
+              heading="Publicaciones en borrador"
+              empty="Todavía no hay borradores."
+              publications={drafts}
+              testId="draft-publications"
+              onEdit={openEdit}
+              onDelete={(publication) => {
+                setPending(publication);
+                setAction("delete");
+              }}
+              onStatus={(publication) => {
+                setPending(publication);
+                setAction("status");
+              }}
+            />
+          </TabsContent>
+        </Tabs>
       )}
-      {editing && (
-        <PublicationForm
-          publication={editing.id ? editing : null}
-          missions={missions}
-          busy={busy}
-          onSubmit={save}
-          onCancel={() => setEditing(null)}
-        />
-      )}
-      <PublicationList
-        publications={publications}
-        onEdit={setEditing}
-        onDelete={(p) => {
-          setPending(p);
-          setAction("delete");
+
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) closeForm();
         }}
-        onStatus={(p) => {
-          setPending(p);
-          setAction("status");
-        }}
-      />
+      >
+        <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? "Editar publicación" : "Nueva publicación"}
+            </DialogTitle>
+            <DialogDescription>
+              {editing
+                ? "Actualiza los datos de la publicación y guarda los cambios."
+                : "Completa los datos para crear una nueva publicación."}
+            </DialogDescription>
+          </DialogHeader>
+          <PublicationForm
+            publication={editing}
+            missions={missions ?? []}
+            busy={busy}
+            onSubmit={save}
+            onCancel={closeForm}
+          />
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={Boolean(pending)}
-        title={action === "delete" ? "Eliminar publicación" : "Cambiar estado"}
+        title={
+          action === "delete"
+            ? "Eliminar publicación"
+            : pending?.status === "PUBLISHED"
+              ? "Despublicar publicación"
+              : "Publicar publicación"
+        }
         description={
           action === "delete"
             ? "Esta acción no se puede deshacer."
-            : "¿Quieres cambiar el estado de esta publicación?"
+            : `¿Quieres ${pending?.status === "PUBLISHED" ? "despublicar" : "publicar"} ${pending?.title ?? "esta publicación"}?`
         }
-        confirmLabel={action === "delete" ? "Eliminar" : "Confirmar"}
+        confirmLabel={
+          action === "delete"
+            ? "Eliminar"
+            : pending?.status === "PUBLISHED"
+              ? "Despublicar"
+              : "Publicar"
+        }
         destructive={action === "delete"}
         onConfirm={confirm}
         onCancel={() => {
@@ -151,6 +270,6 @@ export function PublicationsPage() {
           setAction(null);
         }}
       />
-    </div>
+    </section>
   );
 }

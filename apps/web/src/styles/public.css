@@ -395,9 +395,9 @@ body[data-theme="public"].landing-body {
 
   .public-ui .public-publication-detail__hero {
     display: grid;
-    grid-template-columns: minmax(0, 0.85fr) minmax(18rem, 1.15fr);
-    align-items: center;
-    gap: clamp(2rem, 7vw, 7rem);
+    grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+    align-items: end;
+    gap: clamp(1.5rem, 5vw, 5rem);
     min-width: 0;
   }
 
@@ -411,6 +411,7 @@ body[data-theme="public"].landing-body {
     min-width: 0;
     flex-direction: column;
     align-items: flex-start;
+    padding-block: clamp(1rem, 5vw, 4rem);
   }
 
   .public-ui .public-publication-detail__type {
@@ -423,14 +424,14 @@ body[data-theme="public"].landing-body {
   }
 
   .public-ui .public-publication-detail h1 {
-    max-width: 10ch;
+    max-width: 8ch;
     margin: 0;
     color: var(--foreground);
     font-family: var(--font-display);
-    font-size: clamp(3.5rem, 9vw, 7rem);
+    font-size: clamp(3rem, 8vw, 6rem);
     font-weight: 700;
-    letter-spacing: -0.045em;
-    line-height: 0.88;
+    letter-spacing: -0.035em;
+    line-height: 0.94;
     overflow-wrap: anywhere;
   }
 
@@ -454,6 +455,32 @@ body[data-theme="public"].landing-body {
 
   .public-ui .public-publication-detail__meta .public-publication-badges {
     margin: 0;
+  }
+
+  .public-ui .public-publication-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .public-ui .public-publication-badge {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.375rem 0.625rem;
+    color: var(--secondary-foreground);
+    background: var(--secondary);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+  }
+
+  .public-ui .public-publication-badge__label {
+    opacity: 0.7;
+    text-transform: uppercase;
   }
 
   .public-ui .public-publication-detail__hero-link {
@@ -628,6 +655,10 @@ body[data-theme="public"].landing-body {
     .public-ui .public-publication-detail h1 {
       max-width: 10ch;
       font-size: clamp(3.25rem, 16vw, 5.5rem);
+    }
+
+    .public-ui .public-publication-detail__hero-copy {
+      padding-block: 0;
     }
   }
 
@@ -2407,17 +2438,6 @@ body[data-theme="public"].landing-body {
 
 .public-publication-filters button.list-active {
   font-weight: 700;
-}
-
-.public-publication-detail {
-  max-width: 65ch;
-}
-
-.public-publication-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-block: 1rem;
 }
 
 @layer components {

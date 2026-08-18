@@ -9,6 +9,13 @@ import type {
 import { FileUploadWidget } from "./FileUploadWidget.js";
 import { MissionPickerDialog } from "./MissionPickerDialog.js";
 import { Button } from "../components/ui/button.js";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from "../components/ui/field.js";
+import { Input } from "../components/ui/input.js";
 import { Textarea } from "../components/ui/textarea.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 
@@ -28,6 +35,9 @@ const blank: CreatePublicationInput = {
   featuredImageId: "",
   type: "POST",
 };
+
+const dateInputValue = (value: string | null): string | null =>
+  value ? value.slice(0, 10) : null;
 
 export function PublicationForm({
   publication,
@@ -53,8 +63,8 @@ export function PublicationForm({
             type: publication.type,
             scope: publication.scope,
             missionIds: publication.missionIds,
-            startDate: publication.startDate,
-            endDate: publication.endDate,
+            startDate: dateInputValue(publication.startDate),
+            endDate: dateInputValue(publication.endDate),
             activityStatus: publication.activityStatus,
             documentationStatus: publication.documentationStatus,
           }
@@ -67,6 +77,7 @@ export function PublicationForm({
   return (
     <form
       data-testid="publication-form"
+      className="space-y-5"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -78,150 +89,170 @@ export function PublicationForm({
       }}
       aria-busy={busy}
     >
-      <h2>{publication ? "Editar publicación" : "Nueva publicación"}</h2>
-      <label>
-        Slug
-        <input
-          aria-label="Slug"
-          value={value.slug}
-          onChange={(e) => set("slug", e.target.value)}
-          disabled={busy}
-        />
-      </label>
-      <label>
-        Título
-        <input
-          aria-label="Título"
-          value={value.title}
-          onChange={(e) => set("title", e.target.value)}
-          disabled={busy}
-        />
-      </label>
-      <label>
-        Extracto
-        <Textarea
-          aria-label="Extracto"
-          value={value.excerpt}
-          onChange={(e) => set("excerpt", e.target.value)}
-          disabled={busy}
-        />
-      </label>
-      <label>
-        Contenido
-        <Textarea
-          aria-label="Contenido"
-          value={value.content}
-          onChange={(e) => set("content", e.target.value)}
-          disabled={busy}
-        />
-      </label>
-      <label>
-        Tipo
-        <select
-          aria-label="Tipo"
-          value={value.type}
-          onChange={(e) => {
-            const type = e.target.value as PublicationType;
-            setValue((current) =>
-              type === "POST"
-                ? {
-                    ...current,
-                    type,
-                    startDate: null,
-                    endDate: null,
-                    activityStatus: null,
-                    documentationStatus: null,
-                  }
-                : { ...current, type },
-            );
-          }}
-          disabled={busy}
-        >
-          <option value="POST">Publicación</option>
-          <option value="OUTING">Salida</option>
-          <option value="EVENT">Evento</option>
-        </select>
-      </label>
-      {activity && (
-        <>
-          <label>
-            Fecha de inicio
-            <input
-              aria-label="Fecha de inicio"
-              type="date"
-              value={value.startDate ?? ""}
-              onChange={(e) => set("startDate", e.target.value || null)}
+      <FieldSet>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="publication-slug">Slug</FieldLabel>
+            <Input
+              id="publication-slug"
+              value={value.slug}
+              onChange={(e) => set("slug", e.target.value)}
               disabled={busy}
             />
-          </label>
-          <label>
-            Fecha de fin
-            <input
-              aria-label="Fecha de fin"
-              type="date"
-              value={value.endDate ?? ""}
-              onChange={(e) => set("endDate", e.target.value || null)}
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="publication-title">Título</FieldLabel>
+            <Input
+              id="publication-title"
+              value={value.title}
+              onChange={(e) => set("title", e.target.value)}
               disabled={busy}
             />
-          </label>
-          <label>
-            Estado de actividad
-            <select
-              aria-label="Estado de actividad"
-              value={value.activityStatus ?? "UPCOMING"}
-              onChange={(e) => set("activityStatus", e.target.value)}
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="publication-excerpt">Extracto</FieldLabel>
+            <Textarea
+              id="publication-excerpt"
+              value={value.excerpt}
+              onChange={(e) => set("excerpt", e.target.value)}
               disabled={busy}
-            >
-              <option value="UPCOMING">Próxima</option>
-              <option value="COMPLETED">Completada</option>
-              <option value="CANCELLED">Cancelada</option>
-            </select>
-          </label>
-          <label>
-            Estado de documentación
-            <select
-              aria-label="Estado de documentación"
-              value={value.documentationStatus ?? "PENDING_DOCUMENTATION"}
-              onChange={(e) => set("documentationStatus", e.target.value)}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="publication-content">Contenido</FieldLabel>
+            <Textarea
+              id="publication-content"
+              value={value.content}
+              onChange={(e) => set("content", e.target.value)}
               disabled={busy}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="publication-type">Tipo</FieldLabel>
+            <select
+              id="publication-type"
+              value={value.type}
+              onChange={(e) => {
+                const type = e.target.value as PublicationType;
+                setValue((current) =>
+                  type === "POST"
+                    ? {
+                        ...current,
+                        type,
+                        startDate: null,
+                        endDate: null,
+                        activityStatus: null,
+                        documentationStatus: null,
+                      }
+                    : { ...current, type },
+                );
+              }}
+              disabled={busy}
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             >
-              <option value="PENDING_DOCUMENTATION">Pendiente</option>
-              <option value="DOCUMENTED">Documentada</option>
+              <option value="POST">Publicación</option>
+              <option value="OUTING">Salida</option>
+              <option value="EVENT">Evento</option>
             </select>
+          </Field>
+          {activity && (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="publication-start-date">
+                  Fecha de inicio
+                </FieldLabel>
+                <Input
+                  id="publication-start-date"
+                  type="date"
+                  value={value.startDate ?? ""}
+                  onChange={(e) => set("startDate", e.target.value || null)}
+                  disabled={busy}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="publication-end-date">
+                  Fecha de fin
+                </FieldLabel>
+                <Input
+                  id="publication-end-date"
+                  type="date"
+                  value={value.endDate ?? ""}
+                  onChange={(e) => set("endDate", e.target.value || null)}
+                  disabled={busy}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="publication-activity-status">
+                  Estado de actividad
+                </FieldLabel>
+                <select
+                  id="publication-activity-status"
+                  value={value.activityStatus ?? "UPCOMING"}
+                  onChange={(e) => set("activityStatus", e.target.value)}
+                  disabled={busy}
+                  className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <option value="UPCOMING">Próxima</option>
+                  <option value="COMPLETED">Completada</option>
+                  <option value="CANCELLED">Cancelada</option>
+                </select>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="publication-documentation-status">
+                  Estado de documentación
+                </FieldLabel>
+                <select
+                  id="publication-documentation-status"
+                  value={value.documentationStatus ?? "PENDING_DOCUMENTATION"}
+                  onChange={(e) => set("documentationStatus", e.target.value)}
+                  disabled={busy}
+                  className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <option value="PENDING_DOCUMENTATION">Pendiente</option>
+                  <option value="DOCUMENTED">Documentada</option>
+                </select>
+              </Field>
+            </div>
+          )}
+        </FieldGroup>
+      </FieldSet>
+      <FieldSet>
+        <legend className="text-sm font-medium">Alcance</legend>
+        <FieldGroup className="gap-3 sm:flex-row">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              checked={value.scope !== "MISSION"}
+              onChange={() =>
+                setValue((current) => ({
+                  ...current,
+                  scope: "GENERAL",
+                  missionIds: [],
+                }))
+              }
+            />
+            General
           </label>
-        </>
-      )}
-      <fieldset>
-        <legend>Alcance</legend>
-        <label>
-          <input
-            type="radio"
-            checked={value.scope !== "MISSION"}
-            onChange={() =>
-              setValue((current) => ({
-                ...current,
-                scope: "GENERAL",
-                missionIds: [],
-              }))
-            }
-          />
-          General
-        </label>
-        <label>
-          <input
-            type="radio"
-            checked={value.scope === "MISSION"}
-            onChange={() => set("scope", "MISSION")}
-            disabled={missions.length === 0}
-          />
-          Misiones
-        </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              checked={value.scope === "MISSION"}
+              onChange={() => set("scope", "MISSION")}
+              disabled={missions.length === 0}
+            />
+            Misiones
+          </label>
+        </FieldGroup>
         {value.scope === "MISSION" && (
-          <Button type="button" onClick={() => setPickerOpen(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPickerOpen(true)}
+          >
             Elegir misiones ({value.missionIds?.length ?? 0})
           </Button>
         )}
-      </fieldset>
+      </FieldSet>
       <FileUploadWidget
         category="PUBLICATION_FEATURED_IMAGE"
         fileId={value.featuredImageId || null}
@@ -229,17 +260,19 @@ export function PublicationForm({
         onRemove={() => set("featuredImageId", "")}
         data-testid="publication-featured-image"
       />
-      <Button type="submit" disabled={busy}>
-        Guardar publicación
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={onCancel}
-        disabled={busy}
-      >
-        Cancelar
-      </Button>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={busy}
+        >
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={busy}>
+          Guardar publicación
+        </Button>
+      </div>
       <MissionPickerDialog
         open={pickerOpen}
         missions={missions}

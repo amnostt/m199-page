@@ -1,5 +1,5 @@
 ---
-import { sanitizeAndMakeSafe } from "../../lib/sanitize.js";
+import { sanitizePublicationContentForSsr } from "../../lib/server/publication-sanitizer.js";
 
 interface Props {
   type: string;
@@ -12,7 +12,7 @@ const visible = type === "POST" || activityStatus === "COMPLETED";
 ---
 
 {visible ? (
-  <div class="public-publication-detail__content" set:html={sanitizeAndMakeSafe(content)} />
+  <div class="public-publication-detail__content" set:html={sanitizePublicationContentForSsr(content)} />
 ) : (
   <p class="public-publication-content-placeholder" data-testid="publication-content-placeholder">
     El contenido estará disponible cuando finalice la actividad.
