@@ -48,6 +48,11 @@ function renderShell(
   };
 }
 
+async function openUserMenu() {
+  fireEvent.click(screen.getByTestId("admin-user-menu"));
+  return screen.findByRole("menuitem", { name: /cerrar sesión/i });
+}
+
 beforeEach(() => {
   // Reset to a known desktop viewport so mobile logic in later tests stays
   // opt-in. The mobile responsive test resets it to 375 explicitly.
@@ -93,7 +98,7 @@ describe("AdminShell", () => {
     expect(screen.getByText("Archivos (próximamente)")).toBeTruthy();
   });
 
-  it("uses navigation and logout callbacks without changing shell ownership", () => {
+  it("uses navigation and logout callbacks without changing shell ownership", async () => {
     const onNavigate = vi.fn();
     const onLogout = vi.fn();
     render(
@@ -107,7 +112,7 @@ describe("AdminShell", () => {
     );
 
     fireEvent.click(screen.getByTestId("nav-missions"));
-    fireEvent.click(screen.getByTestId("admin-logout"));
+    fireEvent.click(await openUserMenu());
 
     expect(onNavigate).toHaveBeenCalledWith("missions");
     expect(onLogout).toHaveBeenCalledTimes(1);
@@ -206,12 +211,87 @@ describe("AdminShell", () => {
     expect(footer?.textContent).toContain(USER.email);
   });
 
-  it("keeps the logout control inside the sidebar footer", () => {
+  it("uses the footer identity as the menu trigger and exposes only logout", async () => {
     renderShell("landing");
     const footer = screen
       .getByTestId("admin-sidebar")
       .querySelector('[data-slot="sidebar-footer"]');
-    expect(footer?.contains(screen.getByTestId("admin-logout"))).toBe(true);
+    const trigger = screen.getByTestId("admin-user-menu");
+
+    expect(footer?.contains(trigger)).toBe(true);
+    expect(screen.queryByTestId("admin-logout")).toBeNull();
+
+    const logout = await openUserMenu();
+    expect(logout).toBeTruthy();
+    expect(screen.getAllByRole("menuitem")).toHaveLength(1);
+    expect(footer?.contains(logout)).toBe(false);
+  });
+
+  it("supports keyboard opening and activation of the logout action", async () => {
+    const { onLogout } = renderShell("landing");
+    const trigger = screen.getByTestId("admin-user-menu");
+
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+
+    const logout = await screen.findByRole("menuitem", {
+      name: /cerrar sesión/i,
+    });
+
+    logout.focus();
+    expect(document.activeElement).toBe(logout);
+    fireEvent.keyDown(logout, { key: "Enter" });
+    expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [1280, "right"],
+    [375, "bottom"],
+  ] as const)(
+    "places the user menu on the %s viewport side",
+    async (width, side) => {
+      window.innerWidth = width;
+      renderShell("landing");
+
+      if (width < 768) {
+        fireEvent.click(
+          await waitFor(() =>
+            screen.getByRole("button", {
+              name: /alternar barra lateral de administración/i,
+            }),
+          ),
+        );
+        await waitFor(() => screen.getByTestId("admin-user-menu"));
+      }
+
+      const logout = await openUserMenu();
+      const menu = logout.closest('[role="menu"]');
+
+      const actualSide = menu?.parentElement?.getAttribute("data-side");
+      if (side === "bottom") {
+        expect(actualSide).toBe("bottom");
+      } else {
+        // JSDOM has no layout viewport, so Base UI may collision-flip the
+        // requested right placement to left. Both are horizontal desktop sides.
+        expect(["left", "right"]).toContain(actualSide);
+      }
+    },
+  );
+
+  it("keeps the identity trigger accessible when the sidebar is collapsed", () => {
+    renderShell("landing");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /alternar barra lateral de administración/i,
+      }),
+    );
+
+    const trigger = screen.getByTestId("admin-user-menu");
+    expect(trigger.tagName).toBe("BUTTON");
+    expect(trigger.getAttribute("aria-label")).toBe(
+      `Menú de usuario de ${USER.displayName}`,
+    );
+    expect(within(trigger).getByText("1-99")).toBeTruthy();
   });
 
   it("mounts the canonical SidebarRail inside the sidebar", () => {

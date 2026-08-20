@@ -1,4 +1,5 @@
 import {
+  ChevronsUpDown,
   Files,
   Flag,
   Newspaper,
@@ -22,7 +23,17 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from "../components/ui/sidebar.js";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu.js";
 import { TooltipProvider } from "../components/ui/tooltip.js";
 import type { AuthUser } from "./adminTypes.js";
 import { LandingSettingsPage } from "./LandingSettingsPage.js";
@@ -73,6 +84,68 @@ function SectionContent({
   if (section === "missions") return <MissionsPage />;
   if (section === "publications") return <PublicationsPage />;
   return <ResponsiblesPage currentUserId={user.id} />;
+}
+
+function SidebarUserMenu({
+  user,
+  onLogout,
+}: {
+  user: AuthUser;
+  onLogout: () => void;
+}) {
+  const { isMobile } = useSidebar();
+
+  return (
+    <DropdownMenu>
+      <SidebarMenuButton
+        size="lg"
+        tooltip={user.displayName}
+        className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+        render={<DropdownMenuTrigger />}
+        aria-label={`Menú de usuario de ${user.displayName}`}
+        data-testid="admin-user-menu"
+      >
+        <span
+          aria-hidden="true"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground"
+        >
+          1-99
+        </span>
+        <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+          <span data-testid="admin-user-name" className="truncate font-medium">
+            {user.displayName}
+          </span>
+          <span className="truncate text-xs text-muted-foreground">
+            {user.email}
+          </span>
+        </div>
+        <ChevronsUpDown
+          aria-hidden="true"
+          className="ml-auto group-data-[collapsible=icon]:hidden"
+        />
+      </SidebarMenuButton>
+      <DropdownMenuContent
+        side={isMobile ? "bottom" : "right"}
+        align="end"
+        sideOffset={4}
+        className="min-w-56"
+      >
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="font-normal">
+            <span className="block truncate">{user.displayName}</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {user.email}
+            </span>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem data-testid="admin-logout" onClick={onLogout}>
+          <LogOut aria-hidden="true" />
+          Cerrar sesión
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function AdminShell({
@@ -159,41 +232,7 @@ export function AdminShell({
           <SidebarFooter>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  size="lg"
-                  tooltip={user.displayName}
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                  render={<div aria-label={user.displayName} />}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground"
-                  >
-                    1-99
-                  </span>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span
-                      data-testid="admin-user-name"
-                      className="truncate font-medium"
-                    >
-                      {user.displayName}
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {user.email}
-                    </span>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  type="button"
-                  tooltip="Cerrar sesión"
-                  data-testid="admin-logout"
-                  onClick={onLogout}
-                >
-                  <LogOut aria-hidden="true" />
-                  <span>Cerrar sesión</span>
-                </SidebarMenuButton>
+                <SidebarUserMenu user={user} onLogout={onLogout} />
               </SidebarMenuItem>
             </SidebarMenu>
             {logoutError && (

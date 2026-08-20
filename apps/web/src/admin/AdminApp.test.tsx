@@ -4,7 +4,7 @@
 // Tests admin bootstrap, login, shell navigation, and logout behavior:
 // - Bootstrap: refreshSession success → shell; failure → login
 // - Login: submit success → shell; error on failure
-// - Shell: Landing Settings active, placeholders disabled, logout button
+// - Shell: Landing Settings active, placeholders disabled, user menu logout
 // - Logout failure: keeps shell visible and shows error message
 //
 // WU3 / Slice 1 — the Posts and Outings admin sections were removed
@@ -46,6 +46,15 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
 });
+
+async function clickLogout() {
+  fireEvent.click(
+    screen.getByRole("button", { name: /menú de usuario de admin user/i }),
+  );
+  fireEvent.click(
+    await screen.findByRole("menuitem", { name: /cerrar sesión/i }),
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Bootstrap — refresh on mount
@@ -391,7 +400,9 @@ describe("AdminApp shell navigation", () => {
     // Shell should still be intact
     expect(screen.getByTestId("admin-shell")).toBeTruthy();
     expect(screen.getByTestId("admin-user-name")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /cerrar sesión/i })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /menú de usuario de admin user/i }),
+    ).toBeTruthy();
   });
 
   it("synchronizes active section with browser history", async () => {
@@ -488,7 +499,7 @@ describe("AdminApp shell navigation", () => {
       target: { value: "Título sin guardar" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /cerrar sesión/i }));
+    await clickLogout();
     expect(
       await screen.findByRole("alertdialog", { name: "Cambios sin guardar" }),
     ).toBeTruthy();
@@ -535,11 +546,16 @@ describe("AdminApp shell navigation", () => {
     ).toBe(true);
   });
 
-  it("renders logout button", async () => {
+  it("renders logout menu item from the user control", async () => {
     await renderShell();
-    const logoutButton = screen.getByRole("button", { name: /cerrar sesión/i });
-    expect(logoutButton).toBeTruthy();
-    expect((logoutButton as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(
+      screen.getByRole("button", { name: /menú de usuario de admin user/i }),
+    );
+    const logoutItem = await screen.findByRole("menuitem", {
+      name: /cerrar sesión/i,
+    });
+    expect(logoutItem).toBeTruthy();
+    expect(logoutItem.getAttribute("aria-disabled")).toBeNull();
   });
 
   it("clicking logout POSTs to /auth/logout and shows login", async () => {
@@ -564,7 +580,7 @@ describe("AdminApp shell navigation", () => {
       expect(screen.getByTestId("admin-shell")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /cerrar sesión/i }));
+    await clickLogout();
 
     await waitFor(() => {
       expect(logoutCalled).toBe(true);
@@ -757,7 +773,7 @@ describe("AdminApp triangulation", () => {
     });
 
     // Click logout
-    fireEvent.click(screen.getByRole("button", { name: /cerrar sesión/i }));
+    await clickLogout();
 
     // Shell should still be visible (user not cleared)
     await waitFor(() => {

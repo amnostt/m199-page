@@ -24,12 +24,19 @@ function DropdownMenuContent({
   ...props
 }: DropdownMenuPrimitive.Popup.Props & {
   align?: "start" | "center" | "end";
+  side?: "top" | "right" | "bottom" | "left";
+  sideOffset?: number;
 }) {
-  const { align = "end", ...popupProps } = props;
+  const { align = "end", side = "bottom", sideOffset, ...popupProps } = props;
 
   return (
     <DropdownMenuPrimitive.Portal>
-      <DropdownMenuPrimitive.Positioner align={align} className="isolate z-50">
+      <DropdownMenuPrimitive.Positioner
+        align={align}
+        side={side}
+        sideOffset={sideOffset}
+        className="isolate z-50"
+      >
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
