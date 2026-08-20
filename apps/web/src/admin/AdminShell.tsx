@@ -29,9 +29,9 @@ import { LandingSettingsPage } from "./LandingSettingsPage.js";
 import { ResponsiblesPage } from "./ResponsiblesPage.js";
 import { MissionsPage } from "./MissionsPage.js";
 import { PublicationsPage } from "./PublicationsPage.js";
+import type { AdminSection } from "./adminRouting.js";
 
-export type AdminSection =
-  "landing" | "responsibles" | "missions" | "publications";
+export type { AdminSection } from "./adminRouting.js";
 
 type AdminNavItem = {
   section: AdminSection;

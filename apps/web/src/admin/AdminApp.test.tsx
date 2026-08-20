@@ -40,6 +40,7 @@ const AUTH_USER = {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  window.history.replaceState(null, "", "/admin");
 });
 
 afterEach(() => {
@@ -319,6 +320,13 @@ describe("AdminApp shell navigation", () => {
             }),
         });
       }
+      if (
+        url === "/missions/admin/active" ||
+        url === "/missions/admin/archived" ||
+        url.startsWith("/publications/admin")
+      ) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
@@ -338,6 +346,17 @@ describe("AdminApp shell navigation", () => {
     expect((landingLink as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it.each([
+    ["/admin", "landing-settings-form"],
+    ["/admin/responsables", "responsibles-page"],
+    ["/admin/misiones", "missions-page"],
+    ["/admin/publicaciones", "publications-page"],
+  ])("renders the section for direct URL %s", async (path, testId) => {
+    window.history.replaceState(null, "", path);
+    await renderShell();
+    expect(await screen.findByTestId(testId)).toBeTruthy();
+  });
+
   it("does NOT render the legacy posts or outings nav items (WU3 cleanup)", async () => {
     await renderShell();
     expect(screen.queryByTestId("nav-posts")).toBeNull();
@@ -355,6 +374,7 @@ describe("AdminApp shell navigation", () => {
     // Click Responsibles nav
     const responsiblesNav = screen.getByTestId("nav-responsibles");
     fireEvent.click(responsiblesNav);
+    expect(window.location.pathname).toBe("/admin/responsables");
 
     // Responsibles page should now be visible
     await waitFor(() => {
@@ -372,6 +392,25 @@ describe("AdminApp shell navigation", () => {
     expect(screen.getByTestId("admin-shell")).toBeTruthy();
     expect(screen.getByTestId("admin-user-name")).toBeTruthy();
     expect(screen.getByRole("button", { name: /cerrar sesión/i })).toBeTruthy();
+  });
+
+  it("synchronizes active section with browser history", async () => {
+    await renderShell();
+
+    window.history.pushState(null, "", "/admin/misiones");
+    window.history.pushState(null, "", "/admin/publicaciones");
+    window.history.back();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("missions-page")).toBeTruthy();
+    });
+    expect(window.location.pathname).toBe("/admin/misiones");
+
+    window.history.forward();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("publications-page")).toBeTruthy();
+    });
   });
 
   it("guards navigation and beforeunload while landing changes are unsaved", async () => {
@@ -406,6 +445,38 @@ describe("AdminApp shell navigation", () => {
     await waitFor(() => {
       expect(screen.getByTestId("responsibles-page")).toBeTruthy();
     });
+  });
+
+  it("guards browser history navigation while landing changes are unsaved", async () => {
+    await renderShell();
+    await waitFor(() => {
+      expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText("Título principal"), {
+      target: { value: "Título sin guardar" },
+    });
+
+    window.history.pushState(null, "", "/admin/responsables");
+    window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
+
+    expect(window.location.pathname).toBe("/admin");
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    expect(screen.queryByTestId("responsibles-page")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Seguir editando" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(window.location.pathname).toBe("/admin");
+
+    window.history.pushState(null, "", "/admin/responsables");
+    window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Descartar y salir" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("responsibles-page")).toBeTruthy();
+    });
+    expect(window.location.pathname).toBe("/admin/responsables");
   });
 
   it("guards logout while landing changes are unsaved", async () => {

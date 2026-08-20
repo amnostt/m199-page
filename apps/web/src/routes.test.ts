@@ -17,6 +17,7 @@ describe("Astro route ownership", () => {
   it("defines the public landing, the admin application, and an explicit 404", () => {
     expect(routeEntries()).toEqual([
       "404.astro",
+      "admin",
       "admin.astro",
       "index.astro",
       "misiones",
@@ -25,15 +26,22 @@ describe("Astro route ownership", () => {
     for (const name of ["misiones", "publicaciones"]) {
       expect(statSync(resolve(pages, name)).isDirectory()).toBe(true);
     }
+    expect(statSync(resolve(pages, "admin")).isDirectory()).toBe(true);
   });
 
   it("hydrates React only for the admin application", () => {
     const admin = readFileSync(resolve(pages, "admin.astro"), "utf8");
+    const nestedAdmin = readFileSync(
+      resolve(pages, "admin", "[...section].astro"),
+      "utf8",
+    );
     const publicPages = ["index.astro", "404.astro"].map((path) =>
       readFileSync(resolve(pages, path), "utf8"),
     );
 
     expect(admin).toMatch(/<AdminApp client:load\s*\/>/);
+    expect(nestedAdmin).toMatch(/<AdminApp client:load\s*\/>/);
+    expect(nestedAdmin).toMatch(/Astro\.redirect\("\/admin", 308\)/);
     for (const source of publicPages) expect(source).not.toMatch(/client:/);
   });
 });

@@ -1,0 +1,22 @@
+---
+const section = Astro.params.section?.replace(/\/+$/, "");
+const knownSections = new Set([
+  "responsables",
+  "misiones",
+  "publicaciones",
+]);
+
+if (!section || !knownSections.has(section)) {
+  return Astro.redirect("/admin", 308);
+}
+
+import { AdminApp } from "../../admin/AdminApp.js";
+import "../../styles/admin.css";
+---
+
+<html lang="es">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /><title>Administración | Misión 1-99</title></head>
+  <body data-theme="admin">
+    <AdminApp client:load />
+  </body>
+</html>

@@ -10,7 +10,7 @@
 //   out-of-scope sections (Files), and logout button.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AuthUser } from "./adminTypes.js";
 import {
   login,
@@ -21,6 +21,11 @@ import {
 import { AdminProviders } from "./AdminProviders.js";
 import { AdminShell, type AdminSection } from "./AdminShell.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
+import {
+  getAdminPath,
+  getAdminSection,
+  isKnownAdminPath,
+} from "./adminRouting.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -46,6 +51,26 @@ export const TIMEOUTS = {
   bootstrap: REFRESH_DEADLINE_MS,
   login: 15_000,
 };
+
+type PendingExit =
+  | { kind: "section"; section: AdminSection }
+  | {
+      kind: "history";
+      path: string;
+      section: AdminSection | null;
+      state: unknown;
+    }
+  | { kind: "logout" };
+
+function currentHistoryUrl(): string {
+  if (typeof window === "undefined") return "/admin";
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+function initialAdminSection(): AdminSection {
+  if (typeof window === "undefined") return "landing";
+  return getAdminSection(window.location.pathname);
+}
 
 // ---------------------------------------------------------------------------
 // AdminLogin — inline email/password form
@@ -175,11 +200,11 @@ export function AdminApp() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoutError, setLogoutError] = useState(false);
-  const [activeSection, setActiveSection] = useState<AdminSection>("landing");
+  const [activeSection, setActiveSection] =
+    useState<AdminSection>(initialAdminSection);
   const [landingDirty, setLandingDirty] = useState(false);
-  const [pendingExit, setPendingExit] = useState<
-    AdminSection | "logout" | null
-  >(null);
+  const [pendingExit, setPendingExit] = useState<PendingExit | null>(null);
+  const currentUrlRef = useRef(currentHistoryUrl());
 
   // Bootstrap: attempt refresh on mount with bounded timeout.
   // If the auth endpoint hangs the timeout clears the loading state
@@ -221,6 +246,61 @@ export function AdminApp() {
     return () => window.removeEventListener("beforeunload", preventUnload);
   }, [landingDirty]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const expectedPath = getAdminPath(activeSection);
+    if (window.location.pathname !== expectedPath) {
+      window.history.replaceState(window.history.state, "", expectedPath);
+      currentUrlRef.current = expectedPath;
+    }
+  }, [activeSection]);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const destinationPath = currentHistoryUrl();
+      const destinationIsKnown = isKnownAdminPath(window.location.pathname);
+      const destinationSection = destinationIsKnown
+        ? getAdminSection(window.location.pathname)
+        : null;
+
+      if (
+        activeSection === "landing" &&
+        landingDirty &&
+        destinationSection !== "landing"
+      ) {
+        // popstate cannot be cancelled. Reuse the traversed history entry for
+        // the current URL, then ask for confirmation before applying the
+        // browser's requested destination.
+        window.history.replaceState(
+          window.history.state,
+          "",
+          currentUrlRef.current,
+        );
+        setPendingExit({
+          kind: "history",
+          path: destinationPath,
+          section: destinationSection,
+          state: event.state,
+        });
+        return;
+      }
+
+      if (!destinationIsKnown) {
+        window.history.replaceState(null, "", getAdminPath("landing"));
+        currentUrlRef.current = getAdminPath("landing");
+        setActiveSection("landing");
+        return;
+      }
+
+      currentUrlRef.current = destinationPath;
+      setActiveSection(getAdminSection(window.location.pathname));
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [activeSection, landingDirty]);
+
   const handleLogout = async () => {
     setLogoutError(false);
     try {
@@ -234,15 +314,21 @@ export function AdminApp() {
   const handleNavigate = (section: AdminSection) => {
     if (section === activeSection) return;
     if (activeSection === "landing" && landingDirty) {
-      setPendingExit(section);
+      setPendingExit({ kind: "section", section });
       return;
     }
+    window.history.pushState(
+      { adminSection: section },
+      "",
+      getAdminPath(section),
+    );
+    currentUrlRef.current = getAdminPath(section);
     setActiveSection(section);
   };
 
   const requestLogout = () => {
     if (activeSection === "landing" && landingDirty) {
-      setPendingExit("logout");
+      setPendingExit({ kind: "logout" });
       return;
     }
     void handleLogout();
@@ -251,14 +337,31 @@ export function AdminApp() {
   const discardAndExit = async () => {
     const destination = pendingExit;
     setPendingExit(null);
-    if (destination === "logout") {
+    if (!destination) return;
+    if (destination.kind === "logout") {
       await handleLogout();
       return;
     }
-    if (destination) {
-      setLandingDirty(false);
-      setActiveSection(destination);
+
+    setLandingDirty(false);
+    if (destination.kind === "history") {
+      if (!destination.section) {
+        window.location.assign(destination.path);
+        return;
+      }
+      window.history.replaceState(destination.state, "", destination.path);
+      currentUrlRef.current = destination.path;
+      setActiveSection(destination.section);
+      return;
     }
+
+    window.history.pushState(
+      { adminSection: destination.section },
+      "",
+      getAdminPath(destination.section),
+    );
+    currentUrlRef.current = getAdminPath(destination.section);
+    setActiveSection(destination.section);
   };
 
   // Loading state
