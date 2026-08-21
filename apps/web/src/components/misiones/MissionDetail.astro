@@ -9,6 +9,9 @@ import MissionPublicationItem from "./MissionPublicationItem.astro";
 import MissionPageNav from "./MissionPageNav.astro";
 const { mission } = Astro.props;
 const imageSrc = resolvePublicImageUrl(mission.heroImageUrl);
+const profileImageSrc = mission.profileImageUrl
+  ? resolvePublicImageUrl(mission.profileImageUrl)
+  : null;
 ---
 <main class="public-ui public-page public-mission-detail" data-testid="mission-detail">
   <MissionPageNav current="detail" />
@@ -18,6 +21,15 @@ const imageSrc = resolvePublicImageUrl(mission.heroImageUrl);
       <img src={imageSrc} alt="" onerror={PUBLIC_IMAGE_FALLBACK_HANDLER} />
     </div>
     <div class="public-mission-detail__hero-copy">
+      {profileImageSrc && (
+        <div class="public-mission-detail__profile" data-testid="mission-profile-image">
+          <img
+            src={profileImageSrc}
+            alt={`Logotipo de ${mission.title}`}
+            onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+          />
+        </div>
+      )}
       {mission.finished && <MissionFinishedBadge />}
       <h1 id="mission-title">{mission.title}</h1>
       <p class="public-mission-detail__phrase">{mission.heroPhrase}</p>

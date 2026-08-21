@@ -6,6 +6,9 @@ import {
 
 const { mission } = Astro.props;
 const imageSrc = resolvePublicImageUrl(mission.heroImageUrl);
+const profileImageSrc = mission.profileImageUrl
+  ? resolvePublicImageUrl(mission.profileImageUrl)
+  : null;
 ---
 <article class="public-mission-card">
   <a class="public-mission-card__link" href={`/misiones/${mission.slug}`}>
@@ -19,6 +22,17 @@ const imageSrc = resolvePublicImageUrl(mission.heroImageUrl);
       />
     </div>
     <div class="public-mission-card__body">
+      {profileImageSrc && (
+        <div class="public-mission-card__profile" data-testid="mission-profile-image">
+          <img
+            src={profileImageSrc}
+            alt={`Logotipo de ${mission.title}`}
+            loading="lazy"
+            decoding="async"
+            onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+          />
+        </div>
+      )}
       <h2>{mission.title}</h2>
       <p>{mission.heroPhrase}</p>
       <span class="public-mission-card__action">Ver misión</span>

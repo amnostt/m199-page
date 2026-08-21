@@ -17,6 +17,7 @@ describe("missions SSR", () => {
               slug: "one",
               title: "One",
               heroImageUrl: "/files/f-1",
+              profileImageUrl: "/files/p-1",
               heroPhrase: "Phrase",
               status: "ACTIVE",
             },
@@ -45,6 +46,8 @@ describe("missions SSR", () => {
     expect(html).toContain('class="public-mission-card"');
     expect(html).toContain('href="/misiones/one"');
     expect(html).toContain('src="/files/f-1"');
+    expect(html).toContain('src="/files/p-1"');
+    expect(html).toContain('alt="Logotipo de One"');
     expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
     expect(html).toContain('href="/"');
     expect(html).toContain("Página 2 de 3");
@@ -68,6 +71,7 @@ describe("missions SSR", () => {
                 slug: "one",
                 title: "One",
                 heroImageUrl: "",
+                profileImageUrl: null,
                 heroPhrase: "Phrase",
                 status: "ACTIVE",
               },

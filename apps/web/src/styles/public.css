@@ -1379,6 +1379,7 @@ body[data-theme="public"].landing-body {
     position: relative;
     display: flex;
     flex-direction: column;
+    container: landing-mission-card / inline-size;
     min-height: 22rem;
     height: 100%;
     color: var(--foreground);
@@ -1416,19 +1417,64 @@ body[data-theme="public"].landing-body {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0;
+    min-width: 0;
     padding: 1.25rem 1.5rem 1.5rem;
+  }
+
+  .public-ui .landing-mission-card__profile,
+  .public-ui .public-mission-card__profile,
+  .public-ui .public-mission-detail__profile {
+    display: grid;
+    place-items: center;
+    width: 6rem;
+    height: 4.5rem;
+    overflow: hidden;
+    padding: 0.5rem;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .public-ui .landing-mission-card__profile img,
+  .public-ui .public-mission-card__profile img,
+  .public-ui .public-mission-detail__profile img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    min-height: 0;
+    object-fit: contain;
+    object-position: center;
+  }
+
+  .public-ui .public-mission-card__profile {
+    margin-block-end: 0.75rem;
   }
 
   .public-ui .landing-mission-card__meta {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin-block-end: 0.875rem;
     color: var(--secondary);
     font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: 0.14em;
     text-transform: uppercase;
+  }
+
+  .public-ui .landing-mission-card__identity {
+    display: grid;
+    grid-template-columns: minmax(6rem, 6rem) minmax(0, 1fr);
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .public-ui .landing-mission-card__identity[data-has-profile="false"] {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .public-ui .landing-mission-card__index {
@@ -1441,20 +1487,30 @@ body[data-theme="public"].landing-body {
   }
 
   .public-ui .landing-mission-card__title {
+    min-width: 0;
     margin: 0;
     color: var(--foreground);
     font-family: var(--font-display);
     font-size: 1.5rem;
     font-weight: 700;
     line-height: 1.15;
+    overflow-wrap: anywhere;
   }
 
   .public-ui .landing-mission-card__phrase {
     margin: 0;
+    margin-block-start: clamp(1rem, 2.5vw, 1.5rem);
     color: var(--muted-foreground);
     font-size: 1rem;
     line-height: 1.5;
     overflow-wrap: anywhere;
+  }
+
+  @container landing-mission-card (max-width: 20rem) {
+    .public-ui .landing-mission-card__identity {
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+    }
   }
 
   /* ---------------------------------------------------------------------------
@@ -2799,6 +2855,12 @@ body[data-theme="public"].landing-body {
     letter-spacing: -0.035em;
     line-height: 0.94;
     overflow-wrap: anywhere;
+  }
+
+  .public-ui .public-mission-detail__profile {
+    width: 8rem;
+    height: 6rem;
+    margin-block-end: 1.25rem;
   }
 
   .public-ui .public-mission-detail__phrase {

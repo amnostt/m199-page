@@ -73,6 +73,7 @@ export interface MissionAdmin {
   slug: string;
   title: string;
   heroImageId: string;
+  profileImageId: string | null;
   heroPhrase: string;
   status: MissionStatus;
   createdAt: string;
@@ -83,6 +84,7 @@ export interface CreateMissionInput {
   title: string;
   slug: string;
   heroImageId: string;
+  profileImageId?: string | null;
   heroPhrase: string;
 }
 

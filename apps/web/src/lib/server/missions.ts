@@ -5,6 +5,7 @@ export type MissionListItem = {
   slug: string;
   title: string;
   heroImageUrl: string;
+  profileImageUrl: string | null;
   heroPhrase: string;
   status: "ACTIVE";
 };
@@ -61,6 +62,8 @@ export function validateMissionPublicPayload(
     typeof value.slug !== "string" ||
     typeof value.title !== "string" ||
     typeof value.heroImageUrl !== "string" ||
+    (value.profileImageUrl !== null &&
+      typeof value.profileImageUrl !== "string") ||
     typeof value.heroPhrase !== "string" ||
     !["ACTIVE", "ARCHIVED"].includes(value.status as string) ||
     typeof value.finished !== "boolean" ||

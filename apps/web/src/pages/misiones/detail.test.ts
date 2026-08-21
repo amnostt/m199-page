@@ -9,6 +9,7 @@ const activeDetail = {
   slug: "one",
   title: "One",
   heroImageUrl: "/files/f-1",
+  profileImageUrl: "/files/p-1",
   heroPhrase: "Phrase",
   status: "ACTIVE",
   finished: false,
@@ -48,10 +49,12 @@ describe("mission detail SSR", () => {
     expect(html).toContain("Todas las misiones");
     expect(html).toContain('data-testid="mission-gallery"');
     expect(html).toContain('src="/files/f-1"');
+    expect(html).toContain('src="/files/p-1"');
+    expect(html).toContain('alt="Logotipo de One"');
     expect(html).toContain('src="/files/f-2"');
     expect(
       html.match(new RegExp(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}`, "g")),
-    ).toHaveLength(3);
+    ).toHaveLength(4);
     expect(html).toContain("La Misión en imágenes");
     expect(html).toContain("Story One");
     expect(html).toContain("Explorar publicaciones");
@@ -126,6 +129,28 @@ describe("mission detail SSR", () => {
     expect(html).not.toContain('data-testid="mission-gallery"');
     expect(html).not.toContain("Explorar publicaciones");
     expect(html).toContain("No hay publicaciones relacionadas.");
+  });
+
+  it("omits the profile image container when no profile image is configured", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            JSON.stringify({ ...activeDetail, profileImageUrl: null }),
+          ),
+        ),
+    );
+
+    const html = await (
+      await AstroContainer.create()
+    ).renderToString(Page, {
+      params: { slug: "one" },
+      request: new Request("http://localhost/misiones/one"),
+    });
+
+    expect(html).not.toContain('data-testid="mission-profile-image"');
   });
 
   it("returns 503 with the visitor-safe fallback for upstream, network, and invalid payloads", async () => {

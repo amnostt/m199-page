@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class CreateMissionDto {
   @IsString()
@@ -12,6 +12,11 @@ export class CreateMissionDto {
   @IsString()
   @IsNotEmpty()
   heroImageId!: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  profileImageId?: string;
 
   @IsString()
   @IsNotEmpty()

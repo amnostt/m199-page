@@ -3,8 +3,8 @@
  * LandingMissions.astro — SSR-first editorial mission cards.
  *
  * Populates cards only from the validated fields:
- * `title`, `heroPhrase`, `heroImageUrl`, `slug`. The card index is
- * derived from the iteration position (zero-padded two-digit label).
+ * `title`, `heroPhrase`, `heroImageUrl`, `profileImageUrl`, `slug`. The card index
+ * is derived from the iteration position (zero-padded two-digit label).
  *
  * Composition:
  *   - The section is omitted entirely when `missions` is null or
@@ -121,7 +121,25 @@ const trackId = "missions-track";
                   >{String(index + 1).padStart(2, "0")}</span>
                   <span class="landing-mission-card__arrow" aria-hidden="true">↗</span>
                 </div>
-                <h3 class="landing-mission-card__title" data-testid="mission-card-title">{mission.title}</h3>
+                <div
+                  class="landing-mission-card__identity"
+                  data-has-profile={mission.profileImageUrl ? "true" : "false"}
+                >
+                  {mission.profileImageUrl && (
+                    <div class="landing-mission-card__profile" data-testid="mission-profile-image">
+                      <img
+                        src={resolvePublicImageUrl(mission.profileImageUrl)}
+                        alt={`Logotipo de ${mission.title}`}
+                        loading="lazy"
+                        decoding="async"
+                        onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+                      />
+                    </div>
+                  )}
+                  <h3 class="landing-mission-card__title" data-testid="mission-card-title">
+                    {mission.title}
+                  </h3>
+                </div>
                 <p class="landing-mission-card__phrase" data-testid="mission-card-phrase">{mission.heroPhrase}</p>
               </div>
             </a>

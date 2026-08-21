@@ -81,6 +81,37 @@ describe("FileUploadWidget — idle state (no file)", () => {
 
     expect(screen.queryByTestId("file-upload-remove")).toBeNull();
   });
+
+  it("shows the accepted image guidance and preview for an existing asset", () => {
+    render(
+      <FileUploadWidget
+        category="OTHER"
+        fileId="profile-1"
+        onUploaded={vi.fn()}
+        onRemove={vi.fn()}
+        preview
+        previewAlt="Logotipo de la misión"
+        description="Formatos: JPG, PNG, WebP o GIF. Tamaño máximo: 10 MB."
+      />,
+    );
+
+    expect(screen.getByText(/Formatos: JPG, PNG, WebP o GIF/)).toBeTruthy();
+    const preview = screen.getByTestId("file-upload-preview");
+    expect(preview).toBeTruthy();
+    expect(preview.getAttribute("data-state")).toBe("done");
+    expect(
+      screen.getByAltText("Logotipo de la misión").getAttribute("src"),
+    ).toBe("/files/profile-1");
+    const removeButtons = screen.getAllByRole("button", {
+      name: "Quitar imagen",
+    });
+    expect(removeButtons).toHaveLength(1);
+    const removeButton = removeButtons[0]!;
+    expect(removeButton.getAttribute("data-slot")).toBe("attachment-action");
+    const removeIcon = removeButton.querySelector("svg");
+    expect(removeIcon).not.toBeNull();
+    expect(removeIcon?.getAttribute("aria-hidden")).toBe("true");
+  });
 });
 
 describe("FileUploadWidget — upload flow", () => {
@@ -189,6 +220,90 @@ describe("FileUploadWidget — upload flow", () => {
     expect(screen.queryByTestId("file-upload-uploading")).toBeNull();
   });
 
+  it("reflects uploading and error states through the image attachment", async () => {
+    let rejectUpload: ((reason?: unknown) => void) | undefined;
+    globalThis.fetch = vi.fn().mockImplementation(
+      () =>
+        new Promise<Response>((_, reject) => {
+          rejectUpload = reject;
+        }),
+    );
+
+    render(
+      <FileUploadWidget
+        category="OTHER"
+        fileId={null}
+        onUploaded={vi.fn()}
+        onRemove={vi.fn()}
+        preview
+      />,
+    );
+
+    const input = screen.getByTestId("file-upload-input");
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["x"], "profile.png", { type: "image/png" })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("file-upload-preview")).toBeTruthy();
+      expect(
+        screen.getByTestId("file-upload-preview").getAttribute("data-state"),
+      ).toBe("uploading");
+    });
+    rejectUpload?.(new Error("Network error"));
+    await waitFor(() =>
+      expect(screen.getByTestId("file-upload-preview")).toBeTruthy(),
+    );
+    expect(
+      screen.getByTestId("file-upload-preview").getAttribute("data-state"),
+    ).toBe("error");
+    expect(
+      screen.getByRole("button", { name: "Reintentar carga" }),
+    ).toBeTruthy();
+  });
+
+  it("clears a failed filename when the current file id changes", async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
+
+    const { rerender } = render(
+      <FileUploadWidget
+        category="OTHER"
+        fileId={null}
+        onUploaded={vi.fn()}
+        onRemove={vi.fn()}
+        preview
+      />,
+    );
+    fireEvent.change(screen.getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["x"], "stale.png", { type: "image/png" })],
+      },
+    });
+
+    await waitFor(() => expect(screen.getByText("stale.png")).toBeTruthy());
+    rerender(
+      <FileUploadWidget
+        category="OTHER"
+        fileId="current-file"
+        onUploaded={vi.fn()}
+        onRemove={vi.fn()}
+        preview
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("stale.png")).toBeNull();
+      expect(
+        screen.getByTestId("file-upload-preview").getAttribute("data-state"),
+      ).toBe("done");
+    });
+    expect(
+      screen.getByAltText("Vista previa del archivo").getAttribute("src"),
+    ).toBe("/files/current-file");
+  });
+
   it("shows error state on non-ok response", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -212,6 +327,69 @@ describe("FileUploadWidget — upload flow", () => {
     await waitFor(() => {
       expect(screen.getByTestId("file-upload-error")).toBeTruthy();
     });
+  });
+
+  it("rejects unsupported MIME types before upload", async () => {
+    const errorToast = vi.spyOn(toast, "error");
+    globalThis.fetch = vi.fn();
+
+    render(
+      <FileUploadWidget
+        category="OTHER"
+        fileId={null}
+        onUploaded={vi.fn()}
+        onRemove={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["pdf"], "profile.pdf", { type: "application/pdf" })],
+      },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("file-upload-error")).toBeTruthy(),
+    );
+    expect(errorToast).toHaveBeenCalledWith(
+      "No se pudo cargar el archivo.",
+      expect.objectContaining({
+        description: expect.stringContaining("JPG, PNG, WebP o GIF"),
+      }),
+    );
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized files before upload", async () => {
+    const errorToast = vi.spyOn(toast, "error");
+    globalThis.fetch = vi.fn();
+
+    render(
+      <FileUploadWidget
+        category="OTHER"
+        fileId={null}
+        onUploaded={vi.fn()}
+        onRemove={vi.fn()}
+        maxSizeBytes={1}
+      />,
+    );
+
+    fireEvent.change(screen.getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["xx"], "profile.gif", { type: "image/gif" })],
+      },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("file-upload-error")).toBeTruthy(),
+    );
+    expect(errorToast).toHaveBeenCalledWith(
+      "No se pudo cargar el archivo.",
+      expect.objectContaining({
+        description: expect.stringContaining("máximo"),
+      }),
+    );
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
   it("disables input while uploading", async () => {

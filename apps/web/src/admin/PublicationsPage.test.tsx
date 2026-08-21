@@ -127,6 +127,7 @@ describe("PublicationsPage", () => {
         slug: "mission-1",
         title: "Mission 1",
         heroImageId: "file",
+        profileImageId: null,
         heroPhrase: "Phrase",
         status: "ACTIVE",
         createdAt: "",

@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
   waitFor,
 } from "@testing-library/react";
 import { MissionsPage } from "./MissionsPage.js";
@@ -24,11 +25,16 @@ vi.mock("./missionsApi.js", () => ({
   updateMissionStatus: vi.fn(),
 }));
 vi.mock("./session.js", () => ({ adminFetch: vi.fn() }));
-const mission = (id: string, status: MissionAdmin["status"]): MissionAdmin => ({
+const mission = (
+  id: string,
+  status: MissionAdmin["status"],
+  profileImageId: string | null = null,
+): MissionAdmin => ({
   id,
   slug: `mission-${id}`,
   title: `Mission ${id}`,
   heroImageId: `file-${id}`,
+  profileImageId,
   heroPhrase: `Phrase ${id}`,
   status,
   createdAt: "2026-08-11",
@@ -105,26 +111,106 @@ describe("MissionsPage", () => {
     fireEvent.change(screen.getByLabelText("Frase"), {
       target: { value: " Phrase " },
     });
-    vi.mocked(adminFetch).mockResolvedValue({ id: "hero-1" });
-    fireEvent.change(screen.getByTestId("file-upload-input"), {
-      target: {
-        files: [new File(["hero"], "hero.png", { type: "image/png" })],
+    vi.mocked(adminFetch)
+      .mockResolvedValueOnce({ id: "hero-1" })
+      .mockResolvedValueOnce({ id: "profile-1" });
+    fireEvent.change(
+      within(screen.getByTestId("mission-hero-upload")).getByTestId(
+        "file-upload-input",
+      ),
+      {
+        target: {
+          files: [new File(["hero"], "hero.png", { type: "image/png" })],
+        },
       },
-    });
+    );
     await waitFor(() =>
       expect(adminFetch).toHaveBeenCalledWith(
         "/files/MISSION_HERO",
         expect.objectContaining({ method: "POST" }),
       ),
     );
+    const heroPreview = within(
+      screen.getByTestId("mission-hero-upload"),
+    ).getByTestId("file-upload-preview");
+    expect(heroPreview).toBeTruthy();
+    expect(
+      within(screen.getByTestId("mission-hero-upload"))
+        .getByAltText("Imagen hero de Nueva")
+        .getAttribute("src"),
+    ).toBe("/files/hero-1");
+    fireEvent.change(
+      within(screen.getByTestId("mission-profile-upload")).getByTestId(
+        "file-upload-input",
+      ),
+      {
+        target: {
+          files: [new File(["profile"], "profile.png", { type: "image/png" })],
+        },
+      },
+    );
+    await waitFor(() =>
+      expect(adminFetch).toHaveBeenCalledWith(
+        "/files/OTHER",
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
+    expect(
+      within(screen.getByTestId("mission-profile-upload")).getByTestId(
+        "file-upload-preview",
+      ),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Crear misión" }));
     await waitFor(() =>
       expect(createMission).toHaveBeenCalledWith({
         title: "Nueva",
         slug: "nueva",
         heroImageId: "hero-1",
+        profileImageId: "profile-1",
         heroPhrase: "Phrase",
       }),
+    );
+  });
+
+  it("prefills, previews, and removes an optional profile image", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([
+      mission("active", "ACTIVE", "profile-old"),
+    ]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    vi.mocked(updateMission).mockResolvedValue(mission("active", "ACTIVE"));
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByText("Mission active")).toBeTruthy(),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Mission active" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
+
+    const profileUpload = screen.getByTestId("mission-profile-upload");
+    const heroUpload = screen.getByTestId("mission-hero-upload");
+    expect(
+      within(heroUpload)
+        .getByAltText("Imagen hero de Mission active")
+        .getAttribute("src"),
+    ).toBe("/files/file-active");
+    expect(
+      within(profileUpload).getByTestId("file-upload-preview"),
+    ).toBeTruthy();
+    fireEvent.click(
+      within(profileUpload).getByRole("button", { name: "Quitar imagen" }),
+    );
+    expect(
+      within(profileUpload).queryByTestId("file-upload-preview"),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() =>
+      expect(updateMission).toHaveBeenCalledWith(
+        "active",
+        expect.objectContaining({ profileImageId: null }),
+      ),
     );
   });
 

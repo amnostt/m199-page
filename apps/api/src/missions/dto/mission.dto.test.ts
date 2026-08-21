@@ -23,6 +23,11 @@ describe("Mission DTOs", () => {
     expect(
       await validate(Object.assign(new UpdateMissionDto(), { title: "" })),
     ).not.toHaveLength(0);
+    expect(
+      await validate(
+        Object.assign(new UpdateMissionDto(), { profileImageId: null }),
+      ),
+    ).toHaveLength(0);
   });
 
   it("only accepts ACTIVE or ARCHIVED status", async () => {

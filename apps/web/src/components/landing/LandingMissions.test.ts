@@ -17,6 +17,7 @@ const sampleMissions: MissionListItem[] = [
     slug: "alpha",
     title: "Alpha mission",
     heroImageUrl: "/files/m-1-hero",
+    profileImageUrl: "/files/m-1-profile",
     heroPhrase: "Alpha phrase",
     status: "ACTIVE",
   },
@@ -25,6 +26,7 @@ const sampleMissions: MissionListItem[] = [
     slug: "beta",
     title: "Beta mission",
     heroImageUrl: "/files/m-2-hero",
+    profileImageUrl: null,
     heroPhrase: "Beta phrase",
     status: "ACTIVE",
   },
@@ -52,12 +54,15 @@ describe("LandingMissions.astro — loaded cards", () => {
     expect(html).toContain("Alpha mission");
     expect(html).toContain("Alpha phrase");
     expect(html).toContain('src="/files/m-1-hero"');
+    expect(html).toContain('src="/files/m-1-profile"');
+    expect(html).toContain('alt="Logotipo de Alpha mission"');
     expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
 
     expect(html).toContain('href="/misiones/beta"');
     expect(html).toContain("Beta mission");
     expect(html).toContain("Beta phrase");
     expect(html).toContain('src="/files/m-2-hero"');
+    expect(html).not.toContain('src="/files/m-2-profile"');
 
     expect(html).toContain('href="/misiones"');
     expect(html).toContain("Ver todas las misiones");
@@ -65,6 +70,52 @@ describe("LandingMissions.astro — loaded cards", () => {
     expect(html.match(/class="landing-missions__item"/g)).toHaveLength(2);
     expect(html).toContain('data-testid="missions-prev"');
     expect(html).toContain('data-testid="missions-next"');
+  });
+
+  it("keeps hero media first, metadata compact, and identity grouped before the phrase", async () => {
+    const html = await container.renderToString(LandingMissions, {
+      props: { missions: sampleMissions },
+    });
+    const cards = [
+      ...html.matchAll(/<a class="landing-mission-card"[\s\S]*?<\/a>/g),
+    ].map(([card]) => card);
+    expect(cards).toHaveLength(2);
+
+    const firstCard = cards[0]!;
+    const mediaIndex = firstCard.indexOf('class="landing-mission-card__media"');
+    const metaIndex = firstCard.indexOf('class="landing-mission-card__meta"');
+    const identityIndex = firstCard.indexOf(
+      'class="landing-mission-card__identity"',
+    );
+    const phraseIndex = firstCard.indexOf(
+      'class="landing-mission-card__phrase"',
+    );
+
+    expect(mediaIndex).toBeLessThan(metaIndex);
+    expect(metaIndex).toBeLessThan(identityIndex);
+    expect(identityIndex).toBeLessThan(phraseIndex);
+    expect(firstCard).toMatch(
+      /class="landing-mission-card__media"[\s\S]*?<img[^>]*alt=""[^>]*class="landing-mission-card__image"/,
+    );
+    expect(firstCard).toMatch(
+      /class="landing-mission-card__identity"[\s\S]*?class="landing-mission-card__profile"[\s\S]*?alt="Logotipo de Alpha mission"[\s\S]*?class="landing-mission-card__title"/,
+    );
+  });
+
+  it("omits the optional profile container while retaining the identity group", async () => {
+    const html = await container.renderToString(LandingMissions, {
+      props: { missions: sampleMissions },
+    });
+    const cards = [
+      ...html.matchAll(/<a class="landing-mission-card"[\s\S]*?<\/a>/g),
+    ].map(([card]) => card);
+
+    expect(cards[0]).toContain('data-testid="mission-profile-image"');
+    expect(cards[1]).not.toContain('data-testid="mission-profile-image"');
+    expect(cards[1]).toContain('data-has-profile="false"');
+    expect(cards[1]).toMatch(
+      /class="landing-mission-card__identity"[\s\S]*?class="landing-mission-card__title"[^>]*>\s*Beta mission/,
+    );
   });
 
   it("renders derived zero-padded card indices in order", async () => {

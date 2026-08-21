@@ -286,6 +286,40 @@ describe("public.css landing scroll-snap missions contract", () => {
   });
 });
 
+describe("public.css landing mission card identity contract", () => {
+  it("keeps the logo and title together with responsive wrapping and intact logo rendering", () => {
+    const css = readPublic();
+
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-mission-card\s*\{[^}]*container:\s*landing-mission-card\s*\/\s*inline-size;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-mission-card__body\s*\{[^}]*gap:\s*0;[^}]*min-width:\s*0;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-mission-card__meta\s*\{[^}]*margin-block-end:\s*0\.875rem;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-mission-card__identity\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(6rem,\s*6rem\)\s+minmax\(0,\s*1fr\);[^}]*gap:\s*1rem;[^}]*min-width:\s*0;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-mission-card__identity\[data-has-profile="false"\]\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-mission-card__profile,[\s\S]*?\.public-ui\s+\.public-mission-detail__profile\s*\{[^}]*width:\s*6rem;[^}]*height:\s*4\.5rem;[^}]*background:\s*var\(--background\);/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-mission-card__title\s*\{[^}]*min-width:\s*0;[^}]*overflow-wrap:\s*anywhere;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-mission-card__profile img,[\s\S]*?\.public-ui\s+\.public-mission-detail__profile img\s*\{[^}]*min-height:\s*0;[^}]*object-fit:\s*contain;/s,
+    );
+    expect(css).toMatch(
+      /@container\s+landing-mission-card\s+\(max-width:\s*20rem\)[\s\S]*\.public-ui\s+\.landing-mission-card__identity\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s,
+    );
+  });
+});
+
 describe("public.css landing OpenDesign blocks contract", () => {
   it("defines the verse, banner, about gallery, publications entry, and footer access", () => {
     const css = readPublic();

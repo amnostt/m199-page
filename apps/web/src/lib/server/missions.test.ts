@@ -10,6 +10,7 @@ const activeDetail = {
   slug: "one",
   title: "One",
   heroImageUrl: "/files/f-1",
+  profileImageUrl: null,
   heroPhrase: "Phrase",
   status: "ACTIVE",
   finished: false,

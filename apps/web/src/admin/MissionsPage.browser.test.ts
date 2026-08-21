@@ -6,6 +6,7 @@ const mission = {
   slug: "una-mision-con-un-slug-deliberadamente-extenso",
   title: "Una misión con un título deliberadamente extenso",
   heroImageId: "image-1",
+  profileImageId: null,
   heroPhrase:
     "Una frase suficientemente extensa para forzar que las columnas superen el ancho disponible del viewport.",
   status: "ACTIVE",

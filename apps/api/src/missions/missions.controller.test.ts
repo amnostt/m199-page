@@ -16,6 +16,7 @@ const row = {
   slug: "one",
   title: "One",
   heroImageId: "f-1",
+  profileImageId: null,
   heroPhrase: "Go",
   status: "ACTIVE",
   createdAt: new Date(),
@@ -33,6 +34,7 @@ async function createApp(guard: {
         slug: row.slug,
         title: row.title,
         heroImageUrl: "/files/f-1",
+        profileImageUrl: null,
         heroPhrase: row.heroPhrase,
         status: row.status,
       },
@@ -49,6 +51,7 @@ async function createApp(guard: {
       slug: row.slug,
       title: row.title,
       heroImageUrl: "/files/f-1",
+      profileImageUrl: null,
       heroPhrase: row.heroPhrase,
       status: row.status,
       finished: false,
@@ -110,12 +113,14 @@ describe("Mission route boundaries", () => {
       .mockResolvedValueOnce({
         ...row,
         heroImageUrl: "/files/f-1",
+        profileImageUrl: null,
         finished: false,
       })
       .mockResolvedValueOnce({
         ...row,
         status: "ARCHIVED",
         heroImageUrl: "/files/f-1",
+        profileImageUrl: null,
         finished: true,
       })
       .mockRejectedValueOnce(new NotFoundException());

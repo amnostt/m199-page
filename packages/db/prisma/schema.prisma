@@ -190,6 +190,7 @@ model FileAsset {
   uploadedBy ResponsibleUser? @relation(fields: [uploadedById], references: [id])
 
   missionHeroes          Mission[]          @relation("MissionHeroImage")
+  missionProfiles        Mission[]          @relation("MissionProfileImage")
   publicationFeatures    Publication[]      @relation("PublicationFeaturedImage")
   landingHeroes          LandingSettings[]  @relation("LandingHero")
 
@@ -204,12 +205,14 @@ model Mission {
   slug        String        @unique
   title       String
   heroImageId String
+  profileImageId String?
   heroPhrase  String
   status      MissionStatus @default(ACTIVE)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   heroImage    FileAsset           @relation("MissionHeroImage", fields: [heroImageId], references: [id], onDelete: Restrict)
+  profileImage FileAsset?          @relation("MissionProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
   publications PublicationMission[]
 
   @@index([status])

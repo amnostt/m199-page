@@ -55,8 +55,20 @@ import {
 } from "../components/ui/tabs.js";
 import { Textarea } from "../components/ui/textarea.js";
 
-const EMPTY = { title: "", slug: "", heroImageId: "", heroPhrase: "" };
-type Form = typeof EMPTY;
+type Form = {
+  title: string;
+  slug: string;
+  heroImageId: string;
+  profileImageId: string | null;
+  heroPhrase: string;
+};
+const EMPTY: Form = {
+  title: "",
+  slug: "",
+  heroImageId: "",
+  profileImageId: null,
+  heroPhrase: "",
+};
 
 function MissionList({
   heading,
@@ -220,6 +232,7 @@ export function MissionsPage() {
       title: mission.title,
       slug: mission.slug,
       heroImageId: mission.heroImageId,
+      profileImageId: mission.profileImageId,
       heroPhrase: mission.heroPhrase,
     });
     setMutationError(null);
@@ -233,6 +246,9 @@ export function MissionsPage() {
       title: form.title.trim(),
       slug: form.slug.trim(),
       heroImageId: form.heroImageId,
+      profileImageId: editing
+        ? form.profileImageId
+        : (form.profileImageId ?? undefined),
       heroPhrase: form.heroPhrase.trim(),
     };
     if (
@@ -416,8 +432,31 @@ export function MissionsPage() {
                       setForm({ ...form, heroImageId: asset.id })
                     }
                     onRemove={() => setForm({ ...form, heroImageId: "" })}
+                    preview
+                    previewVariant="hero"
+                    previewAlt={`Imagen hero de ${form.title || "la misión"}`}
                     data-testid="mission-hero-upload"
                   />
+                </Field>
+                <Field>
+                  <FieldLabel>Imagen de perfil o logotipo</FieldLabel>
+                  <FileUploadWidget
+                    category="OTHER"
+                    fileId={form.profileImageId}
+                    onUploaded={(asset) =>
+                      setForm({ ...form, profileImageId: asset.id })
+                    }
+                    onRemove={() => setForm({ ...form, profileImageId: null })}
+                    preview
+                    previewVariant="logo"
+                    previewAlt={`Logotipo de ${form.title || "la misión"}`}
+                    description="Formatos: JPG, PNG, WebP o GIF. Tamaño máximo: 10 MB."
+                    data-testid="mission-profile-upload"
+                  />
+                  <FieldDescription>
+                    Se muestra como identificador de la misión y conserva sus
+                    proporciones.
+                  </FieldDescription>
                 </Field>
               </FieldGroup>
             </FieldSet>

@@ -8,6 +8,7 @@ const mission = (id: string): MissionAdmin => ({
   slug: id,
   title: `Mission ${id}`,
   heroImageId: "file",
+  profileImageId: null,
   heroPhrase: "Phrase",
   status: "ACTIVE",
   createdAt: "2026-01-01",

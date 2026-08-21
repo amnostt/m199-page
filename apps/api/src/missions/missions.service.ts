@@ -15,6 +15,7 @@ export interface MissionRow {
   slug: string;
   title: string;
   heroImageId: string;
+  profileImageId: string | null;
   heroPhrase: string;
   status: "ACTIVE" | "ARCHIVED";
   createdAt: Date;
@@ -25,6 +26,7 @@ export interface MissionPublicSummary {
   slug: string;
   title: string;
   heroImageUrl: string;
+  profileImageUrl: string | null;
   heroPhrase: string;
   status: "ACTIVE" | "ARCHIVED";
 }
@@ -90,6 +92,8 @@ export class MissionsService {
   }
   async create(dto: CreateMissionDto): Promise<MissionRow> {
     await assertFileCategory(this.client, dto.heroImageId, "MISSION_HERO");
+    if (dto.profileImageId)
+      await assertFileCategory(this.client, dto.profileImageId, "OTHER");
     try {
       return await this.client.mission.create({
         data: { ...dto, status: "ACTIVE" },
@@ -104,6 +108,8 @@ export class MissionsService {
     if (!existing) throw new NotFoundException(`Mission "${id}" not found`);
     const data = { ...existing, ...dto };
     await assertFileCategory(this.client, data.heroImageId, "MISSION_HERO");
+    if (data.profileImageId)
+      await assertFileCategory(this.client, data.profileImageId, "OTHER");
     try {
       return await this.client.mission.update({
         where: { id },
@@ -111,6 +117,7 @@ export class MissionsService {
           title: data.title,
           slug: data.slug,
           heroImageId: data.heroImageId,
+          profileImageId: data.profileImageId,
           heroPhrase: data.heroPhrase,
         },
       });
@@ -135,6 +142,9 @@ export class MissionsService {
       slug: row.slug,
       title: row.title,
       heroImageUrl: `/files/${row.heroImageId}`,
+      profileImageUrl: row.profileImageId
+        ? `/files/${row.profileImageId}`
+        : null,
       heroPhrase: row.heroPhrase,
       status: row.status,
     };
@@ -159,6 +169,7 @@ export class MissionsService {
         slug: true,
         title: true,
         heroImageId: true,
+        profileImageId: true,
         heroPhrase: true,
         status: true,
       },
@@ -180,6 +191,7 @@ export class MissionsService {
         slug: true,
         title: true,
         heroImageId: true,
+        profileImageId: true,
         heroPhrase: true,
         status: true,
         publications: {

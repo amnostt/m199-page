@@ -19,5 +19,10 @@ export class UpdateMissionDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  profileImageId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   heroPhrase?: string;
 }

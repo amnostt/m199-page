@@ -9,6 +9,7 @@ const active: MissionRow = {
   slug: "one",
   title: "One",
   heroImageId: "f-1",
+  profileImageId: null,
   heroPhrase: "Phrase",
   status: "ACTIVE",
   createdAt: new Date(),
@@ -89,6 +90,60 @@ describe("MissionsService", () => {
     });
   });
 
+  it("validates an optional profile image as OTHER", async () => {
+    const db = fixture();
+    db.fileFindUnique
+      .mockResolvedValueOnce({ id: "f-1", category: "MISSION_HERO" })
+      .mockResolvedValueOnce({ id: "p-1", category: "OTHER" });
+    const service = await build(db);
+
+    await service.create({
+      title: "One",
+      slug: "one",
+      heroImageId: "f-1",
+      profileImageId: "p-1",
+      heroPhrase: "Phrase",
+    });
+
+    expect(db.fileFindUnique).toHaveBeenNthCalledWith(2, {
+      where: { id: "p-1" },
+    });
+    expect(db.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ profileImageId: "p-1" }),
+    });
+  });
+
+  it("rejects a profile image that is not an OTHER asset", async () => {
+    const db = fixture();
+    db.fileFindUnique
+      .mockResolvedValueOnce({ id: "f-1", category: "MISSION_HERO" })
+      .mockResolvedValueOnce({ id: "p-1", category: "MISSION_HERO" });
+    const service = await build(db);
+
+    await expect(
+      service.create({
+        title: "One",
+        slug: "one",
+        heroImageId: "f-1",
+        profileImageId: "p-1",
+        heroPhrase: "Phrase",
+      }),
+    ).rejects.toThrow("must have category OTHER");
+    expect(db.create).not.toHaveBeenCalled();
+  });
+
+  it("allows an update to remove the optional profile image", async () => {
+    const db = fixture();
+    const service = await build(db);
+
+    await service.update("m-1", { profileImageId: null });
+
+    expect(db.update).toHaveBeenCalledWith({
+      where: { id: "m-1" },
+      data: expect.objectContaining({ profileImageId: null }),
+    });
+  });
+
   it("rejects a create whose file is not MISSION_HERO", async () => {
     const db = fixture();
     db.fileFindUnique.mockResolvedValue({
@@ -162,6 +217,7 @@ describe("MissionsService", () => {
       slug: "one",
       title: "One",
       heroImageUrl: "/files/f-1",
+      profileImageUrl: null,
       heroPhrase: "Phrase",
       status: "ACTIVE",
     });
