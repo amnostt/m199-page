@@ -62,6 +62,18 @@ export type DevelopmentSeedClient = {
       update: Record<string, unknown>;
     }): Promise<SeedRow>;
   };
+  publicationImage: {
+    upsert(args: {
+      where: {
+        publicationId_fileAssetId: {
+          publicationId: string;
+          fileAssetId: string;
+        };
+      };
+      create: Record<string, unknown>;
+      update: Record<string, unknown>;
+    }): Promise<SeedRow>;
+  };
   landingSettings: {
     findUnique(args: {
       where: { id: 1 };
@@ -157,14 +169,11 @@ const SEED_PUBLICATION_POST = {
   excerpt: "Una publicación inicial para la portada pública.",
   content:
     "<p>Esta publicación publicada aporta un punto de partida determinista al sitio público y al editor administrativo.</p>",
-  featuredImageId: SEED_FILE_ASSETS.publicationPost.id,
+  imageId: SEED_FILE_ASSETS.publicationPost.id,
   type: "POST",
   status: "PUBLISHED",
   scope: "GENERAL",
-  startDate: null,
-  endDate: null,
-  activityStatus: null,
-  documentationStatus: null,
+  activityDate: null,
   publishedAt: SEEDED_PUBLISHED_AT,
 } as const;
 
@@ -174,14 +183,11 @@ const SEED_PUBLICATION_OUTING = {
   title: "Salida comunitaria de servicio",
   excerpt: "Una salida publicada vinculada a la primera misión.",
   content: "<p>Esta salida publicada se enlaza a la misión seed-mission-1.</p>",
-  featuredImageId: SEED_FILE_ASSETS.publicationOuting.id,
+  imageId: SEED_FILE_ASSETS.publicationOuting.id,
   type: "OUTING",
   status: "PUBLISHED",
   scope: "GENERAL",
-  startDate: new Date("2026-09-01T00:00:00.000Z"),
-  endDate: new Date("2026-09-01T00:00:00.000Z"),
-  activityStatus: "UPCOMING",
-  documentationStatus: "PENDING_DOCUMENTATION",
+  activityDate: new Date("2026-09-01T00:00:00.000Z"),
   publishedAt: SEEDED_PUBLISHED_AT,
 } as const;
 
@@ -191,14 +197,11 @@ const SEED_PUBLICATION_EVENT = {
   title: "Encuentro mensual de voluntarios",
   excerpt: "Un evento publicado vinculado a la primera misión.",
   content: "<p>Este evento publicado se enlaza a la misión seed-mission-1.</p>",
-  featuredImageId: SEED_FILE_ASSETS.publicationEvent.id,
+  imageId: SEED_FILE_ASSETS.publicationEvent.id,
   type: "EVENT",
   status: "PUBLISHED",
   scope: "GENERAL",
-  startDate: new Date("2026-10-15T00:00:00.000Z"),
-  endDate: new Date("2026-10-16T00:00:00.000Z"),
-  activityStatus: "UPCOMING",
-  documentationStatus: "PENDING_DOCUMENTATION",
+  activityDate: new Date("2026-10-15T00:00:00.000Z"),
   publishedAt: SEEDED_PUBLISHED_AT,
 } as const;
 
@@ -239,14 +242,17 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
     });
   }
 
+  const { imageId: postImageId, ...postPublication } = SEED_PUBLICATION_POST;
   await client.publication.upsert({
     where: { id: SEED_PUBLICATION_POST.id },
-    create: { ...SEED_PUBLICATION_POST, authorId: admin.id },
-    update: { ...SEED_PUBLICATION_POST, authorId: admin.id },
+    create: { ...postPublication, authorId: admin.id },
+    update: { ...postPublication, authorId: admin.id },
   });
+  await upsertPublicationImage(client, SEED_PUBLICATION_POST.id, postImageId);
 
   const linkedPublications = [SEED_PUBLICATION_OUTING, SEED_PUBLICATION_EVENT];
   for (const publication of linkedPublications) {
+    const { imageId, ...publicationData } = publication;
     // Create-or-no-op: on the first run this inserts scope=GENERAL while no
     // PublicationMission row exists yet, which the BEFORE INSERT scope
     // validation trigger accepts. On subsequent runs the empty update is a
@@ -254,7 +260,7 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
     // scope=GENERAL payload while a join row already exists.
     await client.publication.upsert({
       where: { id: publication.id },
-      create: { ...publication, authorId: admin.id },
+      create: { ...publicationData, authorId: admin.id },
       update: {},
     });
 
@@ -286,13 +292,9 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
         title: publication.title,
         excerpt: publication.excerpt,
         content: publication.content,
-        featuredImageId: publication.featuredImageId,
         type: publication.type,
         status: publication.status,
-        startDate: publication.startDate,
-        endDate: publication.endDate,
-        activityStatus: publication.activityStatus,
-        documentationStatus: publication.documentationStatus,
+        activityDate: publication.activityDate,
         publishedAt: publication.publishedAt,
         authorId: admin.id,
       },
@@ -304,9 +306,25 @@ async function seedData(client: DevelopmentSeedClient): Promise<void> {
       where: { id: publication.id },
       data: { scope: "MISSION" },
     });
+
+    await upsertPublicationImage(client, publication.id, imageId);
   }
 
   await seedLandingSettings(client);
+}
+
+async function upsertPublicationImage(
+  client: DevelopmentSeedClient,
+  publicationId: string,
+  fileAssetId: string,
+): Promise<void> {
+  await client.publicationImage.upsert({
+    where: {
+      publicationId_fileAssetId: { publicationId, fileAssetId },
+    },
+    create: { publicationId, fileAssetId, position: 0 },
+    update: { position: 0 },
+  });
 }
 
 /**

@@ -18,6 +18,13 @@ const schemaSql = readFileSync(
   resolve(import.meta.dirname, "../prisma/schema.prisma"),
   "utf8",
 );
+const activityImagesMigrationSql = readFileSync(
+  resolve(
+    import.meta.dirname,
+    "../prisma/migrations/20260916120000_publication_activity_date_images/migration.sql",
+  ),
+  "utf8",
+);
 
 describe("mission/publication domain reset migration SQL contract", () => {
   it("wraps the destructive migration in a single BEGIN/COMMIT transaction", () => {
@@ -184,5 +191,108 @@ describe("Prisma schema reflects the migration foundation", () => {
     ]) {
       expect(schemaSql).not.toMatch(new RegExp(`'${legacy}'`));
     }
+  });
+
+  it("uses one civil activity date and an ordered publication image relation", () => {
+    expect(schemaSql).toMatch(/^\s*activityDate\s+DateTime\?\s+@db\.Date$/m);
+    expect(schemaSql).toMatch(/^model\s+PublicationImage\s+\{/m);
+    expect(schemaSql).toContain("@@id([publicationId, fileAssetId])");
+    expect(schemaSql).toContain("@@unique([publicationId, position])");
+
+    for (const legacy of [
+      "featuredImageId",
+      "startDate",
+      "endDate",
+      "activityStatus",
+      "documentationStatus",
+      "ActivityStatus",
+      "DocumentationStatus",
+    ]) {
+      expect(schemaSql).not.toContain(legacy);
+    }
+  });
+});
+
+describe("publication activity date/image migration SQL contract", () => {
+  it("runs the complete data-preserving reshape in one transaction", () => {
+    const firstNonComment = activityImagesMigrationSql
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0 && !line.startsWith("--"));
+
+    expect(firstNonComment).toBe("BEGIN;");
+    expect(activityImagesMigrationSql.trimEnd().endsWith("COMMIT;")).toBe(true);
+  });
+
+  it("copies startDate into a PostgreSQL DATE before dropping legacy columns", () => {
+    const addDate = activityImagesMigrationSql.indexOf(
+      'ADD COLUMN "activityDate" DATE',
+    );
+    const copyDate = activityImagesMigrationSql.indexOf(
+      'SET "activityDate" = "startDate"::date',
+    );
+    const dropStartDate = activityImagesMigrationSql.indexOf(
+      'DROP COLUMN "startDate"',
+    );
+
+    expect(addDate).toBeGreaterThan(-1);
+    expect(copyDate).toBeGreaterThan(addDate);
+    expect(dropStartDate).toBeGreaterThan(copyDate);
+    expect(activityImagesMigrationSql).toContain(
+      "WHERE \"type\" IN ('OUTING', 'EVENT')",
+    );
+  });
+
+  it("copies featured images to ordered position zero before removing the scalar", () => {
+    const createImages = activityImagesMigrationSql.indexOf(
+      'CREATE TABLE "PublicationImage"',
+    );
+    const copyImages = activityImagesMigrationSql.indexOf(
+      'INSERT INTO "PublicationImage"',
+    );
+    const dropFeaturedImage = activityImagesMigrationSql.indexOf(
+      'DROP COLUMN "featuredImageId"',
+    );
+
+    expect(createImages).toBeGreaterThan(-1);
+    expect(copyImages).toBeGreaterThan(createImages);
+    expect(dropFeaturedImage).toBeGreaterThan(copyImages);
+    expect(activityImagesMigrationSql).toContain(
+      'SELECT "id", "featuredImageId", 0',
+    );
+    expect(activityImagesMigrationSql).toContain(
+      'PRIMARY KEY ("publicationId", "fileAssetId")',
+    );
+    expect(activityImagesMigrationSql).toContain(
+      'ON "PublicationImage"("publicationId", "position")',
+    );
+    expect(activityImagesMigrationSql).toMatch(
+      /PublicationImage_publicationId_fkey[\s\S]*?ON DELETE CASCADE/u,
+    );
+    expect(activityImagesMigrationSql).toMatch(
+      /PublicationImage_fileAssetId_fkey[\s\S]*?ON DELETE RESTRICT/u,
+    );
+  });
+
+  it("removes manual lifecycle fields and enforces the date/type invariant", () => {
+    for (const column of ["endDate", "activityStatus", "documentationStatus"]) {
+      expect(activityImagesMigrationSql).toContain(`DROP COLUMN "${column}"`);
+    }
+    expect(activityImagesMigrationSql).toContain('DROP TYPE "ActivityStatus"');
+    expect(activityImagesMigrationSql).toContain(
+      'DROP TYPE "DocumentationStatus"',
+    );
+    expect(activityImagesMigrationSql).toContain(
+      'ADD CONSTRAINT "Publication_post_activity_date_null"',
+    );
+    expect(activityImagesMigrationSql).toContain(
+      'CHECK ("type" <> \'POST\' OR "activityDate" IS NULL)',
+    );
+    expect(activityImagesMigrationSql).toContain(
+      'ADD CONSTRAINT "Publication_activity_date_required"',
+    );
+    expect(activityImagesMigrationSql).toContain(
+      'CHECK ("type" = \'POST\' OR "activityDate" IS NOT NULL)',
+    );
   });
 });
