@@ -1,10 +1,15 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Page from "./index.astro";
 import { PUBLIC_IMAGE_FALLBACK_HANDLER } from "../../lib/public-image.js";
 
 describe("publications SSR", () => {
+  beforeEach(() => {
+    vi.stubEnv("ASTRO_API_BASE_URL", "http://api.test");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
   it("renders list cards", async () => {
     vi.stubGlobal(
       "fetch",
@@ -43,7 +48,7 @@ describe("publications SSR", () => {
     expect(html).toContain('class="public-publication-card__media"');
     expect(html).toContain('src="/assets/template-picture.png"');
     expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
-    expect(html).toContain("Leer publicación");
+    expect(html).toContain("Ver publicación");
     expect(html).toContain('value="OUTING" aria-pressed="true"');
     expect(html).toContain("Página 1 de 2");
     expect(html).toContain(

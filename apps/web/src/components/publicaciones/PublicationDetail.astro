@@ -6,7 +6,14 @@ import {
 import PublicationBadges from "./PublicationBadges.astro";
 import PublicationContent from "./PublicationContent.astro";
 import PublicationMissionsList from "./PublicationMissionsList.astro";
+import PublicationGallery from "./PublicationGallery.astro";
 import PublicationPageNav from "./PublicationPageNav.astro";
+import {
+  formatPublicDate,
+  getPublicationCta,
+  getPublicationDate,
+  getPublicationTimelineLabel,
+} from "../../lib/server/public-content.js";
 
 const publicationTypeLabels: Record<string, string> = {
   POST: "Historia",
@@ -16,7 +23,10 @@ const publicationTypeLabels: Record<string, string> = {
 
 const { publication } = Astro.props;
 const typeLabel = publicationTypeLabels[publication.type] ?? publication.type;
-const imageSrc = resolvePublicImageUrl(publication.featuredImageUrl);
+const imageUrls = Array.isArray(publication.imageUrls) ? publication.imageUrls : [];
+const imageSrc = resolvePublicImageUrl(imageUrls[0] ?? publication.featuredImageUrl);
+const dateValue = getPublicationDate(publication);
+const timelineLabel = getPublicationTimelineLabel(publication);
 ---
 
 <main
@@ -38,17 +48,14 @@ const imageSrc = resolvePublicImageUrl(publication.featuredImageUrl);
       <h1 id="publication-title">{publication.title}</h1>
       <p class="public-publication-detail__excerpt">{publication.excerpt}</p>
       <div class="public-publication-detail__meta">
-        <time datetime={publication.publishedAt}>
-          {new Date(publication.publishedAt).toLocaleDateString("es-AR", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
+        {timelineLabel && <p class="public-publication-detail__timeline">{timelineLabel}</p>}
+        <time datetime={dateValue}>
+          {formatPublicDate(dateValue)}
         </time>
         <PublicationBadges publication={publication} />
       </div>
       <a class="public-publication-detail__hero-link" href="#publication-content">
-        Leer publicación
+        {getPublicationCta(publication.type)}
       </a>
     </div>
   </section>
@@ -62,8 +69,10 @@ const imageSrc = resolvePublicImageUrl(publication.featuredImageUrl);
       <p>Contenido</p>
       <h2 id="publication-content-title">La historia continúa</h2>
     </div>
-    <PublicationContent {...publication} />
+    <PublicationContent content={publication.content} />
   </section>
+
+  <PublicationGallery imageUrls={imageUrls} />
 
   <PublicationMissionsList missions={publication.missions} />
 </main>

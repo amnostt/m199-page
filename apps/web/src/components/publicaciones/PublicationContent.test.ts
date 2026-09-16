@@ -24,15 +24,15 @@ describe("PublicationContent SSR", () => {
   });
 
   it.each(["UPCOMING", "CANCELLED"])(
-    "hides %s content",
+    "always renders %s content",
     async (activityStatus) => {
       const html = await render({
         type: "OUTING",
         activityStatus,
         content: "<p>Hidden</p>",
       });
-      expect(html).toContain("publication-content-placeholder");
-      expect(html).not.toContain("Hidden");
+      expect(html).toContain("Hidden");
+      expect(html).not.toContain("publication-content-placeholder");
     },
   );
 

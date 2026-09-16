@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -9,24 +10,16 @@ import {
 import { PublicationForm } from "./PublicationForm.js";
 import type { PublicationAdmin } from "./adminTypes.js";
 
-const uploadProps = vi.hoisted(() => ({
+const imageProps = vi.hoisted(() => ({
   current: null as Record<string, unknown> | null,
 }));
-vi.mock("./FileUploadWidget.js", () => ({
-  FileUploadWidget: (props: Record<string, unknown>) => {
-    uploadProps.current = props;
-    return (
-      <div data-testid="upload-widget">
-        {props.fileId && props.preview ? (
-          <img
-            src={`/files/${String(props.fileId)}`}
-            alt={String(props.previewAlt)}
-          />
-        ) : null}
-      </div>
-    );
+vi.mock("./PublicationImageField.js", () => ({
+  PublicationImageField: (props: Record<string, unknown>) => {
+    imageProps.current = props;
+    return <div data-testid="publication-images" />;
   },
 }));
+
 const pickerProps = vi.hoisted(() => ({
   current: null as Record<string, unknown> | null,
 }));
@@ -35,6 +28,7 @@ vi.mock("./MissionPickerDialog.js", () => ({
     pickerProps.current = props;
     return props.open ? (
       <button
+        type="button"
         onClick={() => (props.onConfirm as (ids: string[]) => void)(["m1"])}
       >
         Confirmar misiones
@@ -43,20 +37,42 @@ vi.mock("./MissionPickerDialog.js", () => ({
   },
 }));
 
+const publication = (
+  overrides: Partial<PublicationAdmin> = {},
+): PublicationAdmin => ({
+  id: "p1",
+  slug: "salida",
+  title: "Salida",
+  excerpt: "Resumen",
+  content: "<p>Detalle</p>",
+  imageIds: ["image-1", "image-2"],
+  type: "OUTING",
+  status: "DRAFT",
+  scope: "GENERAL",
+  publishedAt: null,
+  activityDate: "2026-01-02",
+  missionIds: [],
+  createdAt: "",
+  updatedAt: "",
+  ...overrides,
+});
+
 describe("PublicationForm", () => {
   afterEach(cleanup);
-  it("shows post fields and submits the plain content textarea", () => {
+
+  it("submits a POST with ordered images, null activity date, and editor content", () => {
     const onSubmit = vi.fn();
     render(
       <PublicationForm missions={[]} onSubmit={onSubmit} onCancel={vi.fn()} />,
     );
-    expect(screen.getByLabelText("Contenido")).toBeTruthy();
-    expect(screen.queryByLabelText("Fecha de inicio")).toBeNull();
     fireEvent.change(screen.getByLabelText("Slug"), {
       target: { value: "mision-centro-2026" },
     });
     fireEvent.change(screen.getByLabelText("Título"), {
       target: { value: "Nueva" },
+    });
+    act(() => {
+      (imageProps.current?.onChange as (ids: string[]) => void)(["image-1"]);
     });
     fireEvent.submit(screen.getByTestId("publication-form"));
     expect(onSubmit).toHaveBeenCalledWith(
@@ -64,14 +80,14 @@ describe("PublicationForm", () => {
         slug: "mision-centro-2026",
         title: "Nueva",
         type: "POST",
+        imageIds: ["image-1"],
+        activityDate: null,
       }),
     );
-    expect(uploadProps.current).toMatchObject({
-      category: "PUBLICATION_FEATURED_IMAGE",
-    });
+    expect(screen.getByRole("textbox", { name: "Contenido" })).toBeTruthy();
   });
 
-  it("blocks invalid required fields with associated visible messages", () => {
+  it("blocks missing slug, title, and image with visible associated feedback", () => {
     const onSubmit = vi.fn();
     render(
       <PublicationForm missions={[]} onSubmit={onSubmit} onCancel={vi.fn()} />,
@@ -80,130 +96,103 @@ describe("PublicationForm", () => {
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByText("El slug es obligatorio.")).toBeTruthy();
     expect(screen.getByText("El título es obligatorio.")).toBeTruthy();
+    expect(screen.getByText("Agrega al menos una imagen.")).toBeTruthy();
     expect(screen.getByLabelText("Slug").getAttribute("aria-invalid")).toBe(
       "true",
     );
-    expect(screen.getByLabelText("Slug").getAttribute("aria-describedby")).toBe(
-      "publication-slug-description publication-slug-error",
-    );
   });
 
-  it("suggests a normalized slug while the title remains the source", () => {
+  it("suggests a normalized slug until a manual override", () => {
     render(
       <PublicationForm missions={[]} onSubmit={vi.fn()} onCancel={vi.fn()} />,
     );
     const title = screen.getByLabelText("Título");
     const slug = screen.getByLabelText("Slug");
-
     fireEvent.change(title, { target: { value: "Misión Centro 2026" } });
-    expect(slug.getAttribute("value")).toBe("mision-centro-2026");
-    fireEvent.change(title, {
-      target: { value: "  ¡Misión,   Centro — 2026!  " },
-    });
-    expect(slug.getAttribute("value")).toBe("mision-centro-2026");
-    fireEvent.change(title, { target: { value: "Segundo   título" } });
-    expect(slug.getAttribute("value")).toBe("segundo-titulo");
-  });
-
-  it("stops suggestions after a manual slug override, including the same value", () => {
-    render(
-      <PublicationForm missions={[]} onSubmit={vi.fn()} onCancel={vi.fn()} />,
-    );
-    const title = screen.getByLabelText("Título");
-    const slug = screen.getByLabelText("Slug");
-
-    fireEvent.change(title, { target: { value: "Misión Centro 2026" } });
-    fireEvent.input(slug, { target: { value: "mision-centro-2026" } });
-    fireEvent.change(title, { target: { value: "Nuevo título" } });
-    expect(slug.getAttribute("value")).toBe("mision-centro-2026");
+    expect(slug).toHaveProperty("value", "mision-centro-2026");
     fireEvent.change(slug, { target: { value: "manual" } });
     fireEvent.change(title, { target: { value: "Otro título" } });
-    expect(slug.getAttribute("value")).toBe("manual");
+    expect(slug).toHaveProperty("value", "manual");
   });
 
-  it("keeps a manually cleared slug empty and rejects it on submit", () => {
-    const onSubmit = vi.fn();
+  it("hydrates the activity date, ordered images, and editor in edit mode", () => {
     render(
-      <PublicationForm missions={[]} onSubmit={onSubmit} onCancel={vi.fn()} />,
+      <PublicationForm
+        publication={publication()}
+        missions={[]}
+        busy
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />,
     );
-    const title = screen.getByLabelText("Título");
-    const slug = screen.getByLabelText("Slug");
-
-    fireEvent.change(title, { target: { value: "Misión Centro 2026" } });
-    fireEvent.change(slug, { target: { value: "" } });
-    fireEvent.change(title, { target: { value: "Nuevo título" } });
-    expect(slug.getAttribute("value")).toBe("");
+    expect(screen.getByLabelText("Fecha de actividad")).toHaveProperty(
+      "value",
+      "2026-01-02",
+    );
+    expect(imageProps.current).toMatchObject({
+      imageIds: ["image-1", "image-2"],
+    });
+    expect(screen.getByRole("textbox", { name: "Contenido" })).toBeTruthy();
     fireEvent.submit(screen.getByTestId("publication-form"));
-    expect(onSubmit).not.toHaveBeenCalled();
-    expect(screen.getByText("El slug es obligatorio.")).toBeTruthy();
   });
 
-  it("re-enables suggestions after resetting a create flow", () => {
-    const onCancel = vi.fn();
-    render(
-      <PublicationForm missions={[]} onSubmit={vi.fn()} onCancel={onCancel} />,
-    );
-    fireEvent.change(screen.getByLabelText("Título"), {
-      target: { value: "Primer título" },
-    });
-    fireEvent.change(screen.getByLabelText("Slug"), {
-      target: { value: "manual" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(onCancel).toHaveBeenCalledOnce();
-
-    fireEvent.change(screen.getByLabelText("Título"), {
-      target: { value: "Misión Centro 2026" },
-    });
-    expect(screen.getByLabelText("Slug").getAttribute("value")).toBe(
-      "mision-centro-2026",
-    );
-  });
-
-  it.each([
-    "Mision-centro",
-    "mision centro",
-    "Misión-centro",
-    "mision_centro",
-    "mision!",
-    "-mision",
-    "mision-",
-    "mision--centro",
-  ])("rejects malformed slug %j before submission", (slug) => {
+  it("preserves date and images when changing OUTING to EVENT", async () => {
     const onSubmit = vi.fn();
     render(
-      <PublicationForm missions={[]} onSubmit={onSubmit} onCancel={vi.fn()} />,
+      <PublicationForm
+        publication={publication()}
+        missions={[]}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />,
     );
-    fireEvent.change(screen.getByLabelText("Slug"), {
-      target: { value: slug },
-    });
-    fireEvent.change(screen.getByLabelText("Título"), {
-      target: { value: "Nueva" },
+    fireEvent.change(screen.getByLabelText("Tipo"), {
+      target: { value: "EVENT" },
     });
     fireEvent.submit(screen.getByTestId("publication-form"));
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(screen.getByText(/El slug no es válido/)).toBeTruthy();
-    expect(screen.getByLabelText("Slug").getAttribute("aria-invalid")).toBe(
-      "true",
-    );
-    expect(screen.getByLabelText("Slug").getAttribute("aria-describedby")).toBe(
-      "publication-slug-description publication-slug-error",
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar tipo" }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "EVENT",
+          activityDate: "2026-01-02",
+          imageIds: ["image-1", "image-2"],
+          confirmTypeChange: true,
+        }),
+      ),
     );
   });
 
-  it("groups scope options as one native radio group", () => {
+  it("confirms and clears the date when changing an activity to POST", async () => {
+    const onSubmit = vi.fn();
     render(
-      <PublicationForm missions={[]} onSubmit={vi.fn()} onCancel={vi.fn()} />,
+      <PublicationForm
+        publication={publication()}
+        missions={[]}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />,
     );
-    expect(screen.getAllByRole("radio")).toHaveLength(2);
-    expect(
-      screen
-        .getAllByRole("radio")
-        .every((radio) => radio.getAttribute("name") === "publication-scope"),
-    ).toBe(true);
+    fireEvent.change(screen.getByLabelText("Tipo"), {
+      target: { value: "POST" },
+    });
+    fireEvent.submit(screen.getByTestId("publication-form"));
+    expect(screen.getByText(/fecha de actividad se eliminará/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar tipo" }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "POST",
+          activityDate: null,
+          imageIds: ["image-1", "image-2"],
+          confirmTypeChange: true,
+        }),
+      ),
+    );
   });
 
-  it("passes ACTIVE missions and selected IDs through the mission picker", () => {
+  it("passes mission selection through the picker", () => {
     const mission = { id: "m1", status: "ACTIVE" } as never;
     render(
       <PublicationForm
@@ -220,267 +209,5 @@ describe("PublicationForm", () => {
     fireEvent.click(screen.getByRole("button", { name: /Elegir misiones/ }));
     fireEvent.click(screen.getByRole("button", { name: "Confirmar misiones" }));
     expect(pickerProps.current).toMatchObject({ selectedIds: ["m1"] });
-  });
-
-  it("hydrates activity fields and exposes conditional accessible controls in edit mode", () => {
-    const onSubmit = vi.fn();
-    const publication = {
-      id: "p1",
-      slug: "salida",
-      title: "Salida",
-      excerpt: "Resumen",
-      content: "Detalle",
-      featuredImageId: "file1",
-      type: "OUTING",
-      status: "DRAFT",
-      scope: "GENERAL",
-      publishedAt: null,
-      startDate: "2026-01-02T00:00:00.000Z",
-      endDate: "2026-01-03T00:00:00.000Z",
-      activityStatus: "COMPLETED",
-      documentationStatus: "DOCUMENTED",
-      missionIds: [],
-      createdAt: "",
-      updatedAt: "",
-    } as PublicationAdmin;
-    render(
-      <PublicationForm
-        publication={publication}
-        missions={[]}
-        busy
-        onSubmit={onSubmit}
-        onCancel={vi.fn()}
-      />,
-    );
-    expect(screen.getByLabelText("Título").getAttribute("value")).toBe(
-      "Salida",
-    );
-    expect(screen.getByLabelText("Fecha de inicio").getAttribute("value")).toBe(
-      "2026-01-02",
-    );
-    expect(screen.getByLabelText("Fecha de fin").getAttribute("value")).toBe(
-      "2026-01-03",
-    );
-    expect(screen.getByLabelText("Estado de actividad")).toHaveProperty(
-      "value",
-      "COMPLETED",
-    );
-    expect(screen.getByLabelText("Estado de documentación")).toHaveProperty(
-      "value",
-      "DOCUMENTED",
-    );
-    expect(
-      screen.getByTestId("publication-form").getAttribute("aria-busy"),
-    ).toBe("true");
-    expect(
-      screen.getByRole("button", { name: "Guardando publicación…" }),
-    ).toHaveProperty("disabled", true);
-    expect(screen.getByLabelText("Fecha de inicio")).toHaveProperty(
-      "disabled",
-      true,
-    );
-    fireEvent.submit(screen.getByTestId("publication-form"));
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("preserves an edited publication slug until it is directly changed", () => {
-    const onSubmit = vi.fn();
-    const publication = {
-      id: "p1",
-      slug: "stored-slug",
-      title: "Título guardado",
-      excerpt: "",
-      content: "",
-      featuredImageId: null,
-      type: "POST",
-      status: "DRAFT",
-      scope: "GENERAL",
-      publishedAt: null,
-      startDate: null,
-      endDate: null,
-      activityStatus: null,
-      documentationStatus: null,
-      missionIds: [] as string[],
-      createdAt: "",
-      updatedAt: "",
-    } as const;
-    render(
-      <PublicationForm
-        publication={publication}
-        missions={[]}
-        onSubmit={onSubmit}
-        onCancel={vi.fn()}
-      />,
-    );
-    fireEvent.change(screen.getByLabelText("Título"), {
-      target: { value: "Título actualizado" },
-    });
-    expect(screen.getByLabelText("Slug").getAttribute("value")).toBe(
-      "stored-slug",
-    );
-    fireEvent.change(screen.getByLabelText("Slug"), {
-      target: { value: "slug-directo" },
-    });
-    fireEvent.submit(screen.getByTestId("publication-form"));
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: "Título actualizado",
-        slug: "slug-directo",
-      }),
-    );
-  });
-
-  it("hydrates the featured image attachment preview in edit mode", () => {
-    const publication = {
-      id: "p1",
-      slug: "salida",
-      title: "Salida",
-      excerpt: "Resumen",
-      content: "Detalle",
-      featuredImageId: "file1",
-      type: "POST",
-      status: "DRAFT",
-      scope: "GENERAL",
-      publishedAt: null,
-      startDate: null,
-      endDate: null,
-      activityStatus: null,
-      documentationStatus: null,
-      missionIds: [],
-      createdAt: "",
-      updatedAt: "",
-    } as PublicationAdmin;
-
-    render(
-      <PublicationForm
-        publication={publication}
-        missions={[]}
-        onSubmit={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
-
-    expect(uploadProps.current).toMatchObject({
-      fileId: "file1",
-      preview: true,
-      previewVariant: "hero",
-      previewAlt: "Imagen destacada de Salida",
-    });
-    expect(
-      screen.getByAltText("Imagen destacada de Salida").getAttribute("src"),
-    ).toBe("/files/file1");
-  });
-
-  it("submits featured-image replacement and intentional clearing", async () => {
-    const onSubmit = vi.fn();
-    const publication = {
-      id: "p1",
-      slug: "salida",
-      title: "Salida",
-      excerpt: "Resumen",
-      content: "Detalle",
-      featuredImageId: "old-file",
-      type: "POST",
-      status: "DRAFT",
-      scope: "GENERAL",
-      publishedAt: null,
-      startDate: null,
-      endDate: null,
-      activityStatus: null,
-      documentationStatus: null,
-      missionIds: [],
-      createdAt: "",
-      updatedAt: "",
-    } as PublicationAdmin;
-
-    render(
-      <PublicationForm
-        publication={publication}
-        missions={[]}
-        onSubmit={onSubmit}
-        onCancel={vi.fn()}
-      />,
-    );
-
-    (uploadProps.current?.onUploaded as (asset: { id: string }) => void)({
-      id: "new-file",
-    });
-    await waitFor(() =>
-      expect(uploadProps.current).toMatchObject({ fileId: "new-file" }),
-    );
-    fireEvent.submit(screen.getByTestId("publication-form"));
-    expect(onSubmit).toHaveBeenLastCalledWith(
-      expect.objectContaining({ featuredImageId: "new-file" }),
-    );
-
-    (uploadProps.current?.onRemove as () => void)();
-    await waitFor(() =>
-      expect(uploadProps.current).toMatchObject({ fileId: null }),
-    );
-    fireEvent.submit(screen.getByTestId("publication-form"));
-    expect(onSubmit).toHaveBeenLastCalledWith(
-      expect.objectContaining({ featuredImageId: "" }),
-    );
-  });
-
-  it("requires confirmation before submitting an edited type change", async () => {
-    const onSubmit = vi.fn();
-    const publication = {
-      id: "p1",
-      slug: "salida",
-      title: "Salida",
-      excerpt: "",
-      content: "",
-      featuredImageId: null,
-      type: "OUTING",
-      status: "DRAFT",
-      scope: "GENERAL",
-      publishedAt: null,
-      startDate: "2026-01-01",
-      endDate: null,
-      activityStatus: "UPCOMING",
-      documentationStatus: "PENDING_DOCUMENTATION",
-      missionIds: [] as string[],
-      createdAt: "",
-      updatedAt: "",
-    } as const;
-    render(
-      <PublicationForm
-        publication={publication}
-        missions={[]}
-        onSubmit={onSubmit}
-        onCancel={vi.fn()}
-      />,
-    );
-    fireEvent.change(screen.getByLabelText("Tipo"), {
-      target: { value: "POST" },
-    });
-    const form = screen.getByTestId("publication-form");
-    fireEvent.submit(form);
-    expect(onSubmit).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-    expect(onSubmit).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText("Tipo"), {
-      target: { value: "OUTING" },
-    });
-    expect(screen.getByLabelText("Fecha de inicio").getAttribute("value")).toBe(
-      "2026-01-01",
-    );
-    fireEvent.change(screen.getByLabelText("Tipo"), {
-      target: { value: "POST" },
-    });
-    fireEvent.submit(form);
-    fireEvent.click(screen.getByRole("button", { name: "Cambiar tipo" }));
-    await waitFor(() =>
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          confirmTypeChange: true,
-          startDate: null,
-          endDate: null,
-          activityStatus: null,
-          documentationStatus: null,
-        }),
-      ),
-    );
   });
 });

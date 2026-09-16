@@ -208,7 +208,10 @@ export class MissionsService {
                 excerpt: true,
                 type: true,
                 publishedAt: true,
-                featuredImageId: true,
+                images: {
+                  where: { position: 0 },
+                  select: { fileAssetId: true },
+                },
               },
             },
           },
@@ -222,18 +225,21 @@ export class MissionsService {
         row as typeof row & {
           publications: Array<{
             publication: MissionPublicPublication & {
-              featuredImageId: string | null;
+              images: { fileAssetId: string }[];
             };
           }>;
         }
       ).publications ?? []
-    ).map(({ publication }) => ({
-      ...publication,
-      publishedAt: new Date(publication.publishedAt).toISOString(),
-      featuredImageUrl: publication.featuredImageId
-        ? `/files/${publication.featuredImageId}`
-        : null,
-    }));
+    ).map(({ publication }) => {
+      const { images, ...projected } = publication;
+      return {
+        ...projected,
+        publishedAt: new Date(publication.publishedAt).toISOString(),
+        featuredImageUrl: images[0]?.fileAssetId
+          ? `/files/${images[0].fileAssetId}`
+          : null,
+      };
+    });
     const seen = new Set<string>();
     const gallery = publications.flatMap((publication) => {
       const id = publication.featuredImageUrl;

@@ -42,16 +42,12 @@ function localizeMessage(message: string): string {
     [/^Mission not found$/i, "No se encontró la misión."],
     [/^Publication not found$/i, "No se encontró la publicación."],
     [
-      /^POST publications cannot have activity fields$/i,
-      "Las publicaciones POST no pueden tener campos de actividad.",
+      /^POST publications cannot have activityDate$/i,
+      "Las publicaciones POST no pueden tener fecha de actividad.",
     ],
     [
-      /^Activity publications require startDate, activityStatus, and documentationStatus$/i,
-      "Las publicaciones de actividad requieren fecha de inicio y estados de actividad y documentación.",
-    ],
-    [
-      /^endDate must be on or after startDate$/i,
-      "La fecha de fin debe ser posterior o igual a la fecha de inicio.",
+      /^Activity publications require activityDate$/i,
+      "Las publicaciones de actividad requieren fecha de actividad.",
     ],
     [
       /^GENERAL publications cannot have missions$/i,

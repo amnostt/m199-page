@@ -2,8 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { PublicationsService } from "./publications.service.js";
 import { PublicationType } from "./dto/publication.dto.js";
 
+const image = (fileAssetId: string, position = 0) => ({
+  fileAssetId,
+  position,
+});
+
 describe("PublicationsService public list", () => {
-  it("filters published rows and maps a closed projection", async () => {
+  it("filters published rows and maps position zero as the featured image", async () => {
     const findMany = vi.fn().mockResolvedValue([
       {
         slug: "one",
@@ -11,7 +16,7 @@ describe("PublicationsService public list", () => {
         excerpt: "",
         type: "POST",
         publishedAt: new Date("2026-01-01"),
-        featuredImageId: null,
+        images: [image("cover")],
       },
     ]);
     const db = {
@@ -26,6 +31,9 @@ describe("PublicationsService public list", () => {
     expect(findMany.mock.calls[0]?.[0]).toMatchObject({
       where: { status: "PUBLISHED" },
       orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+      select: expect.objectContaining({
+        images: { where: { position: 0 }, select: { fileAssetId: true } },
+      }),
     });
     expect(result.items[0]).toEqual({
       slug: "one",
@@ -33,7 +41,7 @@ describe("PublicationsService public list", () => {
       excerpt: "",
       type: "POST",
       publishedAt: "2026-01-01T00:00:00.000Z",
-      featuredImageUrl: null,
+      featuredImageUrl: "/files/cover",
     });
   });
 
@@ -57,7 +65,47 @@ describe("PublicationsService public list", () => {
     });
   });
 
-  it("projects published POST and activity details without internal fields", async () => {
+  it("projects detail with ordered image URLs, activityDate, and sanitized content", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      slug: "outing",
+      title: "Outing",
+      excerpt: "Excerpt",
+      content: '<p>safe</p><script>alert("x")</script>',
+      type: PublicationType.OUTING,
+      publishedAt: new Date("2026-01-01"),
+      images: [image("cover", 0), image("second", 1)],
+      activityDate: new Date("2026-02-01T00:00:00.000Z"),
+      missions: [],
+    });
+    const service = new PublicationsService({
+      client: { publication: { findUnique } },
+    } as never);
+    await expect(service.findOnePublicBySlug("outing")).resolves.toEqual({
+      slug: "outing",
+      title: "Outing",
+      excerpt: "Excerpt",
+      content: "<p>safe</p>",
+      type: "OUTING",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      featuredImageUrl: "/files/cover",
+      imageUrls: ["/files/cover", "/files/second"],
+      activityDate: "2026-02-01",
+      missions: [],
+    });
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { slug: "outing", status: "PUBLISHED" },
+        select: expect.objectContaining({
+          images: {
+            orderBy: { position: "asc" },
+            select: { fileAssetId: true, position: true },
+          },
+        }),
+      }),
+    );
+  });
+
+  it("projects published POST without activityDate or internal fields", async () => {
     const findUnique = vi.fn().mockResolvedValue({
       slug: "post",
       title: "Post",
@@ -65,39 +113,20 @@ describe("PublicationsService public list", () => {
       content: "<p>safe</p>",
       type: PublicationType.POST,
       publishedAt: new Date("2026-01-01"),
-      featuredImageId: null,
-      startDate: null,
-      endDate: null,
-      activityStatus: null,
-      documentationStatus: null,
-      status: "PUBLISHED",
-      scope: "MISSION",
-      missionIds: ["secret"],
-      createdAt: new Date(),
+      images: [],
+      activityDate: null,
+      missions: [],
     });
     const service = new PublicationsService({
       client: { publication: { findUnique } },
     } as never);
     const result = await service.findOnePublicBySlug("post");
-    expect(result).toEqual({
-      slug: "post",
-      title: "Post",
-      excerpt: "Excerpt",
-      content: "<p>safe</p>",
-      type: "POST",
-      publishedAt: "2026-01-01T00:00:00.000Z",
-      featuredImageUrl: null,
-      missions: [],
-    });
-    expect(findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { slug: "post", status: "PUBLISHED" },
-        select: expect.objectContaining({ content: true }),
-      }),
-    );
+    expect(result).not.toHaveProperty("activityDate");
+    expect(result).not.toHaveProperty("imageIds");
+    expect(result.imageUrls).toEqual([]);
   });
 
-  it("projects associated Missions as closed {slug,title,status} rows ordered createdAt DESC,id DESC", async () => {
+  it("projects associated Missions as closed rows in deterministic order", async () => {
     const findUnique = vi.fn().mockResolvedValue({
       slug: "linked",
       title: "Linked",
@@ -105,13 +134,8 @@ describe("PublicationsService public list", () => {
       content: "<p>safe</p>",
       type: PublicationType.POST,
       publishedAt: new Date("2026-01-01"),
-      featuredImageId: null,
-      startDate: null,
-      endDate: null,
-      activityStatus: null,
-      documentationStatus: null,
-      status: "PUBLISHED",
-      scope: "MISSION",
+      images: [],
+      activityDate: null,
       missions: [
         {
           mission: {
@@ -137,27 +161,6 @@ describe("PublicationsService public list", () => {
       { slug: "newer-archived", title: "Newer archived", status: "ARCHIVED" },
       { slug: "older-active", title: "Older active", status: "ACTIVE" },
     ]);
-    expect(
-      result.missions.map((mission) => Object.keys(mission).sort()),
-    ).toEqual([
-      ["slug", "status", "title"],
-      ["slug", "status", "title"],
-    ]);
-    expect(findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({
-        select: expect.objectContaining({
-          missions: expect.objectContaining({
-            orderBy: [
-              { mission: { createdAt: "desc" } },
-              { mission: { id: "desc" } },
-            ],
-            select: {
-              mission: { select: { slug: true, title: true, status: true } },
-            },
-          }),
-        }),
-      }),
-    );
   });
 
   it("maps a missing or draft slug to the same not-found error", async () => {

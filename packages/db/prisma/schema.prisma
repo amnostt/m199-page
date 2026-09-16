@@ -56,17 +56,6 @@ enum PublicationScope {
   MISSION
 }
 
-enum ActivityStatus {
-  UPCOMING
-  COMPLETED
-  CANCELLED
-}
-
-enum DocumentationStatus {
-  PENDING_DOCUMENTATION
-  DOCUMENTED
-}
-
 enum FileStorageProvider {
   LOCAL
 }
@@ -191,7 +180,7 @@ model FileAsset {
 
   missionHeroes          Mission[]          @relation("MissionHeroImage")
   missionProfiles        Mission[]          @relation("MissionProfileImage")
-  publicationFeatures    Publication[]      @relation("PublicationFeaturedImage")
+  publicationImages      PublicationImage[]
   landingHeroes          LandingSettings[]  @relation("LandingHero")
 
   @@index([category])
@@ -226,26 +215,38 @@ model Publication {
   title                String
   excerpt              String
   content              String
-  featuredImageId      String
   authorId             String?
   type                 PublicationType
   status               PublicationStatus      @default(DRAFT)
   publishedAt          DateTime?
   scope                PublicationScope       @default(GENERAL)
-  startDate            DateTime?
-  endDate              DateTime?
-  activityStatus       ActivityStatus?
-  documentationStatus DocumentationStatus?
+  activityDate         DateTime?              @db.Date
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
 
-  featuredImage FileAsset            @relation("PublicationFeaturedImage", fields: [featuredImageId], references: [id], onDelete: Restrict)
   author        ResponsibleUser?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  images        PublicationImage[]
   missions      PublicationMission[]
 
   @@index([status, publishedAt])
   @@index([type])
   @@index([authorId])
+}
+
+model PublicationImage {
+  // APP: Publication writes enforce one to five images transactionally.
+  // DB: Position is unique within a publication; position zero is featured.
+  publicationId String
+  fileAssetId   String
+  position      Int
+  createdAt     DateTime @default(now())
+
+  publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  fileAsset   FileAsset   @relation(fields: [fileAssetId], references: [id], onDelete: Restrict)
+
+  @@id([publicationId, fileAssetId])
+  @@unique([publicationId, position])
+  @@index([fileAssetId])
 }
 
 model PublicationMission {

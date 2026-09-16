@@ -14,6 +14,7 @@ import {
   PublicationStatus,
   PublicationType,
   UpdatePublicationDto,
+  CIVIL_DATE_REGEX,
 } from "./dto/publication.dto.js";
 import type { ListPublicationsDto } from "./dto/list-publications.dto.js";
 import type {
@@ -43,6 +44,10 @@ type Client = {
     deleteMany: (args: unknown) => Promise<void>;
     createMany: (args: unknown) => Promise<void>;
   };
+  publicationImage: {
+    deleteMany: (args: unknown) => Promise<void>;
+    createMany: (args: unknown) => Promise<void>;
+  };
   $transaction: (
     callback: (tx: Client) => Promise<unknown>,
   ) => Promise<unknown>;
@@ -53,10 +58,8 @@ type PublicationRow = {
   scope: PublicationScope;
   slug: string;
   publishedAt: Date | null;
-  startDate: Date | null;
-  endDate: Date | null;
-  activityStatus: unknown;
-  documentationStatus: unknown;
+  activityDate: Date | null;
+  images: { fileAssetId: string; position: number }[];
   missions: { missionId: string }[];
   [key: string]: unknown;
 };
@@ -72,7 +75,10 @@ export class PublicationsService {
     const rows = await this.client.publication.findMany({
       where: status ? { status } : undefined,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      include: { missions: true },
+      include: {
+        missions: true,
+        images: { orderBy: { position: "asc" } },
+      },
     });
     return rows.map((row) => this.normalize(row));
   }
@@ -95,21 +101,33 @@ export class PublicationsService {
         excerpt: true,
         type: true,
         publishedAt: true,
-        featuredImageId: true,
+        activityDate: true,
+        images: {
+          where: { position: 0 },
+          select: { fileAssetId: true },
+        },
       },
     });
     const total = await this.client.publication.count({ where });
     return {
-      items: rows.slice(0, dto.limit).map((row) => ({
-        slug: String(row.slug),
-        title: String(row.title),
-        excerpt: String(row.excerpt),
-        type: String(row.type),
-        publishedAt: new Date(row.publishedAt as Date).toISOString(),
-        featuredImageUrl: row.featuredImageId
-          ? `/files/${String(row.featuredImageId)}`
-          : null,
-      })),
+      items: rows.slice(0, dto.limit).map((row) => {
+        const item = {
+          slug: String(row.slug),
+          title: String(row.title),
+          excerpt: String(row.excerpt),
+          type: String(row.type),
+          publishedAt: new Date(row.publishedAt as Date).toISOString(),
+          featuredImageUrl: row.images[0]?.fileAssetId
+            ? `/files/${String(row.images[0].fileAssetId)}`
+            : null,
+        };
+        if (row.type !== PublicationType.POST)
+          return {
+            ...item,
+            activityDate: this.formatDateOnly(row.activityDate) ?? undefined,
+          };
+        return item;
+      }),
       page: dto.page,
       limit: dto.limit,
       total,
@@ -126,11 +144,11 @@ export class PublicationsService {
         content: true,
         type: true,
         publishedAt: true,
-        featuredImageId: true,
-        startDate: true,
-        endDate: true,
-        activityStatus: true,
-        documentationStatus: true,
+        images: {
+          orderBy: { position: "asc" },
+          select: { fileAssetId: true, position: true },
+        },
+        activityDate: true,
         missions: {
           orderBy: [
             { mission: { createdAt: "desc" } },
@@ -150,9 +168,10 @@ export class PublicationsService {
       content: sanitizePublicationContent(String(row.content)),
       type: String(row.type),
       publishedAt: new Date(row.publishedAt as Date).toISOString(),
-      featuredImageUrl: row.featuredImageId
-        ? `/files/${String(row.featuredImageId)}`
+      featuredImageUrl: row.images[0]?.fileAssetId
+        ? `/files/${String(row.images[0].fileAssetId)}`
         : null,
+      imageUrls: row.images.map(({ fileAssetId }) => `/files/${fileAssetId}`),
       missions: (
         (
           row as unknown as {
@@ -171,62 +190,47 @@ export class PublicationsService {
         status: mission.status,
       })),
     };
-    if (row.type !== PublicationType.POST) {
-      detail.startDate = new Date(row.startDate as Date).toISOString();
-      detail.endDate = row.endDate
-        ? new Date(row.endDate as Date).toISOString()
-        : null;
-      detail.activityStatus = String(row.activityStatus);
-      detail.documentationStatus = String(row.documentationStatus);
-    }
+    if (row.type !== PublicationType.POST)
+      detail.activityDate = this.formatDateOnly(row.activityDate) ?? undefined;
     return detail;
   }
   async findOne(id: string) {
     const row = await this.client.publication.findUnique({
       where: { id },
-      include: { missions: true },
+      include: {
+        missions: true,
+        images: { orderBy: { position: "asc" } },
+      },
     });
     if (!row) throw new NotFoundException(`Publication "${id}" not found`);
     return this.normalize(row);
   }
   async create(dto: CreatePublicationDto) {
-    this.validateShape(
-      dto.type,
-      dto.startDate,
-      dto.endDate,
-      dto.activityStatus,
-      dto.documentationStatus,
-    );
-    await assertFileCategory(
-      this.client,
-      dto.featuredImageId,
-      "PUBLICATION_FEATURED_IMAGE",
-    );
-    const missions = await this.validateMissions(
-      dto.scope ?? PublicationScope.GENERAL,
-      dto.missionIds ?? [],
-    );
+    this.validateShape(dto.type, dto.activityDate);
     try {
       return await this.client.$transaction(async (tx: Client) => {
+        await this.validateImages(tx, dto.imageIds);
+        const missions = await this.validateMissions(
+          tx,
+          dto.scope ?? PublicationScope.GENERAL,
+          dto.missionIds ?? [],
+        );
         const row = await tx.publication.create({
           data: {
             slug: dto.slug,
             title: dto.title,
             excerpt: dto.excerpt,
             content: sanitizePublicationContent(dto.content),
-            featuredImageId: dto.featuredImageId,
             type: dto.type,
             status: dto.status ?? PublicationStatus.DRAFT,
             publishedAt:
               dto.status === PublicationStatus.PUBLISHED ? new Date() : null,
             // The trigger requires a link before MISSION can be stored.
             scope: PublicationScope.GENERAL,
-            startDate: dto.startDate ?? null,
-            endDate: dto.endDate ?? null,
-            activityStatus: dto.activityStatus ?? null,
-            documentationStatus: dto.documentationStatus ?? null,
+            activityDate: this.toDateOnly(dto.activityDate),
           },
         });
+        await this.syncImages(tx, row.id, dto.imageIds);
         await this.syncLinks(tx, row.id, missions);
         return this.findIn(tx, row.id);
       });
@@ -241,35 +245,29 @@ export class PublicationsService {
       throw new BadRequestException(
         "confirmTypeChange is required when changing publication type",
       );
+    const changingToPost =
+      type === PublicationType.POST && existing.type !== type;
     this.validateShape(
       type,
-      dto.startDate === undefined ? existing.startDate : dto.startDate,
-      dto.endDate === undefined ? existing.endDate : dto.endDate,
-      dto.activityStatus === undefined
-        ? existing.activityStatus
-        : dto.activityStatus,
-      dto.documentationStatus === undefined
-        ? existing.documentationStatus
-        : dto.documentationStatus,
+      changingToPost
+        ? null
+        : dto.activityDate === undefined
+          ? existing.activityDate
+          : dto.activityDate,
     );
-    if (dto.featuredImageId)
-      await assertFileCategory(
-        this.client,
-        dto.featuredImageId,
-        "PUBLICATION_FEATURED_IMAGE",
-      );
-    const missions =
-      dto.scope !== undefined || dto.missionIds !== undefined
-        ? await this.validateMissions(
-            dto.scope ?? existing.scope,
-            dto.missionIds ?? existing.missionIds,
-          )
-        : undefined;
+    const imageIds = dto.imageIds ?? existing.imageIds;
     try {
       return await this.client.$transaction(async (tx: Client) => {
+        await this.validateImages(tx, imageIds);
+        const missions =
+          dto.scope !== undefined || dto.missionIds !== undefined
+            ? await this.validateMissions(
+                tx,
+                dto.scope ?? existing.scope,
+                dto.missionIds ?? existing.missionIds,
+              )
+            : undefined;
         if (missions) await this.syncLinks(tx, id, missions);
-        const changingToPost =
-          type === PublicationType.POST && existing.type !== type;
         const row = await tx.publication.update({
           where: { id },
           data: {
@@ -280,17 +278,16 @@ export class PublicationsService {
               dto.content === undefined
                 ? undefined
                 : sanitizePublicationContent(dto.content),
-            featuredImageId: dto.featuredImageId,
             type: dto.type,
             scope: dto.scope,
-            startDate: changingToPost ? null : dto.startDate,
-            endDate: changingToPost ? null : dto.endDate,
-            activityStatus: changingToPost ? null : dto.activityStatus,
-            documentationStatus: changingToPost
+            activityDate: changingToPost
               ? null
-              : dto.documentationStatus,
+              : dto.activityDate === undefined
+                ? undefined
+                : this.toDateOnly(dto.activityDate),
           },
         });
+        if (dto.imageIds) await this.syncImages(tx, id, dto.imageIds);
         return this.findIn(tx, row.id);
       });
     } catch (error) {
@@ -308,14 +305,17 @@ export class PublicationsService {
             ? (row.publishedAt ?? new Date())
             : null,
       },
-      include: { missions: true },
+      include: {
+        missions: true,
+        images: { orderBy: { position: "asc" } },
+      },
     });
     return this.normalize(updated);
   }
   async updateScope(id: string, scope: PublicationScope, missionIds: string[]) {
     await this.findOne(id);
-    const missions = await this.validateMissions(scope, missionIds);
     return this.client.$transaction(async (tx: Client) => {
+      const missions = await this.validateMissions(tx, scope, missionIds);
       await this.syncLinks(tx, id, missions);
       await tx.publication.update({ where: { id }, data: { scope } });
       return this.findIn(tx, id);
@@ -328,18 +328,29 @@ export class PublicationsService {
   private async findIn(client: Client, id: string) {
     const row = await client.publication.findUnique({
       where: { id },
-      include: { missions: true },
+      include: {
+        missions: true,
+        images: { orderBy: { position: "asc" } },
+      },
     });
     return row && this.normalize(row);
   }
   private normalize(row: PublicationRow) {
-    const { missions, ...publication } = row;
+    const { missions, images, ...publication } = row;
     return {
       ...publication,
+      activityDate: this.formatDateOnly(publication.activityDate),
+      imageIds: [...images]
+        .sort((a, b) => a.position - b.position)
+        .map(({ fileAssetId }) => fileAssetId),
       missionIds: missions.map((mission) => mission.missionId).sort(),
     };
   }
-  private async validateMissions(scope: PublicationScope, ids: string[]) {
+  private async validateMissions(
+    client: Client,
+    scope: PublicationScope,
+    ids: string[],
+  ) {
     if (scope === PublicationScope.GENERAL && ids.length)
       throw new BadRequestException(
         "GENERAL publications cannot have missions",
@@ -350,12 +361,35 @@ export class PublicationsService {
       );
     const unique = [...new Set(ids)];
     if (!unique.length) return unique;
-    const rows = await this.client.mission.findMany({
+    const rows = await client.mission.findMany({
       where: { id: { in: unique }, status: "ACTIVE" },
     });
     if (rows.length !== unique.length)
       throw new BadRequestException("All linked missions must be ACTIVE");
     return unique;
+  }
+  private async validateImages(client: Client, ids: string[]) {
+    if (ids.length < 1 || ids.length > 5 || new Set(ids).size !== ids.length)
+      throw new BadRequestException(
+        "Publications require one to five unique images",
+      );
+    await Promise.all(
+      ids.map((id) =>
+        assertFileCategory(client, id, "PUBLICATION_FEATURED_IMAGE"),
+      ),
+    );
+  }
+  private async syncImages(client: Client, id: string, imageIds: string[]) {
+    await client.publicationImage.deleteMany({
+      where: { publicationId: id },
+    });
+    await client.publicationImage.createMany({
+      data: imageIds.map((fileAssetId, position) => ({
+        publicationId: id,
+        fileAssetId,
+        position,
+      })),
+    });
   }
   private async syncLinks(tx: Client, id: string, missionIds: string[]) {
     await tx.publicationMission.deleteMany({
@@ -372,27 +406,38 @@ export class PublicationsService {
   }
   private validateShape(
     type: PublicationType,
-    start: Date | null | undefined,
-    end: Date | null | undefined,
-    activity: unknown,
-    documentation: unknown,
+    activityDate: string | Date | null | undefined,
   ) {
-    if (
-      type === PublicationType.POST &&
-      (start || end || activity || documentation)
-    )
+    if (type === PublicationType.POST && activityDate)
       throw new BadRequestException(
         "POST publications cannot have activity fields",
       );
-    if (
-      type !== PublicationType.POST &&
-      (!start || !activity || !documentation)
-    )
+    if (type !== PublicationType.POST && !activityDate)
       throw new BadRequestException(
-        "Activity publications require startDate, activityStatus, and documentationStatus",
+        "Activity publications require activityDate",
       );
-    if (start && end && end < start)
-      throw new BadRequestException("endDate must be on or after startDate");
+    if (
+      activityDate &&
+      (activityDate instanceof Date
+        ? Number.isNaN(activityDate.getTime())
+        : !this.isValidCivilDate(activityDate))
+    )
+      throw new BadRequestException("activityDate must use YYYY-MM-DD");
+  }
+  private toDateOnly(value: string | Date | null | undefined) {
+    if (value === null || value === undefined) return null;
+    if (value instanceof Date) return value;
+    return new Date(`${value}T00:00:00.000Z`);
+  }
+  private isValidCivilDate(value: string) {
+    if (!CIVIL_DATE_REGEX.test(value)) return false;
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return date.toISOString().slice(0, 10) === value;
+  }
+  private formatDateOnly(value: Date | string | null | undefined) {
+    if (!value) return null;
+    if (typeof value === "string") return value.slice(0, 10);
+    return value.toISOString().slice(0, 10);
   }
   private handleError(error: unknown, slug: string): never {
     if (

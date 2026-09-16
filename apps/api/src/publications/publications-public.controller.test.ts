@@ -135,10 +135,8 @@ describe("PublicationsPublicController", () => {
         type: "OUTING",
         publishedAt: "2026-01-01T00:00:00.000Z",
         featuredImageUrl: null,
-        startDate: "2026-02-01T00:00:00.000Z",
-        endDate: null,
-        activityStatus: "COMPLETED",
-        documentationStatus: "DOCUMENTED",
+        activityDate: "2026-02-01",
+        imageUrls: ["/files/cover", "/files/second"],
         missions: [
           { slug: "alpha", title: "Alpha", status: "ACTIVE" },
           { slug: "beta", title: "Beta", status: "ARCHIVED" },
@@ -156,16 +154,14 @@ describe("PublicationsPublicController", () => {
         .get("/publications/public/trip")
         .expect(200);
       expect(Object.keys(response.body).sort()).toEqual([
-        "activityStatus",
+        "activityDate",
         "content",
-        "documentationStatus",
-        "endDate",
         "excerpt",
         "featuredImageUrl",
+        "imageUrls",
         "missions",
         "publishedAt",
         "slug",
-        "startDate",
         "title",
         "type",
       ]);

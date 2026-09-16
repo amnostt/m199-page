@@ -22,17 +22,17 @@ const invalidSlugs = [
 ];
 
 describe("publication DTOs", () => {
-  it("converts date-only input to UTC midnight and excludes authorId from the contract", () => {
+  it("preserves civil activity dates as YYYY-MM-DD and excludes authorId", () => {
     const dto = plainToInstance(CreatePublicationDto, {
       slug: "x",
       title: "x",
       excerpt: "x",
       content: "x",
-      featuredImageId: "f",
-      type: "POST",
-      startDate: "2026-01-02",
+      imageIds: ["f"],
+      type: "OUTING",
+      activityDate: "2026-01-02",
     });
-    expect(dto.startDate).toEqual(new Date("2026-01-02T00:00:00.000Z"));
+    expect(dto.activityDate).toBe("2026-01-02");
     expect("authorId" in dto).toBe(false);
   });
   it("transforms and validates status query values through the enum", () => {
@@ -41,25 +41,37 @@ describe("publication DTOs", () => {
     expect(PublicationType.POST).toBe("POST");
   });
 
-  it("accepts valid hyphenated slugs in create and update DTOs", async () => {
-    const createErrors = await validate(
+  it("accepts valid image and date contracts", async () => {
+    const errors = await validate(
       Object.assign(new CreatePublicationDto(), {
         slug: "mision-centro-2026",
         title: "x",
         excerpt: "x",
         content: "x",
-        featuredImageId: "f",
-        type: "POST",
+        imageIds: ["f", "g"],
+        type: "OUTING",
+        activityDate: "2026-01-02",
       }),
     );
-    const updateErrors = await validate(
-      Object.assign(new UpdatePublicationDto(), {
-        slug: "mision-centro-2026",
-      }),
-    );
-    expect(createErrors).toHaveLength(0);
-    expect(updateErrors).toHaveLength(0);
+    expect(errors).toHaveLength(0);
   });
+
+  it.each<[string[]]>([[[]], [["a", "a"]], [["a", "b", "c", "d", "e", "f"]]])(
+    "rejects invalid image collections %j",
+    async (imageIds) => {
+      const errors = await validate(
+        Object.assign(new CreatePublicationDto(), {
+          slug: "mision-centro-2026",
+          title: "x",
+          excerpt: "x",
+          content: "x",
+          imageIds,
+          type: "POST",
+        }),
+      );
+      expect(errors.map((error) => error.property)).toContain("imageIds");
+    },
+  );
 
   it.each(invalidSlugs)("rejects invalid publication slug %j", async (slug) => {
     const createErrors = await validate(
@@ -68,7 +80,7 @@ describe("publication DTOs", () => {
         title: "x",
         excerpt: "x",
         content: "x",
-        featuredImageId: "f",
+        imageIds: ["f"],
         type: "POST",
       }),
     );

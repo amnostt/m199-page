@@ -151,21 +151,19 @@ integration("public publications PostgreSQL boundary", () => {
     const rows = await client.$transaction(async (tx) => {
       return Promise.all(
         ["OUTING", "EVENT"].flatMap((type) =>
-          ["UPCOMING", "CANCELLED", "COMPLETED"].map((activityStatus) =>
+          ["2026-01-01", "2026-02-01"].map((activityDate) =>
             tx.publication.create({
               data: {
-                slug: `${prefix}-${type.toLowerCase()}-${activityStatus.toLowerCase()}`,
+                slug: `${prefix}-${type.toLowerCase()}-${activityDate}`,
                 title: "Regression",
                 excerpt: "Excerpt",
                 content: "<p>Activity content</p>",
-                featuredImageId: image.id,
                 type,
                 status: "PUBLISHED",
                 publishedAt: new Date(),
                 scope: "GENERAL",
-                startDate: new Date("2026-01-01T00:00:00.000Z"),
-                activityStatus,
-                documentationStatus: "DOCUMENTED",
+                activityDate: new Date("2026-01-01T00:00:00.000Z"),
+                images: { create: { fileAssetId: image.id, position: 0 } },
               },
               select: { slug: true },
             }),
@@ -259,8 +257,8 @@ integration("public publications PostgreSQL boundary", () => {
             title: "Mixed missions",
             excerpt: "Links to ACTIVE and ARCHIVED missions",
             content: "<p>Mixed</p>",
-            featuredImageId: image.id,
             type: "POST",
+            images: { create: { fileAssetId: image.id, position: 0 } },
             status: "PUBLISHED",
             publishedAt: new Date(),
             scope: "GENERAL",

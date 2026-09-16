@@ -8,6 +8,8 @@ import MissionGallery from "./MissionGallery.astro";
 import MissionPublicationItem from "./MissionPublicationItem.astro";
 import MissionPageNav from "./MissionPageNav.astro";
 const { mission } = Astro.props;
+const publications = mission.publications ?? [];
+const gallery = mission.gallery ?? [];
 const imageSrc = resolvePublicImageUrl(mission.heroImageUrl);
 const profileImageSrc = mission.profileImageUrl
   ? resolvePublicImageUrl(mission.profileImageUrl)
@@ -33,7 +35,7 @@ const profileImageSrc = mission.profileImageUrl
       {mission.finished && <MissionFinishedBadge />}
       <h1 id="mission-title">{mission.title}</h1>
       <p class="public-mission-detail__phrase">{mission.heroPhrase}</p>
-      {mission.publications.length > 0 && (
+      {publications.length > 0 && (
         <a class="public-mission-detail__hero-link" href="#mission-publications">
           Explorar publicaciones
         </a>
@@ -41,7 +43,7 @@ const profileImageSrc = mission.profileImageUrl
     </div>
   </section>
 
-  <MissionGallery gallery={mission.gallery} />
+  <MissionGallery gallery={gallery} />
 
   <section
     class="public-mission-detail__publications"
@@ -52,9 +54,9 @@ const profileImageSrc = mission.profileImageUrl
     <div class="public-mission-detail__section-heading">
       <h2 id="mission-publications-title">Publicaciones relacionadas</h2>
     </div>
-    {mission.publications.length > 0 ? (
+    {publications.length > 0 ? (
       <div class="public-mission-detail__publication-list">
-        {mission.publications.map((publication: object) => (
+        {publications.map((publication: object) => (
           <MissionPublicationItem publication={publication} />
         ))}
       </div>

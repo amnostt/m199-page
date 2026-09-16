@@ -2,19 +2,10 @@
 import { sanitizePublicationContentForSsr } from "../../lib/server/publication-sanitizer.js";
 
 interface Props {
-  type: string;
-  activityStatus?: string;
   content: string;
 }
 
-const { type, activityStatus, content } = Astro.props;
-const visible = type === "POST" || activityStatus === "COMPLETED";
+const { content } = Astro.props;
 ---
 
-{visible ? (
-  <div class="public-publication-detail__content" set:html={sanitizePublicationContentForSsr(content)} />
-) : (
-  <p class="public-publication-content-placeholder" data-testid="publication-content-placeholder">
-    El contenido estará disponible cuando finalice la actividad.
-  </p>
-)}
+<div class="public-publication-detail__content" set:html={sanitizePublicationContentForSsr(content)} />

@@ -38,6 +38,15 @@ function createFakeClient(): FakeClient {
     };
     return `${w.publicationId_missionId.publicationId}:${w.publicationId_missionId.missionId}`;
   };
+  const imageKey = (args: Record<string, unknown>): string => {
+    const w = args.where as {
+      publicationId_fileAssetId: {
+        publicationId: string;
+        fileAssetId: string;
+      };
+    };
+    return `${w.publicationId_fileAssetId.publicationId}:${w.publicationId_fileAssetId.fileAssetId}`;
+  };
 
   const client = {
     rows,
@@ -67,6 +76,7 @@ function createFakeClient(): FakeClient {
       ),
     },
     publicationMission: { upsert: upsert("publicationMission", linkKey) },
+    publicationImage: { upsert: upsert("publicationImage", imageKey) },
     landingSettings: {
       findUnique: vi.fn().mockResolvedValue(null),
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
@@ -155,22 +165,16 @@ describe("development database seed", () => {
     expect(byType("POST")).toMatchObject({
       scope: "GENERAL",
       status: "PUBLISHED",
-      startDate: null,
-      endDate: null,
-      activityStatus: null,
-      documentationStatus: null,
+      activityDate: null,
     });
+    expect(byType("POST")).not.toHaveProperty("imageId");
     expect(byType("OUTING")).toMatchObject({
       scope: "GENERAL",
-      startDate: expect.any(Date),
-      activityStatus: "UPCOMING",
-      documentationStatus: "PENDING_DOCUMENTATION",
+      activityDate: new Date("2026-09-01T00:00:00.000Z"),
     });
     expect(byType("EVENT")).toMatchObject({
       scope: "GENERAL",
-      startDate: expect.any(Date),
-      activityStatus: "UPCOMING",
-      documentationStatus: "PENDING_DOCUMENTATION",
+      activityDate: new Date("2026-10-15T00:00:00.000Z"),
     });
 
     // Database scope-sync trigger + explicit update promote linked
@@ -183,6 +187,26 @@ describe("development database seed", () => {
     ).toMatchObject({ scope: "MISSION" });
 
     expect(client.calls.publicationMission).toHaveLength(2);
+    const publicationImages = (client.calls.publicationImage ?? []).map(
+      (call) => call.create,
+    );
+    expect(publicationImages).toEqual([
+      {
+        publicationId: "seed-publication-post-1",
+        fileAssetId: "seed-file-asset-publication-post",
+        position: 0,
+      },
+      {
+        publicationId: "seed-publication-outing-1",
+        fileAssetId: "seed-file-asset-publication-outing",
+        position: 0,
+      },
+      {
+        publicationId: "seed-publication-event-1",
+        fileAssetId: "seed-file-asset-publication-event",
+        position: 0,
+      },
+    ]);
     expect(client.rows.get("landingSettings:1")).not.toHaveProperty(
       "featuredOutingId",
     );
@@ -209,6 +233,12 @@ describe("development database seed", () => {
     expect(client.calls.mission).toHaveLength(8);
     expect(client.calls.publication).toHaveLength(6);
     expect(client.calls.publicationMission).toHaveLength(4);
+    expect(client.calls.publicationImage).toHaveLength(6);
+    expect(
+      client.rows.has(
+        "publicationImage:seed-publication-post-1:seed-file-asset-publication-post",
+      ),
+    ).toBe(true);
   });
 
   it("does not seed legacy Post/Outing/featuredOuting wiring and runs in one transaction", async () => {

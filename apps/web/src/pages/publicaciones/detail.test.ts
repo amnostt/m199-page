@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Page from "./[slug].astro";
 import { PUBLIC_IMAGE_FALLBACK_HANDLER } from "../../lib/public-image.js";
@@ -19,6 +19,11 @@ const detail = (type: string, missions: object[] = []) => ({
   documentationStatus: "DOCUMENTED",
 });
 describe("publication detail SSR", () => {
+  beforeEach(() => {
+    vi.stubEnv("ASTRO_API_BASE_URL", "http://api.test");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
   it.each(["POST", "OUTING", "EVENT"])("renders %s", async (type) => {
     vi.stubGlobal(
       "fetch",
@@ -43,7 +48,13 @@ describe("publication detail SSR", () => {
     expect(html).toContain(
       type === "POST" ? "Historia" : type === "OUTING" ? "Salida" : "Evento",
     );
-    expect(html).toContain("Leer publicación");
+    expect(html).toContain(
+      type === "POST"
+        ? "Ver publicación"
+        : type === "OUTING"
+          ? "Ver salida"
+          : "Ver evento",
+    );
     expect(html).toContain("La historia continúa");
     expect(html).not.toContain("<script>");
     expect(html).not.toContain('data-testid="publication-missions"');

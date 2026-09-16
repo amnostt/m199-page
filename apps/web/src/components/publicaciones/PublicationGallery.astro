@@ -1,0 +1,34 @@
+---
+import {
+  PUBLIC_IMAGE_FALLBACK_HANDLER,
+  resolvePublicImageUrl,
+} from "../../lib/public-image.js";
+
+const { imageUrls = [] } = Astro.props as { imageUrls?: string[] };
+const remainingImages = imageUrls.slice(1);
+---
+{remainingImages.length > 0 && (
+  <section
+    class="public-publication-detail__gallery"
+    data-testid="publication-gallery"
+    aria-labelledby="publication-gallery-title"
+  >
+    <div class="public-publication-detail__section-heading">
+      <p>Registro visual</p>
+      <h2 id="publication-gallery-title">Más de esta historia</h2>
+    </div>
+    <div class="public-publication-detail__gallery-grid">
+      {remainingImages.map((imageUrl) => (
+        <figure class="public-publication-detail__gallery-item">
+          <img
+            src={resolvePublicImageUrl(imageUrl)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+          />
+        </figure>
+      ))}
+    </div>
+  </section>
+)}

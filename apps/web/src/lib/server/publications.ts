@@ -7,6 +7,7 @@ export type PublicationListItem = {
   type: string;
   publishedAt: string;
   featuredImageUrl: string | null;
+  activityDate?: string;
 };
 export type PublicationsList = {
   items: PublicationListItem[];
@@ -18,10 +19,7 @@ export type PublicationsList = {
 export type PublicationPublicDetail = PublicationListItem & {
   content: string;
   missions: { slug: string; title: string; status: "ACTIVE" | "ARCHIVED" }[];
-  startDate?: string;
-  endDate?: string | null;
-  activityStatus?: string;
-  documentationStatus?: string;
+  imageUrls: string[];
 };
 export class PublicationsFetchError extends Error {
   constructor(
@@ -45,6 +43,8 @@ export function validatePublicationsListPayload(
     typeof value.total !== "number" ||
     typeof value.hasMore !== "boolean"
   )
+    throw new PublicationsFetchError("invalid_payload");
+  if (value.items.some((item) => !isPublicListItem(item)))
     throw new PublicationsFetchError("invalid_payload");
   return value as PublicationsList;
 }
@@ -83,6 +83,9 @@ export function validatePublicationPublicPayload(
       typeof value.featuredImageUrl === "string" ||
       value.featuredImageUrl === null
     ) ||
+    (value.imageUrls !== undefined &&
+      (!Array.isArray(value.imageUrls) ||
+        value.imageUrls.some((image) => typeof image !== "string"))) ||
     !Array.isArray(value.missions) ||
     value.missions.some(
       (mission) =>
@@ -96,7 +99,32 @@ export function validatePublicationPublicPayload(
     )
   )
     throw new PublicationsFetchError("invalid_payload");
-  return value as PublicationPublicDetail;
+  if (!isPublicListItem(value))
+    throw new PublicationsFetchError("invalid_payload");
+  const imageUrls = (raw as Record<string, unknown>).imageUrls;
+  return {
+    ...value,
+    imageUrls: Array.isArray(imageUrls)
+      ? imageUrls.filter((image): image is string => typeof image === "string")
+      : value.featuredImageUrl
+        ? [value.featuredImageUrl]
+        : [],
+  } as PublicationPublicDetail;
+}
+
+function isPublicListItem(value: unknown): value is PublicationListItem {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.slug === "string" &&
+    typeof item.title === "string" &&
+    typeof item.excerpt === "string" &&
+    typeof item.type === "string" &&
+    typeof item.publishedAt === "string" &&
+    (item.featuredImageUrl === null ||
+      typeof item.featuredImageUrl === "string") &&
+    (item.activityDate === undefined || typeof item.activityDate === "string")
+  );
 }
 
 export async function fetchPublicationBySlug(
