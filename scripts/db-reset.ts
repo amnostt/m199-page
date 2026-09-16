@@ -2,12 +2,20 @@ import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 
-import { assertExpectedLocalDatabaseUrl } from "../packages/db/src/local-database.js";
+import {
+  assertExpectedLocalDatabaseUrl,
+  resolveExpectedLocalDatabasePort,
+} from "../packages/db/src/local-database.js";
 
-type CommandRunner = (command: string, args: string[]) => Promise<number>;
+type CommandRunner = (
+  command: string,
+  args: string[],
+  environment?: NodeJS.ProcessEnv,
+) => Promise<number>;
 
 type ResetOptions = {
   databaseUrl: string | undefined;
+  postgresHostPort?: string;
   runCommand?: CommandRunner;
   sleep?: (milliseconds: number) => Promise<void>;
   readinessAttempts?: number;
@@ -16,9 +24,16 @@ type ResetOptions = {
 const READINESS_INTERVAL_MS = 1_000;
 const DEFAULT_READINESS_ATTEMPTS = 60;
 
-function spawnCommand(command: string, args: string[]): Promise<number> {
+function spawnCommand(
+  command: string,
+  args: string[],
+  environment?: NodeJS.ProcessEnv,
+): Promise<number> {
   return new Promise((resolveExit, reject) => {
-    const child = spawn(command, args, { stdio: "inherit" });
+    const child = spawn(command, args, {
+      env: environment,
+      stdio: "inherit",
+    });
     child.once("error", reject);
     child.once("exit", (code) => resolveExit(code ?? 1));
   });
@@ -61,12 +76,39 @@ export function resolveDatabaseUrl(
   }
 }
 
+export function resolvePostgresHostPort(
+  environment: NodeJS.ProcessEnv = process.env,
+  envFilePath = resolve(process.cwd(), ".env"),
+): string | undefined {
+  if (environment["POSTGRES_HOST_PORT"] !== undefined) {
+    return environment["POSTGRES_HOST_PORT"];
+  }
+
+  try {
+    const line = readFileSync(envFilePath, "utf8")
+      .split("\n")
+      .find((candidate) =>
+        /^\s*(?:export\s+)?POSTGRES_HOST_PORT\s*=/.test(candidate),
+      );
+    if (!line) return undefined;
+
+    const value = line.replace(
+      /^\s*(?:export\s+)?POSTGRES_HOST_PORT\s*=\s*/,
+      "",
+    );
+    return parseDotEnvValue(value);
+  } catch {
+    return undefined;
+  }
+}
+
 async function runRequired(
   runner: CommandRunner,
   command: string,
   args: string[],
+  environment: NodeJS.ProcessEnv,
 ): Promise<void> {
-  const exitCode = await runner(command, args);
+  const exitCode = await runner(command, args, environment);
   if (exitCode !== 0) {
     throw new Error(
       `${command} ${args.join(" ")} exited with code ${exitCode}`,
@@ -78,19 +120,14 @@ async function waitForDatabase(
   runner: CommandRunner,
   pause: (milliseconds: number) => Promise<void>,
   attempts: number,
+  environment: NodeJS.ProcessEnv,
 ): Promise<void> {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const exitCode = await runner("docker", [
-      "compose",
-      "exec",
-      "-T",
-      "db",
-      "pg_isready",
-      "-U",
-      "m199",
-      "-d",
-      "m199",
-    ]);
+    const exitCode = await runner(
+      "docker",
+      ["compose", "exec", "-T", "db", "pg_isready", "-U", "m199", "-d", "m199"],
+      environment,
+    );
     if (exitCode === 0) return;
     if (attempt < attempts) await pause(READINESS_INTERVAL_MS);
   }
@@ -107,27 +144,54 @@ async function waitForDatabase(
 export async function runLocalDatabaseReset(
   options: ResetOptions,
 ): Promise<void> {
-  assertExpectedLocalDatabaseUrl(options.databaseUrl);
+  const configuredPort =
+    options.postgresHostPort ?? process.env["POSTGRES_HOST_PORT"];
+  assertExpectedLocalDatabaseUrl(options.databaseUrl, configuredPort);
+  const postgresHostPort = resolveExpectedLocalDatabasePort(configuredPort);
+  if (postgresHostPort === undefined) {
+    throw new Error("Invalid PostgreSQL host port");
+  }
+
+  const commandEnvironment = {
+    ...process.env,
+    POSTGRES_HOST_PORT: postgresHostPort,
+  };
 
   const runner = options.runCommand ?? spawnCommand;
   const pause = options.sleep ?? sleep;
   const attempts = options.readinessAttempts ?? DEFAULT_READINESS_ATTEMPTS;
 
-  await runRequired(runner, "docker", ["compose", "down", "-v"]);
-  await runRequired(runner, "docker", ["compose", "up", "-d", "db"]);
-  await waitForDatabase(runner, pause, attempts);
-  await runRequired(runner, "pnpm", [
-    "--filter",
-    "@m199/db",
-    "run",
-    "db:migrate:deploy",
-  ]);
-  await runRequired(runner, "pnpm", ["--filter", "@m199/db", "run", "db:seed"]);
+  await runRequired(
+    runner,
+    "docker",
+    ["compose", "down", "-v"],
+    commandEnvironment,
+  );
+  await runRequired(
+    runner,
+    "docker",
+    ["compose", "up", "-d", "db"],
+    commandEnvironment,
+  );
+  await waitForDatabase(runner, pause, attempts, commandEnvironment);
+  await runRequired(
+    runner,
+    "pnpm",
+    ["--filter", "@m199/db", "run", "db:migrate:deploy"],
+    commandEnvironment,
+  );
+  await runRequired(
+    runner,
+    "pnpm",
+    ["--filter", "@m199/db", "run", "db:seed"],
+    commandEnvironment,
+  );
 }
 
 async function main(): Promise<void> {
   await runLocalDatabaseReset({
     databaseUrl: resolveDatabaseUrl(),
+    postgresHostPort: resolvePostgresHostPort(),
   });
 }
 

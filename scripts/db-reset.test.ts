@@ -1,9 +1,17 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import { resolveDatabaseUrl, runLocalDatabaseReset } from "./db-reset.js";
+import {
+  resolveDatabaseUrl,
+  resolvePostgresHostPort,
+  runLocalDatabaseReset,
+} from "./db-reset.js";
 
 const LOCAL_DATABASE_URL =
-  "postgresql://m199:m199@localhost:5432/m199?schema=public";
+  "postgresql://m199:m199@localhost:5433/m199?schema=public";
 
 describe("local database reset", () => {
   it("refuses unsafe targets before running destructive commands", async () => {
@@ -23,12 +31,19 @@ describe("local database reset", () => {
   });
 
   it("resets, waits for readiness, migrates, and explicitly seeds", async () => {
-    const commands: Array<{ command: string; args: string[] }> = [];
+    const commands: Array<{
+      command: string;
+      args: string[];
+      environment: NodeJS.ProcessEnv | undefined;
+    }> = [];
+    const configuredDatabaseUrl =
+      "postgresql://m199:m199@localhost:5544/m199?schema=public";
 
     await runLocalDatabaseReset({
-      databaseUrl: LOCAL_DATABASE_URL,
-      runCommand: async (command, args) => {
-        commands.push({ command, args });
+      databaseUrl: configuredDatabaseUrl,
+      postgresHostPort: "5544",
+      runCommand: async (command, args, environment) => {
+        commands.push({ command, args, environment });
         return 0;
       },
       readinessAttempts: 1,
@@ -52,6 +67,11 @@ describe("local database reset", () => {
       ["pnpm", "--filter", "@m199/db", "run", "db:migrate:deploy"],
       ["pnpm", "--filter", "@m199/db", "run", "db:seed"],
     ]);
+    expect(
+      commands.every(
+        ({ environment }) => environment?.["POSTGRES_HOST_PORT"] === "5544",
+      ),
+    ).toBe(true);
   });
 
   it("prefers an explicitly exported DATABASE_URL over the env file", () => {
@@ -61,5 +81,27 @@ describe("local database reset", () => {
         "/path/that/does/not/exist",
       ),
     ).toBe(LOCAL_DATABASE_URL);
+  });
+
+  it("resolves an explicitly exported PostgreSQL host port", () => {
+    expect(
+      resolvePostgresHostPort(
+        { POSTGRES_HOST_PORT: "5544" },
+        "/path/that/does/not/exist",
+      ),
+    ).toBe("5544");
+  });
+
+  it("resolves the PostgreSQL host port from the env file fallback", () => {
+    const directory = mkdtempSync(join(tmpdir(), "m199-db-reset-"));
+    const envFilePath = join(directory, ".env");
+
+    try {
+      writeFileSync(envFilePath, "POSTGRES_HOST_PORT=5544\n", "utf8");
+
+      expect(resolvePostgresHostPort({}, envFilePath)).toBe("5544");
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
   });
 });
