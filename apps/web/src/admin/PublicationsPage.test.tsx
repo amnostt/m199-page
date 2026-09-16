@@ -26,6 +26,23 @@ vi.mock("./publicationsApi.js", () => ({
   deletePublication: api.remove,
 }));
 vi.mock("./missionsApi.js", () => ({ listActiveMissions: api.missions }));
+vi.mock("./PublicationImageField.js", () => ({
+  PublicationImageField: ({
+    imageIds,
+    onChange,
+  }: {
+    imageIds: string[];
+    onChange: (ids: string[]) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid="publication-images"
+      onClick={() => onChange(imageIds.length > 0 ? imageIds : ["image-1"])}
+    >
+      Agregar imagen
+    </button>
+  ),
+}));
 
 const publication = (overrides = {}) => ({
   id: "p1",
@@ -33,15 +50,12 @@ const publication = (overrides = {}) => ({
   title: "Salida",
   excerpt: "",
   content: "",
-  featuredImageId: null,
+  imageIds: ["image-1"],
   type: "POST",
   status: "DRAFT",
   scope: "GENERAL",
   publishedAt: null,
-  startDate: null,
-  endDate: null,
-  activityStatus: null,
-  documentationStatus: null,
+  activityDate: null,
   missionIds: [],
   createdAt: "",
   updatedAt: "",
@@ -195,6 +209,7 @@ describe("PublicationsPage", () => {
     fireEvent.change(screen.getByLabelText("Título"), {
       target: { value: "Nueva" },
     });
+    fireEvent.click(screen.getByTestId("publication-images"));
     fireEvent.submit(screen.getByTestId("publication-form"));
     await waitFor(() =>
       expect(api.create).toHaveBeenCalledWith(

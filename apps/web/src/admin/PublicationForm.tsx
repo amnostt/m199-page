@@ -6,8 +6,9 @@ import type {
   PublicationType,
   UpdatePublicationInput,
 } from "./adminTypes.js";
-import { FileUploadWidget } from "./FileUploadWidget.js";
 import { MissionPickerDialog } from "./MissionPickerDialog.js";
+import { PublicationContentEditor } from "./PublicationContentEditor.js";
+import { PublicationImageField } from "./PublicationImageField.js";
 import { Button } from "../components/ui/button.js";
 import { Alert, AlertDescription } from "../components/ui/alert.js";
 import {
@@ -43,24 +44,15 @@ const blank: CreatePublicationInput = {
   title: "",
   excerpt: "",
   content: "",
-  featuredImageId: "",
+  imageIds: [],
   type: "POST",
+  activityDate: null,
 };
 
 const dateInputValue = (value: string | null): string | null =>
   value ? value.slice(0, 10) : null;
 
 type FormErrors = Partial<Record<keyof CreatePublicationInput, string>>;
-
-const clearActivityFields = (
-  input: CreatePublicationInput,
-): CreatePublicationInput => ({
-  ...input,
-  startDate: null,
-  endDate: null,
-  activityStatus: null,
-  documentationStatus: null,
-});
 
 export function PublicationForm({
   publication,
@@ -74,9 +66,10 @@ export function PublicationForm({
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [typeChange, setTypeChange] = useState<CreatePublicationInput | null>(
+  const [typeChange, setTypeChange] = useState<UpdatePublicationInput | null>(
     null,
   );
+
   useEffect(() => {
     setFieldErrors({});
     setTypeChange(null);
@@ -88,18 +81,16 @@ export function PublicationForm({
             title: publication.title,
             excerpt: publication.excerpt,
             content: publication.content,
-            featuredImageId: publication.featuredImageId ?? "",
+            imageIds: publication.imageIds,
             type: publication.type,
             scope: publication.scope,
             missionIds: publication.missionIds,
-            startDate: dateInputValue(publication.startDate),
-            endDate: dateInputValue(publication.endDate),
-            activityStatus: publication.activityStatus,
-            documentationStatus: publication.documentationStatus,
+            activityDate: dateInputValue(publication.activityDate),
           }
         : blank,
     );
   }, [publication]);
+
   const set = (key: keyof CreatePublicationInput, next: unknown) => {
     setValue((current) => ({ ...current, [key]: next }));
     setFieldErrors((current) => {
@@ -109,6 +100,7 @@ export function PublicationForm({
       return nextErrors;
     });
   };
+
   const handleTitleChange = (title: string) => {
     setValue((current) => ({
       ...current,
@@ -129,22 +121,26 @@ export function PublicationForm({
       return nextErrors;
     });
   };
+
   const validate = (): FormErrors => {
     const errors: FormErrors = {};
     if (!value.slug) errors.slug = "El slug es obligatorio.";
     else if (!isUrlSafeSlug(value.slug)) errors.slug = URL_SAFE_SLUG_ERROR;
     if (!value.title.trim()) errors.title = "El título es obligatorio.";
-    if (value.type !== "POST") {
-      if (!value.startDate)
-        errors.startDate = "La fecha de inicio es obligatoria.";
-      if (!value.activityStatus)
-        errors.activityStatus = "Selecciona el estado de actividad.";
-      if (!value.documentationStatus)
-        errors.documentationStatus = "Selecciona el estado de documentación.";
-    }
+    if (value.imageIds.length === 0)
+      errors.imageIds = "Agrega al menos una imagen.";
+    if (value.type !== "POST" && !value.activityDate)
+      errors.activityDate = "La fecha de actividad es obligatoria.";
     return errors;
   };
-  const activity = value.type !== "POST";
+
+  const submitValue = (
+    input: CreatePublicationInput,
+  ): UpdatePublicationInput => ({
+    ...input,
+    activityDate: input.type === "POST" ? null : input.activityDate,
+  });
+
   return (
     <form
       data-testid="publication-form"
@@ -156,8 +152,7 @@ export function PublicationForm({
         const nextErrors = validate();
         setFieldErrors(nextErrors);
         if (Object.keys(nextErrors).length > 0) return;
-        const nextValue =
-          value.type === "POST" ? clearActivityFields(value) : value;
+        const nextValue = submitValue(value);
         if (publication && publication.type !== value.type) {
           setTypeChange(nextValue);
           return;
@@ -171,6 +166,7 @@ export function PublicationForm({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
       <FieldSet>
         <FieldGroup>
           <Field data-invalid={Boolean(fieldErrors.title)}>
@@ -193,6 +189,7 @@ export function PublicationForm({
               </FieldError>
             )}
           </Field>
+
           <Field data-invalid={Boolean(fieldErrors.slug)}>
             <FieldLabel htmlFor="publication-slug">Slug</FieldLabel>
             <Input
@@ -225,6 +222,7 @@ export function PublicationForm({
               </FieldError>
             )}
           </Field>
+
           <Field>
             <FieldLabel htmlFor="publication-excerpt">Extracto</FieldLabel>
             <Textarea
@@ -234,34 +232,28 @@ export function PublicationForm({
               disabled={busy}
             />
           </Field>
+
           <Field>
             <FieldLabel htmlFor="publication-content">Contenido</FieldLabel>
-            <Textarea
+            <PublicationContentEditor
               id="publication-content"
               value={value.content}
-              onChange={(e) => set("content", e.target.value)}
+              onChange={(content) => set("content", content)}
               disabled={busy}
+              aria-label="Contenido"
             />
           </Field>
+
           <Field>
             <FieldLabel htmlFor="publication-type">Tipo</FieldLabel>
             <select
               id="publication-type"
               value={value.type}
               onChange={(e) => {
-                const type = e.target.value as PublicationType;
                 setFieldErrors({});
                 setValue((current) => ({
                   ...current,
-                  type,
-                  ...(type !== "POST" && current.type === "POST"
-                    ? {
-                        activityStatus: current.activityStatus ?? "UPCOMING",
-                        documentationStatus:
-                          current.documentationStatus ??
-                          "PENDING_DOCUMENTATION",
-                      }
-                    : {}),
+                  type: e.target.value as PublicationType,
                 }));
               }}
               disabled={busy}
@@ -272,108 +264,48 @@ export function PublicationForm({
               <option value="EVENT">Evento</option>
             </select>
           </Field>
-          {activity && (
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field data-invalid={Boolean(fieldErrors.startDate)}>
-                <FieldLabel htmlFor="publication-start-date">
-                  Fecha de inicio
-                </FieldLabel>
-                <Input
-                  id="publication-start-date"
-                  name="startDate"
-                  type="date"
-                  value={value.startDate ?? ""}
-                  onChange={(e) => set("startDate", e.target.value || null)}
-                  aria-invalid={Boolean(fieldErrors.startDate)}
-                  aria-describedby={
-                    fieldErrors.startDate
-                      ? "publication-start-date-error"
-                      : undefined
-                  }
-                  disabled={busy}
-                  required
-                />
-                {fieldErrors.startDate && (
-                  <FieldError id="publication-start-date-error">
-                    {fieldErrors.startDate}
-                  </FieldError>
-                )}
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="publication-end-date">
-                  Fecha de fin
-                </FieldLabel>
-                <Input
-                  id="publication-end-date"
-                  type="date"
-                  value={value.endDate ?? ""}
-                  onChange={(e) => set("endDate", e.target.value || null)}
-                  disabled={busy}
-                />
-              </Field>
-              <Field data-invalid={Boolean(fieldErrors.activityStatus)}>
-                <FieldLabel htmlFor="publication-activity-status">
-                  Estado de actividad
-                </FieldLabel>
-                <select
-                  id="publication-activity-status"
-                  name="activityStatus"
-                  value={value.activityStatus ?? ""}
-                  onChange={(e) => set("activityStatus", e.target.value)}
-                  aria-invalid={Boolean(fieldErrors.activityStatus)}
-                  aria-describedby={
-                    fieldErrors.activityStatus
-                      ? "publication-activity-status-error"
-                      : undefined
-                  }
-                  disabled={busy}
-                  required
-                  className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  <option value="">Selecciona un estado</option>
-                  <option value="UPCOMING">Próxima</option>
-                  <option value="COMPLETED">Completada</option>
-                  <option value="CANCELLED">Cancelada</option>
-                </select>
-                {fieldErrors.activityStatus && (
-                  <FieldError id="publication-activity-status-error">
-                    {fieldErrors.activityStatus}
-                  </FieldError>
-                )}
-              </Field>
-              <Field data-invalid={Boolean(fieldErrors.documentationStatus)}>
-                <FieldLabel htmlFor="publication-documentation-status">
-                  Estado de documentación
-                </FieldLabel>
-                <select
-                  id="publication-documentation-status"
-                  name="documentationStatus"
-                  value={value.documentationStatus ?? ""}
-                  onChange={(e) => set("documentationStatus", e.target.value)}
-                  aria-invalid={Boolean(fieldErrors.documentationStatus)}
-                  aria-describedby={
-                    fieldErrors.documentationStatus
-                      ? "publication-documentation-status-error"
-                      : undefined
-                  }
-                  disabled={busy}
-                  required
-                  className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  <option value="">Selecciona un estado</option>
-                  <option value="PENDING_DOCUMENTATION">Pendiente</option>
-                  <option value="DOCUMENTED">Documentada</option>
-                </select>
-                {fieldErrors.documentationStatus && (
-                  <FieldError id="publication-documentation-status-error">
-                    {fieldErrors.documentationStatus}
-                  </FieldError>
-                )}
-              </Field>
-            </div>
+
+          {value.type !== "POST" && (
+            <Field data-invalid={Boolean(fieldErrors.activityDate)}>
+              <FieldLabel htmlFor="publication-activity-date">
+                Fecha de actividad
+              </FieldLabel>
+              <Input
+                id="publication-activity-date"
+                name="activityDate"
+                type="date"
+                value={value.activityDate ?? ""}
+                onChange={(e) => set("activityDate", e.target.value || null)}
+                aria-invalid={Boolean(fieldErrors.activityDate)}
+                aria-describedby={
+                  fieldErrors.activityDate
+                    ? "publication-activity-date-error"
+                    : undefined
+                }
+                disabled={busy}
+                required
+              />
+              {fieldErrors.activityDate && (
+                <FieldError id="publication-activity-date-error">
+                  {fieldErrors.activityDate}
+                </FieldError>
+              )}
+            </Field>
           )}
         </FieldGroup>
       </FieldSet>
+
+      <PublicationImageField
+        imageIds={value.imageIds}
+        onChange={(imageIds) => set("imageIds", imageIds)}
+        disabled={busy}
+      />
+      {fieldErrors.imageIds && (
+        <p className="text-sm text-destructive" role="alert">
+          {fieldErrors.imageIds}
+        </p>
+      )}
+
       <FieldSet>
         <legend className="text-sm font-medium">Alcance</legend>
         <FieldGroup className="gap-3 sm:flex-row">
@@ -390,6 +322,7 @@ export function PublicationForm({
                   missionIds: [],
                 }))
               }
+              disabled={busy}
             />
             General
           </label>
@@ -400,7 +333,7 @@ export function PublicationForm({
               value="MISSION"
               checked={value.scope === "MISSION"}
               onChange={() => set("scope", "MISSION")}
-              disabled={missions.length === 0}
+              disabled={busy || missions.length === 0}
             />
             Misiones
           </label>
@@ -410,21 +343,13 @@ export function PublicationForm({
             type="button"
             variant="outline"
             onClick={() => setPickerOpen(true)}
+            disabled={busy}
           >
             Elegir misiones ({value.missionIds?.length ?? 0})
           </Button>
         )}
       </FieldSet>
-      <FileUploadWidget
-        category="PUBLICATION_FEATURED_IMAGE"
-        fileId={value.featuredImageId || null}
-        onUploaded={(asset) => set("featuredImageId", asset.id)}
-        onRemove={() => set("featuredImageId", "")}
-        preview
-        previewVariant="hero"
-        previewAlt={`Imagen destacada de ${value.title || "la publicación"}`}
-        data-testid="publication-featured-image"
-      />
+
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button
           type="button"
@@ -451,6 +376,7 @@ export function PublicationForm({
           {busy ? "Guardando publicación…" : "Guardar publicación"}
         </Button>
       </div>
+
       <MissionPickerDialog
         open={pickerOpen}
         missions={missions}
@@ -464,16 +390,15 @@ export function PublicationForm({
       <ConfirmDialog
         open={typeChange !== null}
         title="Cambiar tipo de publicación"
-        description="Los campos de actividad cambiarán según el nuevo tipo. ¿Quieres continuar?"
+        description={
+          typeChange?.type === "POST"
+            ? "La fecha de actividad se eliminará al cambiar a publicación. ¿Quieres continuar?"
+            : "La fecha y las imágenes se conservarán al cambiar el tipo. ¿Quieres continuar?"
+        }
         confirmLabel="Cambiar tipo"
         onConfirm={() => {
-          if (typeChange) {
-            const nextValue =
-              typeChange.type === "POST"
-                ? clearActivityFields(typeChange)
-                : typeChange;
-            void onSubmit({ ...nextValue, confirmTypeChange: true });
-          }
+          if (typeChange)
+            void onSubmit({ ...typeChange, confirmTypeChange: true });
           setTypeChange(null);
         }}
         onCancel={() => setTypeChange(null)}

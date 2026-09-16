@@ -27,7 +27,7 @@ describe("publicationsApi", () => {
       title: "Hello",
       excerpt: "",
       content: "",
-      featuredImageId: "image-1",
+      imageIds: ["image-1"],
       type: "POST" as const,
     };
     await createPublication(input);

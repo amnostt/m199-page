@@ -28,23 +28,18 @@ export type MissionStatus = "ACTIVE" | "ARCHIVED";
 export type PublicationStatus = "DRAFT" | "PUBLISHED";
 export type PublicationType = "POST" | "OUTING" | "EVENT";
 export type PublicationScope = "GENERAL" | "MISSION";
-export type ActivityStatus = "UPCOMING" | "COMPLETED" | "CANCELLED";
-export type DocumentationStatus = "PENDING_DOCUMENTATION" | "DOCUMENTED";
 export interface PublicationAdmin {
   id: string;
   slug: string;
   title: string;
   excerpt: string;
   content: string;
-  featuredImageId: string | null;
+  imageIds: string[];
   type: PublicationType;
   status: PublicationStatus;
   scope: PublicationScope;
   publishedAt: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  activityStatus: ActivityStatus | null;
-  documentationStatus: DocumentationStatus | null;
+  activityDate: string | null;
   missionIds: string[];
   createdAt: string;
   updatedAt: string;
@@ -54,15 +49,12 @@ export interface CreatePublicationInput {
   title: string;
   excerpt: string;
   content: string;
-  featuredImageId: string;
+  imageIds: string[];
   type: PublicationType;
   status?: PublicationStatus;
   scope?: PublicationScope;
   missionIds?: string[];
-  startDate?: string | null;
-  endDate?: string | null;
-  activityStatus?: ActivityStatus | null;
-  documentationStatus?: DocumentationStatus | null;
+  activityDate?: string | null;
 }
 export type UpdatePublicationInput = Partial<CreatePublicationInput> & {
   confirmTypeChange?: boolean;
