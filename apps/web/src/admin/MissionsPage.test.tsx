@@ -244,6 +244,40 @@ describe("MissionsPage", () => {
     );
   });
 
+  it("opens the row context menu with the same actions and valid table markup", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([
+      mission("active", "ACTIVE"),
+    ]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByText("Mission active")).toBeTruthy(),
+    );
+
+    const row = screen.getByTestId("mission-active");
+    expect(row.tagName).toBe("TR");
+    expect(row.parentElement?.tagName).toBe("TBODY");
+    expect(
+      Array.from(row.parentElement?.children ?? []).every(
+        (child) => child.tagName === "TR",
+      ),
+    ).toBe(true);
+
+    fireEvent.contextMenu(row);
+    expect(
+      await screen.findByRole("menuitem", { name: "Editar" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Archivar" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    fireEvent.contextMenu(row);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Archivar" }));
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+  });
+
   it("saves edited values and resets the form", async () => {
     vi.mocked(listActiveMissions).mockResolvedValue([
       mission("active", "ACTIVE"),

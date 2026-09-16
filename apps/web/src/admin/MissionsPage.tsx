@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useState, type SyntheticEvent } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useState,
+  type ElementType,
+  type SyntheticEvent,
+} from "react";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import type { MissionAdmin } from "./adminTypes.js";
 import { FileUploadWidget } from "./FileUploadWidget.js";
@@ -22,6 +29,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog.js";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "../components/ui/context-menu.js";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +85,90 @@ const EMPTY: Form = {
   profileImageId: null,
   heroPhrase: "",
 };
+
+type RowAction = {
+  id: string;
+  label: string;
+  onSelect: () => void;
+  group: number;
+  destructive?: boolean;
+};
+
+type ActionMenu = {
+  Group: ElementType;
+  Label: ElementType;
+  Item: ElementType;
+  Separator: ElementType;
+};
+
+function RowActionItems({
+  actions,
+  menu,
+}: {
+  actions: readonly RowAction[];
+  menu: ActionMenu;
+}) {
+  const groups = actions.reduce<RowAction[][]>((result, action) => {
+    (result[action.group] ??= []).push(action);
+    return result;
+  }, []);
+  const Group = menu.Group;
+  const Label = menu.Label;
+  const Item = menu.Item;
+  const Separator = menu.Separator;
+
+  return groups.map((group, index) => (
+    <Fragment key={`action-group-${index}`}>
+      {index > 0 && <Separator />}
+      <Group>
+        {index === 0 && <Label>Acciones</Label>}
+        {group.map((action) => (
+          <Item
+            key={action.id}
+            className={
+              action.destructive
+                ? "text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                : undefined
+            }
+            onClick={action.onSelect}
+          >
+            {action.label}
+          </Item>
+        ))}
+      </Group>
+    </Fragment>
+  ));
+}
+
+const missionActionMenu = {
+  Group: ContextMenuGroup,
+  Label: ContextMenuLabel,
+  Item: ContextMenuItem,
+  Separator: ContextMenuSeparator,
+};
+
+const missionDropdownActionMenu = {
+  Group: DropdownMenuGroup,
+  Label: DropdownMenuLabel,
+  Item: DropdownMenuItem,
+  Separator: DropdownMenuSeparator,
+};
+
+function missionRowActions(
+  mission: MissionAdmin,
+  onEdit: (mission: MissionAdmin) => void,
+  onStatus: (mission: MissionAdmin) => void,
+): RowAction[] {
+  return [
+    { id: "edit", label: "Editar", onSelect: () => onEdit(mission), group: 0 },
+    {
+      id: "status",
+      label: mission.status === "ACTIVE" ? "Archivar" : "Reactivar",
+      onSelect: () => onStatus(mission),
+      group: 1,
+    },
+  ];
+}
 
 function MissionList({
   heading,
@@ -120,60 +220,66 @@ function MissionList({
                 </TableCell>
               </TableRow>
             ) : (
-              missions.map((mission) => (
-                <TableRow
-                  key={mission.id}
-                  data-testid={`mission-${mission.id}`}
-                >
-                  <TableCell className="font-medium">{mission.title}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {mission.slug}
-                  </TableCell>
-                  <TableCell className="max-w-[22rem] truncate">
-                    {mission.heroPhrase}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        mission.status === "ACTIVE" ? "secondary" : "outline"
+              missions.map((mission) => {
+                const actions = missionRowActions(mission, onEdit, onStatus);
+                return (
+                  <ContextMenu key={mission.id}>
+                    <ContextMenuTrigger
+                      render={
+                        <TableRow data-testid={`mission-${mission.id}`} />
                       }
                     >
-                      {mission.status === "ACTIVE" ? "Activa" : "Archivada"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`Acciones para ${mission.title}`}
-                          />
-                        }
-                      >
-                        <MoreHorizontalIcon aria-hidden="true" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuGroup>
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => onEdit(mission)}>
-                            Editar
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                          <DropdownMenuItem onClick={() => onStatus(mission)}>
-                            {mission.status === "ACTIVE"
-                              ? "Archivar"
-                              : "Reactivar"}
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
+                      <TableCell className="font-medium">
+                        {mission.title}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {mission.slug}
+                      </TableCell>
+                      <TableCell className="max-w-[22rem] truncate">
+                        {mission.heroPhrase}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            mission.status === "ACTIVE"
+                              ? "secondary"
+                              : "outline"
+                          }
+                        >
+                          {mission.status === "ACTIVE" ? "Activa" : "Archivada"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Acciones para ${mission.title}`}
+                              />
+                            }
+                          >
+                            <MoreHorizontalIcon aria-hidden="true" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <RowActionItems
+                              actions={actions}
+                              menu={missionDropdownActionMenu}
+                            />
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-44">
+                      <RowActionItems
+                        actions={actions}
+                        menu={missionActionMenu}
+                      />
+                    </ContextMenuContent>
+                  </ContextMenu>
+                );
+              })
             )}
           </TableBody>
         </Table>
