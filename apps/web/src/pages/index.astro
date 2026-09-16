@@ -10,6 +10,8 @@
  * The public layout imports the shared visual system. Calls the PR2 helper
  * `fetchLandingPublicPayload` against the server-only
  * `ASTRO_API_BASE_URL` validated in `apps/web/src/lib/server/env.ts`.
+ * It also fetches a bounded newest-first publications list independently from
+ * the landing payload and missions requests.
  *
  * On `LandingFetchError` (or any other thrown error) sets
  * `Astro.response.status = 503` and renders a non-sensitive failure
@@ -25,11 +27,17 @@ import {
 } from "../lib/server/landing.js";
 import { resolveApiBaseUrl } from "../lib/server/env.js";
 import { fetchMissionsList } from "../lib/server/missions.js";
+import { fetchPublicationsList } from "../lib/server/publications.js";
+
+const LANDING_PUBLICATION_LIMIT = 4;
 
 let payload: import("../lib/server/landing.js").LandingPublicPayload | null =
   null;
 let failure: { reason: string } | null = null;
 let missions: import("../lib/server/missions.js").MissionListItem[] | null = null;
+let publications:
+  | import("../lib/server/publications.js").PublicationListItem[]
+  | null = null;
 
 try {
   const apiBaseUrl = resolveApiBaseUrl();
@@ -51,6 +59,20 @@ try {
   });
 }
 
+try {
+  const apiBaseUrl = resolveApiBaseUrl();
+  const requestUrl = new URL("/", Astro.url);
+  requestUrl.searchParams.set("page", "1");
+  requestUrl.searchParams.set("limit", String(LANDING_PUBLICATION_LIMIT));
+  publications = (
+    await fetchPublicationsList(requestUrl, { apiBaseUrl })
+  ).items;
+} catch (cause) {
+  console.warn("Landing publications fetch failed", {
+    reason: cause instanceof Error ? cause.name : "unknown",
+  });
+}
+
 if (failure) {
   Astro.response.status = 503;
   Astro.response.statusText = "Service Unavailable";
@@ -58,5 +80,10 @@ if (failure) {
 ---
 
 <PublicLayout>
-  <Landing payload={payload} failure={failure} missions={missions} />
+  <Landing
+    payload={payload}
+    failure={failure}
+    missions={missions}
+    publications={publications}
+  />
 </PublicLayout>

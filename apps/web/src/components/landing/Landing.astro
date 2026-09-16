@@ -14,8 +14,7 @@
  *   4. Dynamic verse (currentVerse from the payload).
  *   5. Visual banner (`/assets/redesign/banner.png`).
  *   6. Real missions (omitted for null/empty).
- *   7. Honest static publications entry linking /publicaciones
- *      (no fake href/anchor, no restored legacy payload).
+ *   7. Latest published publications carousel (omitted for null/empty).
  *   8. About (CMS narrative precedence + local gallery + optional contact CTA).
  *   9. Featured video (omitted when no safe URL is configured).
  *  10. Contact (conditional channels; never placeholder values).
@@ -42,14 +41,16 @@ import LandingAbout from "./LandingAbout.astro";
 import LandingFeaturedVideo from "./LandingFeaturedVideo.astro";
 import LandingContact from "./LandingContact.astro";
 import type { MissionListItem } from "../../lib/server/missions.js";
+import type { PublicationListItem } from "../../lib/server/publications.js";
 
 interface Props {
   payload: LandingPayloadShape | null;
   failure: LandingFailure | null;
   missions: MissionListItem[] | null;
+  publications?: PublicationListItem[] | null;
 }
 
-const { payload, failure, missions = null } = Astro.props;
+const { payload, failure, missions = null, publications = null } = Astro.props;
 
 const missionHref = payload ? "/misiones" : "#inicio";
 const hasAbout = Boolean(
@@ -112,7 +113,7 @@ const publicationsHref = "/publicaciones";
 
     <LandingMissions missions={missions} />
 
-    <LandingPublications />
+    <LandingPublications publications={publications} />
 
     <LandingAbout
       mission={payload.mission}

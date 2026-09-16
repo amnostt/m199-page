@@ -286,6 +286,33 @@ describe("public.css landing scroll-snap missions contract", () => {
   });
 });
 
+describe("public.css landing scroll-snap publications contract", () => {
+  it("defines the bounded publication carousel with accessible control mechanics", () => {
+    const css = readPublic();
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications__track\s*\{[^}]*grid-auto-flow:\s*column;[^}]*grid-auto-columns:\s*minmax\(280px,\s*1fr\);/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications__track\s*\{[^}]*overflow-x:\s*auto;[^}]*scroll-snap-type:\s*x\s+mandatory;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications__track\s*\{[^}]*scrollbar-color:\s*var\(--primary\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications__track::-webkit-scrollbar-thumb\s*\{[^}]*background:\s*var\(--primary\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications__item\s*\{[^}]*scroll-snap-align:\s*start;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-publications__control\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px;/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.public-ui\s+\.landing-publications__track\s*\{[^}]*scroll-behavior:\s*auto/s,
+    );
+  });
+});
+
 describe("public.css landing mission card identity contract", () => {
   it("keeps the logo and title together with responsive wrapping and intact logo rendering", () => {
     const css = readPublic();

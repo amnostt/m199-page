@@ -1,29 +1,171 @@
 ---
 /**
- * LandingPublications.astro — honest static publications entry.
+ * LandingPublications.astro — SSR-first latest-publications carousel.
  *
- * Links to the real `/publicaciones` route. Never carries a fake
- * placeholder href/anchor and never restores the legacy
- * `featuredPosts` payload. Renders nothing if the entry should not be
- * present (it is always present on the public landing — exposed as a
- * component for parity with the other blocks).
+ * The landing receives the already validated, newest-first bounded list from
+ * the server route. Cards consume only `title`, `featuredImageUrl`, and
+ * `slug`; the progressive enhancement script only wires scroll controls.
+ * The entire section is omitted when the independent publications request
+ * fails or returns no items.
  */
+import type { PublicationListItem } from "../../lib/server/publications.js";
+import {
+  PUBLIC_IMAGE_FALLBACK_HANDLER,
+  resolvePublicImageUrl,
+} from "../../lib/public-image.js";
+
+interface Props {
+  publications: PublicationListItem[] | null;
+}
+
+const { publications } = Astro.props;
+const hasPublications = Boolean(publications && publications.length > 0);
+const showControls = hasPublications && (publications?.length ?? 0) > 1;
+const trackId = "publications-track";
 ---
 
-<section
-  class="public-section landing-publications"
-  id="publicaciones"
-  data-testid="publications-entry"
-  aria-labelledby="publications-entry-title"
->
-  <div class="landing-publications__inner">
-    <p class="landing-publications__eyebrow">Publicaciones</p>
-    <h2 id="publications-entry-title" class="landing-publications__title">
-      Lo que estamos <span class="landing-publications__underline">viviendo.</span>
-    </h2>
-    <a class="landing-publications__link" href="/publicaciones" data-testid="publications-entry-link">
-      <span class="landing-publications__link-label">Ver todas las publicaciones</span>
-      <span aria-hidden="true" class="landing-publications__link-arrow">→</span>
-    </a>
-  </div>
-</section>
+{hasPublications && (
+  <section
+    class="public-section landing-publications"
+    id="publicaciones"
+    data-testid="publications-entry"
+    aria-labelledby="publications-entry-title"
+  >
+    <div class="landing-publications__inner">
+      <header class="landing-publications__header">
+        <div class="landing-publications__heading">
+          <p class="landing-publications__eyebrow">Publicaciones</p>
+          <h2 id="publications-entry-title" class="landing-publications__title">
+            Lo que estamos <span class="landing-publications__underline">viviendo.</span>
+          </h2>
+        </div>
+        <a class="landing-publications__link" href="/publicaciones" data-testid="publications-entry-link">
+          <span class="landing-publications__link-label">Ver todas las publicaciones</span>
+          <span aria-hidden="true" class="landing-publications__link-arrow">→</span>
+        </a>
+      </header>
+
+      <div class="landing-publications__carousel">
+        <div class="landing-publications__carousel-head">
+          <p class="landing-publications__note" data-testid="publications-subtitle">
+            Historias, salidas y momentos que mantienen viva la misión.
+          </p>
+          {showControls && (
+            <div
+              class="landing-publications__controls"
+              aria-label="Controles del carrusel de publicaciones"
+            >
+              <button
+                type="button"
+                class="landing-publications__control"
+                data-publication-control="prev"
+                data-testid="publications-prev"
+                aria-label="Ver publicaciones anteriores"
+                disabled
+              >←</button>
+              <button
+                type="button"
+                class="landing-publications__control"
+                data-publication-control="next"
+                data-testid="publications-next"
+                aria-label="Ver más publicaciones"
+                disabled
+              >→</button>
+            </div>
+          )}
+        </div>
+
+        <ol
+          class="landing-publications__track"
+          id={trackId}
+          role="region"
+          aria-label="Publicaciones recientes"
+          tabindex="0"
+          data-testid="publications-track"
+          data-publications-track
+        >
+          {publications!.map((publication, index) => (
+            <li class="landing-publications__item">
+              <a
+                class="landing-publication-card"
+                href={`/publicaciones/${publication.slug}`}
+                data-testid="publication-card"
+                aria-label={`Leer publicación ${publication.title}`}
+              >
+                <div class="landing-publication-card__media">
+                  <img
+                    src={resolvePublicImageUrl(publication.featuredImageUrl)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    class="landing-publication-card__image"
+                    onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+                  />
+                </div>
+                <div class="landing-publication-card__body">
+                  <div class="landing-publication-card__meta">
+                    <span
+                      class="landing-publication-card__index"
+                      data-testid="publication-card-index"
+                      aria-hidden="true"
+                    >{String(index + 1).padStart(2, "0")}</span>
+                    <span class="landing-publication-card__arrow" aria-hidden="true">↗</span>
+                  </div>
+                  <h3 class="landing-publication-card__title" data-testid="publication-card-title">
+                    {publication.title}
+                  </h3>
+                  <span class="landing-publication-card__action">Leer publicación ↗</span>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+
+    {showControls && (
+      <script is:inline>
+        (function () {
+          const script = document.currentScript;
+          const section = script && script.closest(".landing-publications");
+          if (!(section instanceof HTMLElement)) return;
+
+          const track = section.querySelector("[data-publications-track]");
+          const prev = section.querySelector('[data-publication-control="prev"]');
+          const next = section.querySelector('[data-publication-control="next"]');
+          if (!(track instanceof HTMLElement)) return;
+          if (!(prev instanceof HTMLButtonElement)) return;
+          if (!(next instanceof HTMLButtonElement)) return;
+
+          const reduceMotion =
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+          const sync = function () {
+            prev.disabled = track.scrollLeft <= 2;
+            next.disabled =
+              track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+          };
+
+          const step = function (direction) {
+            const firstCard = track.querySelector(".landing-publication-card");
+            const width =
+              firstCard instanceof HTMLElement
+                ? firstCard.getBoundingClientRect().width + 16
+                : track.clientWidth * 0.8;
+            track.scrollBy({
+              left: direction * width,
+              behavior: reduceMotion ? "auto" : "smooth",
+            });
+          };
+
+          prev.addEventListener("click", function () { step(-1); });
+          next.addEventListener("click", function () { step(1); });
+          track.addEventListener("scroll", sync, { passive: true });
+          window.addEventListener("resize", sync);
+          sync();
+        })();
+      </script>
+    )}
+  </section>
+)}

@@ -8,6 +8,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Landing from "./Landing.astro";
 import type { LandingPayloadShape } from "./landing-shape.js";
+import type { PublicationListItem } from "../../lib/server/publications.js";
 
 let container: Awaited<ReturnType<typeof AstroContainer.create>>;
 
@@ -48,13 +49,25 @@ function minimalPayload(): LandingPayloadShape {
   };
 }
 
+const samplePublications: PublicationListItem[] = [
+  {
+    slug: "latest-story",
+    title: "Latest story",
+    excerpt: "Latest excerpt",
+    type: "POST",
+    publishedAt: "2026-09-16T00:00:00.000Z",
+    featuredImageUrl: "/files/latest-story",
+  },
+];
+
 async function render(
   payload: LandingPayloadShape | null,
   failure: { reason: string } | null = null,
   missions: { slug: string; title: string }[] | null = null,
+  publications: PublicationListItem[] | null = samplePublications,
 ): Promise<string> {
   return container.renderToString(Landing, {
-    props: { payload, failure, missions },
+    props: { payload, failure, missions, publications },
   });
 }
 
@@ -115,9 +128,10 @@ describe("Landing.astro — successful markup", () => {
     expect(html).toContain("Transformamos vidas");
     expect(html).toContain("Id por todo el mundo");
     expect(html).toContain("Marcos 16:15");
-    // The honest static publications entry links /publicaciones — never
-    // a placeholder or fake anchor.
+    // The latest publications carousel keeps the archive link real and never
+    // uses a placeholder or fake anchor.
     expect(html).toContain('href="/publicaciones"');
+    expect(html).toContain('href="/publicaciones/latest-story"');
     expect(html).not.toContain('href="#"');
     expect(html).not.toContain("featured-outing-section");
     expect(html).not.toContain("featured-posts-section");
@@ -129,8 +143,8 @@ describe("Landing.astro — successful markup", () => {
     expect(html).toContain('data-testid="hero-section"');
     expect(html).toContain('src="/assets/redesign/hero-final.png"');
     expect(html).not.toContain('data-testid="missions-section"');
-    // The banner and the publications entry are static OpenDesign
-    // blocks and are always rendered. The optional CMS-driven
+    // The banner is a static OpenDesign block. Publications are available in
+    // this isolated render, while the optional CMS-driven
     // sections (about / video / contact / verse) are omitted when
     // the payload has no values for them.
     expect(html).toContain('data-testid="banner-section"');
@@ -221,10 +235,12 @@ describe("Landing.astro — about, verse, banner, and contact", () => {
     expect(html).toContain('src="/assets/redesign/banner.png"');
   });
 
-  it("renders the honest publications entry linking /publicaciones", async () => {
+  it("renders the latest publications carousel and archive link", async () => {
     const html = await render(fullPayload());
     expect(html).toContain('data-testid="publications-entry"');
     expect(html).toContain('href="/publicaciones"');
+    expect(html).toContain('href="/publicaciones/latest-story"');
+    expect(html).toContain("Latest story");
     expect(html).toContain("Ver todas las publicaciones");
     expect(html).not.toContain("PUBLICACIÓN PENDIENTE");
   });
@@ -429,6 +445,15 @@ describe("Landing.astro — CSS scope contract", () => {
     // dedicated full-width composition classes; missions are conditional.
     expect(count).toBe(3);
     expect(html).not.toContain('data-testid="missions-section"');
+  });
+
+  it("drops the publications public-section when no publications are provided", async () => {
+    const html = await render(fullPayload(), null, null, []);
+    const count = html.match(/class="[^"]*\bpublic-section\b[^"]*"/g)?.length;
+
+    expect(count).toBe(2);
+    expect(html).not.toContain('data-testid="publications-entry"');
+    expect(html).not.toContain("Latest story");
   });
 
   it("does not render the legacy featured-outing or featured-posts sections", async () => {

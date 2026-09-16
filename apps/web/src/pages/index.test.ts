@@ -46,6 +46,23 @@ const MISSIONS_PAYLOAD = {
   hasMore: false,
 };
 
+const PUBLICATIONS_PAYLOAD = {
+  items: [
+    {
+      slug: "latest-story",
+      title: "Latest story",
+      excerpt: "A current story from the mission.",
+      type: "POST",
+      publishedAt: "2026-09-16T00:00:00.000Z",
+      featuredImageUrl: "/files/latest-story",
+    },
+  ],
+  page: 1,
+  limit: 4,
+  total: 1,
+  hasMore: false,
+};
+
 type Behavior = (
   url: URL,
 ) => Response | Promise<Response> | Error | Promise<Error>;
@@ -63,7 +80,7 @@ function scriptless(html: string): string {
   return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
 }
 
-describe("index.astro — independent landing + missions fetch", () => {
+describe("index.astro — independent landing, missions, and publications fetch", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -93,6 +110,12 @@ describe("index.astro — independent landing + missions fetch", () => {
             headers: { "content-type": "application/json" },
           });
         }
+        if (url.pathname === "/publications/public") {
+          return new Response(JSON.stringify(PUBLICATIONS_PAYLOAD), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
         return new Response("not found", { status: 404 });
       }),
     );
@@ -113,6 +136,8 @@ describe("index.astro — independent landing + missions fetch", () => {
     expect(html).toContain("Alpha mission");
     expect(html).toContain('href="/misiones"');
     expect(html).toContain("Ver todas las misiones");
+    expect(html).toContain('data-testid="publications-entry"');
+    expect(html).toContain('href="/publicaciones/latest-story"');
     expect(html).not.toContain('data-testid="landing-error"');
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -136,6 +161,12 @@ describe("index.astro — independent landing + missions fetch", () => {
           if (url.pathname === "/missions/public") {
             if (failure instanceof Error) throw failure;
             return failure;
+          }
+          if (url.pathname === "/publications/public") {
+            return new Response(JSON.stringify(PUBLICATIONS_PAYLOAD), {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            });
           }
           return new Response("not found", { status: 404 });
         }),
@@ -198,6 +229,12 @@ describe("index.astro — independent landing + missions fetch", () => {
             headers: { "content-type": "application/json" },
           });
         }
+        if (url.pathname === "/publications/public") {
+          return new Response(JSON.stringify(PUBLICATIONS_PAYLOAD), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
         return new Response("not found", { status: 404 });
       }),
     );
@@ -214,6 +251,47 @@ describe("index.astro — independent landing + missions fetch", () => {
     expect(html).not.toContain('data-testid="landing-page"');
     expect(html).not.toContain('data-testid="missions-section"');
     expect(html).toContain("La página no se puede cargar en este momento");
+  });
+
+  it("isolates a publications-only failure and requests the bounded newest page", async () => {
+    const fetchMock = makeFetch((url) => {
+      if (url.pathname === "/landing/public") {
+        return new Response(JSON.stringify(LANDING_PAYLOAD), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.pathname === "/missions/public") {
+        return new Response(JSON.stringify(MISSIONS_PAYLOAD), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.pathname === "/publications/public") {
+        expect(url.searchParams.get("page")).toBe("1");
+        expect(url.searchParams.get("limit")).toBe("4");
+        return new Response("down", { status: 503 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await (
+      await AstroContainer.create()
+    ).renderToResponse(Page, {
+      request: new Request("http://localhost/"),
+    });
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('data-testid="landing-page"');
+    expect(html).toContain('data-testid="missions-section"');
+    expect(html).not.toContain('data-testid="publications-entry"');
+    expect(html).not.toContain("Latest story");
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]?.[0]).toBe(
+      "Landing publications fetch failed",
+    );
   });
 });
 
