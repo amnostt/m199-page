@@ -10,6 +10,7 @@
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { useState } from "react";
 import {
   render,
   screen,
@@ -434,6 +435,51 @@ describe("FileUploadWidget — remove button", () => {
     expect(removeBtn.textContent).toMatch(/quitar/i);
   });
 
+  it("keeps the current attachment visible while replacing it and reports the new asset", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(MOCK_ASSET),
+    });
+    const onUploaded = vi.fn();
+
+    const { rerender } = render(
+      <FileUploadWidget
+        category="PUBLICATION_FEATURED_IMAGE"
+        fileId="existing-file-id"
+        onUploaded={onUploaded}
+        onRemove={vi.fn()}
+        preview
+      />,
+    );
+
+    fireEvent.change(screen.getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["new"], "replacement.png", { type: "image/png" })],
+      },
+    });
+
+    await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(MOCK_ASSET));
+    expect(
+      screen.getByAltText("Vista previa del archivo").getAttribute("src"),
+    ).toBe("/files/existing-file-id");
+
+    rerender(
+      <FileUploadWidget
+        category="PUBLICATION_FEATURED_IMAGE"
+        fileId={MOCK_ASSET.id}
+        onUploaded={onUploaded}
+        onRemove={vi.fn()}
+        preview
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByAltText("Vista previa del archivo").getAttribute("src"),
+      ).toBe("/files/asset-1"),
+    );
+  });
+
   it("calls onRemove when remove button is clicked", () => {
     const onRemove = vi.fn();
 
@@ -448,6 +494,42 @@ describe("FileUploadWidget — remove button", () => {
 
     fireEvent.click(screen.getByTestId("file-upload-remove"));
     expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render removal UI when onRemove is omitted", () => {
+    render(
+      <FileUploadWidget
+        category="LANDING_HERO"
+        fileId="existing-file-id"
+        onUploaded={vi.fn()}
+        preview
+      />,
+    );
+
+    expect(screen.getByTestId("file-upload-preview")).toBeTruthy();
+    expect(screen.queryByTestId("file-upload-remove")).toBeNull();
+  });
+
+  it("reports an intentional clear as the controlled empty value", () => {
+    function ControlledUpload() {
+      const [fileId, setFileId] = useState<string | null>("existing-file-id");
+
+      return (
+        <FileUploadWidget
+          category="PUBLICATION_FEATURED_IMAGE"
+          fileId={fileId}
+          onUploaded={vi.fn()}
+          onRemove={() => setFileId(null)}
+          preview
+        />
+      );
+    }
+
+    render(<ControlledUpload />);
+
+    fireEvent.click(screen.getByTestId("file-upload-remove"));
+
+    expect(screen.queryByTestId("file-upload-preview")).toBeNull();
   });
 });
 

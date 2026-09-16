@@ -15,7 +15,16 @@ const uploadProps = vi.hoisted(() => ({
 vi.mock("./FileUploadWidget.js", () => ({
   FileUploadWidget: (props: Record<string, unknown>) => {
     uploadProps.current = props;
-    return <div data-testid="upload-widget" />;
+    return (
+      <div data-testid="upload-widget">
+        {props.fileId && props.preview ? (
+          <img
+            src={`/files/${String(props.fileId)}`}
+            alt={String(props.previewAlt)}
+          />
+        ) : null}
+      </div>
+    );
   },
 }));
 const pickerProps = vi.hoisted(() => ({
@@ -129,6 +138,99 @@ describe("PublicationForm", () => {
     expect(screen.getByLabelText("Fecha de inicio")).toHaveProperty(
       "disabled",
       true,
+    );
+  });
+
+  it("hydrates the featured image attachment preview in edit mode", () => {
+    const publication = {
+      id: "p1",
+      slug: "salida",
+      title: "Salida",
+      excerpt: "Resumen",
+      content: "Detalle",
+      featuredImageId: "file1",
+      type: "POST",
+      status: "DRAFT",
+      scope: "GENERAL",
+      publishedAt: null,
+      startDate: null,
+      endDate: null,
+      activityStatus: null,
+      documentationStatus: null,
+      missionIds: [],
+      createdAt: "",
+      updatedAt: "",
+    } as PublicationAdmin;
+
+    render(
+      <PublicationForm
+        publication={publication}
+        missions={[]}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(uploadProps.current).toMatchObject({
+      fileId: "file1",
+      preview: true,
+      previewVariant: "hero",
+      previewAlt: "Imagen destacada de Salida",
+    });
+    expect(
+      screen.getByAltText("Imagen destacada de Salida").getAttribute("src"),
+    ).toBe("/files/file1");
+  });
+
+  it("submits featured-image replacement and intentional clearing", async () => {
+    const onSubmit = vi.fn();
+    const publication = {
+      id: "p1",
+      slug: "salida",
+      title: "Salida",
+      excerpt: "Resumen",
+      content: "Detalle",
+      featuredImageId: "old-file",
+      type: "POST",
+      status: "DRAFT",
+      scope: "GENERAL",
+      publishedAt: null,
+      startDate: null,
+      endDate: null,
+      activityStatus: null,
+      documentationStatus: null,
+      missionIds: [],
+      createdAt: "",
+      updatedAt: "",
+    } as PublicationAdmin;
+
+    render(
+      <PublicationForm
+        publication={publication}
+        missions={[]}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    (uploadProps.current?.onUploaded as (asset: { id: string }) => void)({
+      id: "new-file",
+    });
+    await waitFor(() =>
+      expect(uploadProps.current).toMatchObject({ fileId: "new-file" }),
+    );
+    fireEvent.submit(screen.getByTestId("publication-form"));
+    expect(onSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({ featuredImageId: "new-file" }),
+    );
+
+    (uploadProps.current?.onRemove as () => void)();
+    await waitFor(() =>
+      expect(uploadProps.current).toMatchObject({ fileId: null }),
+    );
+    fireEvent.submit(screen.getByTestId("publication-form"));
+    expect(onSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({ featuredImageId: "" }),
     );
   });
 

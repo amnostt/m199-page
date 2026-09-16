@@ -337,27 +337,13 @@ export function LandingSettingsPage({
                   </Field>
                   <Field>
                     <FieldTitle>Imagen principal</FieldTitle>
-                    {settings.heroImageId && (
-                      <FieldDescription>
-                        Archivo actual:{" "}
-                        <a
-                          className="underline underline-offset-4 hover:text-primary"
-                          href={`/files/${settings.heroImageId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          data-testid="landing-hero-asset-link"
-                        >
-                          {settings.heroImageId}
-                        </a>
-                      </FieldDescription>
-                    )}
                     <FileUploadWidget
                       category="LANDING_HERO"
-                      fileId={null}
+                      fileId={settings.heroImageId}
                       onUploaded={handleHeroUploaded}
-                      onRemove={() => {
-                        /* disassociation is out of scope */
-                      }}
+                      preview
+                      previewVariant="hero"
+                      previewAlt={`Imagen hero de ${settings.heroTitle || "la página de inicio"}`}
                       data-testid="landing-hero-upload-widget"
                     />
                   </Field>

@@ -5,7 +5,7 @@
 //   category    — file-module category to POST to (e.g. POST_COVER_IMAGE)
 //   fileId      — current file id (null = no file selected)
 //   onUploaded  — called with FileAssetResponse after successful upload
-//   onRemove    — called when user clicks remove
+//   onRemove    — optional callback called when user clicks remove
 //   data-testid — forwarded to root element for parent integration testing
 //
 // State machine: "idle" → (file selected) → "uploading" → "idle" | "error"
@@ -42,7 +42,7 @@ export interface FileUploadWidgetProps {
   category: string;
   fileId: string | null;
   onUploaded: (asset: FileAssetResponse) => void;
-  onRemove: () => void;
+  onRemove?: () => void;
   accept?: string;
   acceptedFormats?: string;
   maxSizeBytes?: number;
@@ -155,7 +155,7 @@ export function FileUploadWidget({
   };
 
   const handleRemove = () => {
-    if (state === "uploading") return;
+    if (!onRemove || state === "uploading") return;
     setState("idle");
     setLastFile(null);
     onRemove();
@@ -224,7 +224,7 @@ export function FileUploadWidget({
                 <RotateCcwIcon aria-hidden="true" />
               </AttachmentAction>
             )}
-            {fileId && (
+            {fileId && onRemove && (
               <AttachmentAction
                 type="button"
                 aria-label="Quitar imagen"
@@ -275,7 +275,7 @@ export function FileUploadWidget({
         </Button>
       )}
 
-      {fileId && !preview && (
+      {fileId && !preview && onRemove && (
         <Button
           type="button"
           data-testid="file-upload-remove"

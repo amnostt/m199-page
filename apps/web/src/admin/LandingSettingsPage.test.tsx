@@ -110,9 +110,14 @@ describe("LandingSettingsPage load", () => {
       (screen.getByLabelText("Subtítulo principal") as HTMLTextAreaElement)
         .value,
     ).toBe(SAMPLE_SETTINGS.heroSubtitle);
-    expect(screen.getByTestId("landing-hero-asset-link").textContent).toBe(
-      SAMPLE_SETTINGS.heroImageId,
-    );
+    expect(
+      screen.getByAltText("Imagen hero de Welcome to M199").getAttribute("src"),
+    ).toBe(`/files/${SAMPLE_SETTINGS.heroImageId}`);
+    expect(
+      within(screen.getByTestId("landing-hero-upload-widget")).queryByTestId(
+        "file-upload-remove",
+      ),
+    ).toBeNull();
     expect(screen.queryByLabelText(/^misión$/i)).toBeNull();
     expect(screen.queryByLabelText(/^visión$/i)).toBeNull();
     expect(
@@ -407,6 +412,7 @@ describe("LandingSettingsPage edit and save", () => {
     expect(body).not.toHaveProperty("mission");
     expect(body).not.toHaveProperty("vision");
     expect(body.description).toBe("Saved description");
+    expect(body.heroImageId).toBe(SAMPLE_SETTINGS.heroImageId);
     expect(body.featuredVideoUrl).toBe(SAMPLE_SETTINGS.featuredVideoUrl);
     expect(body.contactEmail).toBe(SAMPLE_SETTINGS.contactEmail);
     expect(body.contactPhone).toBe(SAMPLE_SETTINGS.contactPhone);
@@ -485,9 +491,14 @@ describe("LandingSettingsPage edit and save", () => {
         expect.objectContaining({ method: "POST" }),
       );
     });
-    expect(screen.getByTestId("landing-hero-asset-link").textContent).toBe(
-      "new-hero",
-    );
+    expect(
+      screen.getByAltText("Imagen hero de Updated hero").getAttribute("src"),
+    ).toBe("/files/new-hero");
+    expect(
+      within(screen.getByTestId("landing-hero-upload-widget")).queryByTestId(
+        "file-upload-remove",
+      ),
+    ).toBeNull();
 
     await confirmSave();
 
@@ -565,9 +576,9 @@ describe("LandingSettingsPage edit and save", () => {
         "No se pudo cargar el archivo.",
       );
     });
-    expect(screen.getByTestId("landing-hero-asset-link").textContent).toBe(
-      "existing-hero",
-    );
+    expect(
+      screen.getByAltText("Imagen hero de Welcome to M199").getAttribute("src"),
+    ).toBe("/files/existing-hero");
   });
 
   it("shows a success toast after save", async () => {
