@@ -245,9 +245,15 @@ export class PublicationsService {
       throw new BadRequestException(
         "confirmTypeChange is required when changing publication type",
       );
+    const changingToPost =
+      type === PublicationType.POST && existing.type !== type;
     this.validateShape(
       type,
-      dto.activityDate === undefined ? existing.activityDate : dto.activityDate,
+      changingToPost
+        ? null
+        : dto.activityDate === undefined
+          ? existing.activityDate
+          : dto.activityDate,
     );
     const imageIds = dto.imageIds ?? existing.imageIds;
     try {
@@ -262,8 +268,6 @@ export class PublicationsService {
               )
             : undefined;
         if (missions) await this.syncLinks(tx, id, missions);
-        const changingToPost =
-          type === PublicationType.POST && existing.type !== type;
         const row = await tx.publication.update({
           where: { id },
           data: {

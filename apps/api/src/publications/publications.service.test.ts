@@ -111,6 +111,35 @@ describe("PublicationsService", () => {
       service.update("pub-1", { type: PublicationType.OUTING } as never),
     ).rejects.toThrow("confirmTypeChange");
   });
+  it("clears an existing activity date when changing to POST without resending it", async () => {
+    const { service, client, row } = fixture();
+    const existing = {
+      ...row,
+      type: PublicationType.OUTING,
+      activityDate: new Date("2026-01-02T00:00:00.000Z"),
+    };
+    client.publication.findUnique
+      .mockResolvedValueOnce(existing)
+      .mockResolvedValueOnce({
+        ...existing,
+        type: PublicationType.POST,
+        activityDate: null,
+      });
+
+    await service.update("pub-1", {
+      type: PublicationType.POST,
+      confirmTypeChange: true,
+    });
+
+    expect(client.publication.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: PublicationType.POST,
+          activityDate: null,
+        }),
+      }),
+    );
+  });
   it("writes an activity date and ordered images in the same transaction", async () => {
     const { service, client, row } = fixture();
     client.publication.findUnique.mockResolvedValueOnce({
