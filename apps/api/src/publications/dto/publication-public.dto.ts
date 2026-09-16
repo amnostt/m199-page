@@ -5,6 +5,7 @@ export interface PublicationPublicListItem {
   type: string;
   publishedAt: string;
   featuredImageUrl: string | null;
+  activityDate?: string;
 }
 
 export interface PublicationsPublicList {
@@ -27,8 +28,5 @@ export interface PublicationMissionLink {
 
 export interface PublicationPublicDetail extends PublicationPublicDetailBase {
   missions: PublicationMissionLink[];
-  startDate?: string;
-  endDate?: string | null;
-  activityStatus?: string;
-  documentationStatus?: string;
+  imageUrls: string[];
 }
