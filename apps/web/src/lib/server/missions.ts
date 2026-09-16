@@ -23,6 +23,7 @@ export type MissionPublication = {
   type: string;
   publishedAt: string;
   featuredImageUrl: string | null;
+  activityDate?: string;
 };
 export type MissionPublicDetail = MissionListItem & {
   finished: boolean;
@@ -79,6 +80,8 @@ export function validateMissionPublicPayload(
         typeof (item as Record<string, unknown>).excerpt !== "string" ||
         typeof (item as Record<string, unknown>).type !== "string" ||
         typeof (item as Record<string, unknown>).publishedAt !== "string" ||
+        ((item as Record<string, unknown>).activityDate !== undefined &&
+          typeof (item as Record<string, unknown>).activityDate !== "string") ||
         ((item as Record<string, unknown>).featuredImageUrl !== null &&
           typeof (item as Record<string, unknown>).featuredImageUrl !==
             "string"),

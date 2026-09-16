@@ -1,22 +1,32 @@
 ---
+import {
+  formatPublicDate,
+  getPublicationDate,
+  getPublicationTimelineLabel,
+} from "../../lib/server/public-content.js";
+
 const { publication } = Astro.props;
 const isActivity = publication.type === "OUTING" || publication.type === "EVENT";
-const activityStatusLabels: Record<string, string> = {
-  UPCOMING: "Próxima actividad",
-  COMPLETED: "Actividad realizada",
-  CANCELLED: "Actividad cancelada",
-};
-const documentationStatusLabels: Record<string, string> = {
-  PENDING_DOCUMENTATION: "Documentación pendiente",
-  DOCUMENTED: "Documentada",
-};
+const dateValue = getPublicationDate({
+  ...publication,
+  activityDate: publication.activityDate ?? publication.startDate,
+});
+const timelineLabel = publication.activityDate
+  ? getPublicationTimelineLabel(publication)
+  : ({ COMPLETED: "Revive lo que hicimos", UPCOMING: "Próximamente", CANCELLED: "Revive lo que hicimos" } as Record<string, string | null>)[publication.activityStatus] ?? null;
+const legacyActivityLabel = publication.activityDate
+  ? null
+  : ({ COMPLETED: "Actividad realizada", UPCOMING: "Próxima actividad", CANCELLED: "Actividad cancelada" } as Record<string, string | null>)[publication.activityStatus] ?? null;
+const legacyDocumentationLabel = publication.activityDate
+  ? null
+  : ({ DOCUMENTED: "Documentada", PENDING_DOCUMENTATION: "Documentación pendiente" } as Record<string, string | null>)[publication.documentationStatus] ?? null;
 ---
 {isActivity && <div class="public-publication-badges" data-testid="publication-badges">
   <span class="public-publication-badge">
     <span class="public-publication-badge__label">Fecha</span>
-    <time datetime={publication.startDate}>{new Date(publication.startDate).toLocaleDateString("es-AR")}</time>
-    {publication.endDate && <time datetime={publication.endDate}> hasta {new Date(publication.endDate).toLocaleDateString("es-AR")}</time>}
+    <time datetime={dateValue}>{formatPublicDate(dateValue)}</time>
   </span>
-  <span class="public-publication-badge">{activityStatusLabels[publication.activityStatus] ?? publication.activityStatus}</span>
-  <span class="public-publication-badge">{documentationStatusLabels[publication.documentationStatus] ?? publication.documentationStatus}</span>
+  {timelineLabel && <span class="public-publication-badge">{timelineLabel}</span>}
+  {legacyActivityLabel && <span class="public-publication-badge">{legacyActivityLabel}</span>}
+  {legacyDocumentationLabel && <span class="public-publication-badge">{legacyDocumentationLabel}</span>}
 </div>}

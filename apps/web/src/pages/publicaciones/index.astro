@@ -6,9 +6,17 @@ import PublicationsPagination from "../../components/publicaciones/PublicationsP
 import PublicationsFilters from "../../components/publicaciones/PublicationsFilters.astro";
 import { fetchPublicationsList, PublicationsFetchError } from "../../lib/server/publications.js";
 import type { PublicationListItem } from "../../lib/server/publications.js";
-const result = await fetchPublicationsList(Astro.url).catch((error) => error);
-if (result instanceof PublicationsFetchError) Astro.response.status = 503;
-const publications = result instanceof PublicationsFetchError ? null : result;
+let publications: import("../../lib/server/publications.js").PublicationsList | null = null;
+try {
+  publications = await fetchPublicationsList(Astro.url);
+} catch (error) {
+  if (!(error instanceof PublicationsFetchError)) {
+    console.warn("Publications list fetch failed", {
+      reason: error instanceof Error ? error.name : "unknown",
+    });
+  }
+  Astro.response.status = 503;
+}
 ---
 <PublicLayout title="Publicaciones | Misión 1-99">
   <main class="public-ui public-page public-publications-list" data-testid="publications-page">

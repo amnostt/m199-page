@@ -1,5 +1,10 @@
 ---
-import { formatPublicDate } from "../../lib/server/public-content.js";
+import {
+  formatPublicDate,
+  getPublicationCta,
+  getPublicationDate,
+  getPublicationTimelineLabel,
+} from "../../lib/server/public-content.js";
 import {
   PUBLIC_IMAGE_FALLBACK_HANDLER,
   resolvePublicImageUrl,
@@ -7,6 +12,8 @@ import {
 
 const { publication } = Astro.props;
 const imageSrc = resolvePublicImageUrl(publication.featuredImageUrl);
+const dateValue = getPublicationDate(publication);
+const timelineLabel = getPublicationTimelineLabel(publication);
 ---
 <article class="public-publication-card">
   <a class="public-publication-card__link" href={`/publicaciones/${publication.slug}`}>
@@ -22,13 +29,14 @@ const imageSrc = resolvePublicImageUrl(publication.featuredImageUrl);
     <div class="public-publication-card__body">
       <div class="public-publication-card__meta">
         <p class="public-publication-card__type">{publication.type}</p>
-        <time datetime={publication.publishedAt}>
-          {formatPublicDate(publication.publishedAt)}
+        {timelineLabel && <p class="public-publication-card__timeline">{timelineLabel}</p>}
+        <time datetime={dateValue}>
+          {formatPublicDate(dateValue)}
         </time>
       </div>
       <h2>{publication.title}</h2>
       <p class="public-publication-card__excerpt">{publication.excerpt}</p>
-      <span class="public-publication-card__action">Leer publicación ↗</span>
+      <span class="public-publication-card__action">{getPublicationCta(publication.type)} ↗</span>
     </div>
   </a>
 </article>
