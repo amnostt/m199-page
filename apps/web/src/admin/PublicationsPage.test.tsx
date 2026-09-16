@@ -118,6 +118,28 @@ describe("PublicationsPage", () => {
     ).toBeTruthy();
   });
 
+  it("keeps save failures inside the open publication dialog", async () => {
+    const item = publication();
+    setLists([], [item]);
+    api.update.mockRejectedValueOnce(new Error("Save failed"));
+    render(<PublicationsPage />);
+    await screen.findByTestId("published-publications");
+    fireEvent.click(screen.getByRole("tab", { name: /Borradores/ }));
+    await screen.findByTestId("publication-p1");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Salida" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
+    fireEvent.submit(screen.getByTestId("publication-form"));
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("publication-form-error").textContent,
+      ).toContain("No se pudo completar la solicitud. Intenta de nuevo."),
+    );
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
   it("submits fields and mission scope through one update request", async () => {
     const item = publication({ scope: "MISSION", missionIds: ["m1"] });
     setLists([], [item]);
@@ -167,6 +189,9 @@ describe("PublicationsPage", () => {
     await screen.findByTestId("published-publications");
     setLists([], [publication({ title: "Nueva" })]);
     fireEvent.click(screen.getByRole("button", { name: "Nueva publicación" }));
+    fireEvent.change(screen.getByLabelText("Slug"), {
+      target: { value: "nueva" },
+    });
     fireEvent.change(screen.getByLabelText("Título"), {
       target: { value: "Nueva" },
     });

@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  ValidateIf,
+} from "class-validator";
+import { URL_SAFE_SLUG_REGEX } from "../../common/validation/slug.js";
 
 export class UpdateMissionDto {
   @IsOptional()
@@ -6,9 +13,10 @@ export class UpdateMissionDto {
   @IsNotEmpty()
   title?: string;
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @IsNotEmpty()
+  @Matches(URL_SAFE_SLUG_REGEX)
   slug?: string;
 
   @IsOptional()

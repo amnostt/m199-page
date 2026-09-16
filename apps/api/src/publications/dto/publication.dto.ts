@@ -8,7 +8,9 @@ import {
   IsString,
   MinLength,
   ValidateIf,
+  Matches,
 } from "class-validator";
+import { URL_SAFE_SLUG_REGEX } from "../../common/validation/slug.js";
 
 export enum PublicationType {
   POST = "POST",
@@ -41,7 +43,7 @@ const utcDate = ({ value }: { value: unknown }) => {
 };
 
 export class CreatePublicationDto {
-  @IsString() @MinLength(1) slug!: string;
+  @IsString() @MinLength(1) @Matches(URL_SAFE_SLUG_REGEX) slug!: string;
   @IsString() @MinLength(1) title!: string;
   @IsString() excerpt!: string;
   @IsString() content!: string;
@@ -62,7 +64,11 @@ export class CreatePublicationDto {
 }
 
 export class UpdatePublicationDto {
-  @IsOptional() @IsString() @MinLength(1) slug?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MinLength(1)
+  @Matches(URL_SAFE_SLUG_REGEX)
+  slug?: string;
   @IsOptional() @IsString() @MinLength(1) title?: string;
   @IsOptional() @IsString() excerpt?: string;
   @IsOptional() @IsString() content?: string;

@@ -4,6 +4,18 @@ import { CreateMissionDto } from "./create-mission.dto.js";
 import { UpdateMissionDto } from "./update-mission.dto.js";
 import { UpdateMissionStatusDto } from "./update-mission-status.dto.js";
 
+const invalidSlugs = [
+  "",
+  "Mision-centro",
+  "mision centro",
+  "Misión-centro",
+  "mision_centro",
+  "mision!",
+  "-mision",
+  "mision-",
+  "mision--centro",
+];
+
 describe("Mission DTOs", () => {
   it("requires every create field, including heroPhrase", async () => {
     const errors = await validate(
@@ -36,5 +48,39 @@ describe("Mission DTOs", () => {
         Object.assign(new UpdateMissionStatusDto(), { status: "DRAFT" }),
       ),
     ).not.toHaveLength(0);
+  });
+
+  it("accepts valid hyphenated slugs in create and update DTOs", async () => {
+    const createErrors = await validate(
+      Object.assign(new CreateMissionDto(), {
+        title: "Title",
+        slug: "mision-centro-2026",
+        heroImageId: "file",
+        heroPhrase: "Phrase",
+      }),
+    );
+    const updateErrors = await validate(
+      Object.assign(new UpdateMissionDto(), {
+        slug: "mision-centro-2026",
+      }),
+    );
+    expect(createErrors).toHaveLength(0);
+    expect(updateErrors).toHaveLength(0);
+  });
+
+  it.each(invalidSlugs)("rejects invalid mission slug %j", async (slug) => {
+    const createErrors = await validate(
+      Object.assign(new CreateMissionDto(), {
+        title: "Title",
+        slug,
+        heroImageId: "file",
+        heroPhrase: "Phrase",
+      }),
+    );
+    const updateErrors = await validate(
+      Object.assign(new UpdateMissionDto(), { slug }),
+    );
+    expect(createErrors.map((error) => error.property)).toContain("slug");
+    expect(updateErrors.map((error) => error.property)).toContain("slug");
   });
 });

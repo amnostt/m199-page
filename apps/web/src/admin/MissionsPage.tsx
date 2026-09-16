@@ -34,6 +34,7 @@ import {
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -54,6 +55,13 @@ import {
   TabsTrigger,
 } from "../components/ui/tabs.js";
 import { Textarea } from "../components/ui/textarea.js";
+import {
+  isUrlSafeSlug,
+  suggestSlugFromTitle,
+  URL_SAFE_SLUG_DESCRIPTION,
+  URL_SAFE_SLUG_ERROR,
+  URL_SAFE_SLUG_PATTERN,
+} from "./slugValidation.js";
 
 type Form = {
   title: string;
@@ -190,6 +198,8 @@ export function MissionsPage() {
   const [editing, setEditing] = useState<MissionAdmin | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [pending, setPending] = useState(false);
   const [statusTarget, setStatusTarget] = useState<MissionAdmin | null>(null);
 
@@ -213,6 +223,8 @@ export function MissionsPage() {
     setEditing(null);
     setForm(EMPTY);
     setMutationError(null);
+    setSlugError(null);
+    setSlugManuallyEdited(false);
   };
 
   const closeForm = () => {
@@ -235,7 +247,9 @@ export function MissionsPage() {
       profileImageId: mission.profileImageId,
       heroPhrase: mission.heroPhrase,
     });
+    setSlugManuallyEdited(true);
     setMutationError(null);
+    setSlugError(null);
     setDialogOpen(true);
   };
 
@@ -244,19 +258,28 @@ export function MissionsPage() {
     if (pending) return;
     const values = {
       title: form.title.trim(),
-      slug: form.slug.trim(),
+      slug: form.slug,
       heroImageId: form.heroImageId,
       profileImageId: editing
         ? form.profileImageId
         : (form.profileImageId ?? undefined),
       heroPhrase: form.heroPhrase.trim(),
     };
-    if (
-      !values.title ||
-      !values.slug ||
-      !values.heroImageId ||
-      !values.heroPhrase
-    ) {
+    const nextSlugError = !values.slug
+      ? "El slug es obligatorio."
+      : !isUrlSafeSlug(values.slug)
+        ? URL_SAFE_SLUG_ERROR
+        : null;
+    setSlugError(nextSlugError);
+    if (nextSlugError) {
+      setMutationError(
+        !values.slug
+          ? "Completa el título, el slug, la imagen y la frase."
+          : null,
+      );
+      return;
+    }
+    if (!values.title || !values.heroImageId || !values.heroPhrase) {
       setMutationError("Completa el título, el slug, la imagen y la frase.");
       return;
     }
@@ -390,26 +413,51 @@ export function MissionsPage() {
                     id="mission-title"
                     value={form.title}
                     onChange={(event) =>
-                      setForm({ ...form, title: event.target.value })
+                      setForm((current) => ({
+                        ...current,
+                        title: event.target.value,
+                        ...(!editing && !slugManuallyEdited
+                          ? { slug: suggestSlugFromTitle(event.target.value) }
+                          : {}),
+                      }))
                     }
                     disabled={pending}
                     required
                   />
                 </Field>
-                <Field>
+                <Field data-invalid={Boolean(slugError)}>
                   <FieldLabel htmlFor="mission-slug">Slug</FieldLabel>
                   <Input
                     id="mission-slug"
                     value={form.slug}
-                    onChange={(event) =>
-                      setForm({ ...form, slug: event.target.value })
+                    onChange={(event) => {
+                      setSlugManuallyEdited(true);
+                      setForm((current) => ({
+                        ...current,
+                        slug: event.target.value,
+                      }));
+                      setSlugError(null);
+                    }}
+                    onInput={() => setSlugManuallyEdited(true)}
+                    aria-invalid={Boolean(slugError)}
+                    aria-describedby={
+                      slugError
+                        ? "mission-slug-description mission-slug-error"
+                        : "mission-slug-description"
                     }
+                    pattern={URL_SAFE_SLUG_PATTERN}
+                    autoCapitalize="none"
+                    spellCheck={false}
                     disabled={pending}
                     required
                   />
-                  <FieldDescription>
-                    Se usará en la URL pública de la misión.
+                  <FieldDescription id="mission-slug-description">
+                    Se usará en la URL pública de la misión.{" "}
+                    {URL_SAFE_SLUG_DESCRIPTION}
                   </FieldDescription>
+                  {slugError && (
+                    <FieldError id="mission-slug-error">{slugError}</FieldError>
+                  )}
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="mission-phrase">Frase</FieldLabel>

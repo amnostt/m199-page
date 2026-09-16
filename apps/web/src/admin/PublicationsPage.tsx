@@ -39,6 +39,7 @@ export function PublicationsPage() {
   const [drafts, setDrafts] = useState<PublicationAdmin[] | null>(null);
   const [missions, setMissions] = useState<MissionAdmin[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [editing, setEditing] = useState<PublicationAdmin | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pending, setPending] = useState<PublicationAdmin | null>(null);
@@ -75,19 +76,22 @@ export function PublicationsPage() {
 
   const openCreate = () => {
     setError(null);
+    setMutationError(null);
     setEditing(null);
     setDialogOpen(true);
   };
 
   const openEdit = (publication: PublicationAdmin) => {
     setError(null);
+    setMutationError(null);
     setEditing(publication);
     setDialogOpen(true);
   };
 
   const save = async (input: UpdatePublicationInput) => {
+    if (busy) return;
     setBusy(true);
-    setError(null);
+    setMutationError(null);
     try {
       if (editing) {
         const { status: _status, ...update } = input;
@@ -101,7 +105,7 @@ export function PublicationsPage() {
       setEditing(null);
       load();
     } catch (reason) {
-      setError(mapAdminError(reason).root);
+      setMutationError(mapAdminError(reason).root);
     } finally {
       setBusy(false);
     }
@@ -236,6 +240,7 @@ export function PublicationsPage() {
             publication={editing}
             missions={missions ?? []}
             busy={busy}
+            error={mutationError}
             onSubmit={save}
             onCancel={closeForm}
           />

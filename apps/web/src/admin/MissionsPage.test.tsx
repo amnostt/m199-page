@@ -101,12 +101,14 @@ describe("MissionsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Nueva misión" }));
     expect(screen.getByRole("dialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Crear misión" }));
-    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(
+      screen.getByText("Completa el título, el slug, la imagen y la frase."),
+    ).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Título"), {
       target: { value: " Nueva " },
     });
     fireEvent.change(screen.getByLabelText("Slug"), {
-      target: { value: " nueva " },
+      target: { value: "mision-centro-2026" },
     });
     fireEvent.change(screen.getByLabelText("Frase"), {
       target: { value: " Phrase " },
@@ -164,11 +166,118 @@ describe("MissionsPage", () => {
     await waitFor(() =>
       expect(createMission).toHaveBeenCalledWith({
         title: "Nueva",
-        slug: "nueva",
+        slug: "mision-centro-2026",
         heroImageId: "hero-1",
         profileImageId: "profile-1",
         heroPhrase: "Phrase",
       }),
+    );
+  });
+
+  it.each([
+    "",
+    "Mision-centro",
+    "mision centro",
+    "Misión-centro",
+    "mision_centro",
+    "mision!",
+    "-mision",
+    "mision-",
+    "mision--centro",
+  ])("rejects malformed slug %j before submission", async (slug) => {
+    vi.mocked(listActiveMissions).mockResolvedValue([]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId("active-missions")).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Nueva misión" }));
+    fireEvent.change(screen.getByLabelText("Título"), {
+      target: { value: "Nueva" },
+    });
+    fireEvent.change(screen.getByLabelText("Slug"), {
+      target: { value: slug },
+    });
+    fireEvent.change(screen.getByLabelText("Frase"), {
+      target: { value: "Phrase" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Crear misión" }));
+    expect(createMission).not.toHaveBeenCalled();
+    if (slug) expect(screen.getByText(/El slug no es válido/)).toBeTruthy();
+    else expect(screen.getByText("El slug es obligatorio.")).toBeTruthy();
+    expect(screen.getByLabelText("Slug").getAttribute("aria-invalid")).toBe(
+      "true",
+    );
+    expect(screen.getByLabelText("Slug").getAttribute("aria-describedby")).toBe(
+      "mission-slug-description mission-slug-error",
+    );
+  });
+
+  it("suggests normalized slugs for consecutive create titles", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId("active-missions")).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Nueva misión" }));
+    const title = screen.getByLabelText("Título");
+    const slug = screen.getByLabelText("Slug");
+
+    fireEvent.change(title, { target: { value: "Misión Centro 2026" } });
+    expect(slug.getAttribute("value")).toBe("mision-centro-2026");
+    fireEvent.change(title, {
+      target: { value: "  ¡Misión,   Centro — 2026!  " },
+    });
+    expect(slug.getAttribute("value")).toBe("mision-centro-2026");
+    fireEvent.change(title, { target: { value: "Segundo   título" } });
+    expect(slug.getAttribute("value")).toBe("segundo-titulo");
+  });
+
+  it("stops create suggestions after overriding or clearing the slug", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId("active-missions")).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Nueva misión" }));
+    const title = screen.getByLabelText("Título");
+    const slug = screen.getByLabelText("Slug");
+
+    fireEvent.change(title, { target: { value: "Misión Centro 2026" } });
+    fireEvent.input(slug, { target: { value: "mision-centro-2026" } });
+    fireEvent.change(title, { target: { value: "Nuevo título" } });
+    expect(slug.getAttribute("value")).toBe("mision-centro-2026");
+    fireEvent.change(slug, { target: { value: "" } });
+    fireEvent.change(title, { target: { value: "Otro título" } });
+    expect(slug.getAttribute("value")).toBe("");
+    fireEvent.click(screen.getByRole("button", { name: "Crear misión" }));
+    expect(screen.getByText("El slug es obligatorio.")).toBeTruthy();
+    expect(createMission).not.toHaveBeenCalled();
+  });
+
+  it("re-enables suggestions after closing and reopening a create flow", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByTestId("active-missions")).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Nueva misión" }));
+    fireEvent.change(screen.getByLabelText("Título"), {
+      target: { value: "Primer título" },
+    });
+    fireEvent.change(screen.getByLabelText("Slug"), {
+      target: { value: "manual" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Nueva misión" }));
+    fireEvent.change(screen.getByLabelText("Título"), {
+      target: { value: "Misión Centro 2026" },
+    });
+    expect(screen.getByLabelText("Slug").getAttribute("value")).toBe(
+      "mision-centro-2026",
     );
   });
 
@@ -269,6 +378,41 @@ describe("MissionsPage", () => {
       ),
     );
     expect(screen.getByRole("button", { name: "Nueva misión" })).toBeTruthy();
+  });
+
+  it("preserves the stored edit slug and allows a direct slug change", async () => {
+    vi.mocked(listActiveMissions).mockResolvedValue([
+      mission("active", "ACTIVE"),
+    ]);
+    vi.mocked(listArchivedMissions).mockResolvedValue([]);
+    vi.mocked(updateMission).mockResolvedValue(mission("active", "ACTIVE"));
+    render(<MissionsPage />);
+    await waitFor(() =>
+      expect(screen.getByText("Mission active")).toBeTruthy(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Acciones para Mission active" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar" }));
+    fireEvent.change(screen.getByLabelText("Título"), {
+      target: { value: "Título actualizado" },
+    });
+    expect(screen.getByLabelText("Slug").getAttribute("value")).toBe(
+      "mission-active",
+    );
+    fireEvent.change(screen.getByLabelText("Slug"), {
+      target: { value: "slug-directo" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() =>
+      expect(updateMission).toHaveBeenCalledWith(
+        "active",
+        expect.objectContaining({
+          title: "Título actualizado",
+          slug: "slug-directo",
+        }),
+      ),
+    );
   });
 
   it("rejects confirmation and reactivates an archived mission", async () => {
