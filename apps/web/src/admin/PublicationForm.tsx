@@ -420,6 +420,9 @@ export function PublicationForm({
         fileId={value.featuredImageId || null}
         onUploaded={(asset) => set("featuredImageId", asset.id)}
         onRemove={() => set("featuredImageId", "")}
+        preview
+        previewVariant="hero"
+        previewAlt={`Imagen destacada de ${value.title || "la publicación"}`}
         data-testid="publication-featured-image"
       />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
