@@ -13,6 +13,7 @@ import {
   LandingFetchError,
   fetchLandingPublicPayload,
   validateFeaturedVideoUrl,
+  validateLandingAudioUrl,
   validateLandingPublicPayload,
 } from "./landing.js";
 
@@ -74,6 +75,25 @@ describe("validateFeaturedVideoUrl — omit", () => {
   });
 });
 
+describe("validateLandingAudioUrl", () => {
+  it("accepts a local FileAsset URL and trims whitespace", () => {
+    expect(validateLandingAudioUrl("  /files/music-001  ")).toBe(
+      "/files/music-001",
+    );
+  });
+
+  it.each([
+    null,
+    undefined,
+    "",
+    "https://cdn.example.com/music.mp3",
+    "/files/music-001?download=1",
+    "/files/audio/music-001",
+  ])("omits unsafe or empty value %s", (value) => {
+    expect(validateLandingAudioUrl(value)).toBeNull();
+  });
+});
+
 // ---------------------------------------------------------------------------
 // validateLandingPublicPayload — video URL sanitization
 // ---------------------------------------------------------------------------
@@ -91,6 +111,7 @@ const basePayload = () => ({
   vision: null,
   description: null,
   featuredVideoUrl: null,
+  backgroundMusicUrl: null,
   contactTitle: null,
   contactDescription: null,
   contactEmail: null,
@@ -125,6 +146,26 @@ describe("validateLandingPublicPayload — video URL sanitization", () => {
     expect(() =>
       validateLandingPublicPayload({ ...basePayload(), featuredVideoUrl: 42 }),
     ).toThrow(InvalidLandingPayloadError);
+  });
+});
+
+describe("validateLandingPublicPayload — background music URL sanitization", () => {
+  it("keeps a valid local background music FileAsset URL", () => {
+    const payload = validateLandingPublicPayload({
+      ...basePayload(),
+      backgroundMusicUrl: " /files/music-001 ",
+    });
+
+    expect(payload.backgroundMusicUrl).toBe("/files/music-001");
+  });
+
+  it("omits an external background music URL", () => {
+    const payload = validateLandingPublicPayload({
+      ...basePayload(),
+      backgroundMusicUrl: "https://evil.example.com/music.mp3",
+    });
+
+    expect(payload.backgroundMusicUrl).toBeNull();
   });
 });
 
@@ -192,6 +233,7 @@ const validPayload = {
   vision: null,
   description: null,
   featuredVideoUrl: "/files/video-001",
+  backgroundMusicUrl: null,
   contactTitle: null,
   contactDescription: null,
   contactEmail: null,

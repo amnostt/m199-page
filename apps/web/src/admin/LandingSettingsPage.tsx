@@ -52,6 +52,7 @@ const EMPTY: LandingSettingsForm = {
   aboutTitle: "",
   description: "",
   featuredVideoId: null,
+  backgroundMusicId: null,
   contactTitle: "",
   contactDescription: "",
   contactEmail: "",
@@ -72,6 +73,7 @@ const fields: Array<keyof LandingSettingsForm> = [
   "aboutTitle",
   "description",
   "featuredVideoId",
+  "backgroundMusicId",
   "contactTitle",
   "contactDescription",
   "contactEmail",
@@ -104,6 +106,7 @@ export function normalizeLandingSettings(
     aboutTitle: data.aboutTitle ?? "",
     description: data.description ?? "",
     featuredVideoId: data.featuredVideoId,
+    backgroundMusicId: data.backgroundMusicId,
     contactTitle: data.contactTitle ?? "",
     contactDescription: data.contactDescription ?? "",
     contactEmail: data.contactEmail ?? "",
@@ -174,7 +177,10 @@ export function LandingSettingsPage({
   const handleChange = (
     field: Exclude<
       keyof LandingSettingsForm,
-      "heroImageId" | "visualBreakImageId" | "featuredVideoId"
+      | "heroImageId"
+      | "visualBreakImageId"
+      | "featuredVideoId"
+      | "backgroundMusicId"
     >,
     value: string,
   ) => {
@@ -211,6 +217,16 @@ export function LandingSettingsPage({
     setSettings((prev) => (prev ? { ...prev, featuredVideoId: null } : null));
   };
 
+  const handleBackgroundMusicUploaded = (asset: { id: string }) => {
+    setSettings((prev) =>
+      prev ? { ...prev, backgroundMusicId: asset.id } : null,
+    );
+  };
+
+  const handleBackgroundMusicRemoved = () => {
+    setSettings((prev) => (prev ? { ...prev, backgroundMusicId: null } : null));
+  };
+
   const saveSettings = async () => {
     if (!settings || saving) return;
     setSaving(true);
@@ -220,6 +236,7 @@ export function LandingSettingsPage({
         heroImageId,
         visualBreakImageId,
         featuredVideoId,
+        backgroundMusicId,
         verseText,
         verseReference,
         ...copySettings
@@ -230,6 +247,7 @@ export function LandingSettingsPage({
         body: JSON.stringify({
           ...copySettings,
           featuredVideoId,
+          backgroundMusicId,
           verseText: verseText.trim(),
           verseReference: verseReference.trim(),
           heroImageId,
@@ -401,6 +419,36 @@ export function LandingSettingsPage({
                       previewVariant="hero"
                       previewAlt={`Imagen hero de ${settings.heroTitle || "la página de inicio"}`}
                       data-testid="landing-hero-upload-widget"
+                    />
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <FieldSet>
+                <FieldLegend>Música de fondo</FieldLegend>
+                <FieldDescription>
+                  Permite reproducir una canción MP3 desde el botón flotante de
+                  la landing pública. La reproducción nunca comienza sola.
+                </FieldDescription>
+                <FieldGroup>
+                  <Field>
+                    <FieldTitle>Archivo de música de fondo</FieldTitle>
+                    <FileUploadWidget
+                      category="LANDING_BACKGROUND_MUSIC"
+                      fileId={settings.backgroundMusicId}
+                      onUploaded={handleBackgroundMusicUploaded}
+                      onRemove={handleBackgroundMusicRemoved}
+                      accept=".mp3,audio/mpeg"
+                      acceptedFormats="MP3"
+                      maxSizeBytes={10 * 1024 * 1024}
+                      fileLabel="música"
+                      inputLabel="música de fondo"
+                      description="Formato: MP3 (audio/mpeg). Tamaño máximo: 10 MB."
+                      data-testid="landing-background-music-upload-widget"
                     />
                   </Field>
                 </FieldGroup>

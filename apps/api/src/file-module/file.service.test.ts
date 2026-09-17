@@ -101,6 +101,19 @@ const VALID_MP4 = Buffer.from([
   0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0x00,
   0x00, 0x02, 0x00, 0x6d, 0x70, 0x34, 0x32, 0x6d, 0x70, 0x34, 0x32,
 ]);
+const VALID_MP3_FRAME = Buffer.alloc(417);
+VALID_MP3_FRAME.set([0xff, 0xfb, 0x90, 0x64]);
+const VALID_MP3_ID3 = Buffer.concat([
+  Buffer.from([0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]),
+  Buffer.from([0x01, 0x02, 0x03, 0x04, 0x05]),
+  VALID_MP3_FRAME,
+]);
+const VALID_MP3_ID3_V24_FOOTER = Buffer.concat([
+  Buffer.from([0x49, 0x44, 0x33, 0x04, 0x00, 0x10, 0x00, 0x00, 0x00, 0x05]),
+  Buffer.from([0x01, 0x02, 0x03, 0x04, 0x05]),
+  Buffer.from([0x33, 0x44, 0x49, 0x04, 0x00, 0x10, 0x00, 0x00, 0x00, 0x05]),
+  VALID_MP3_FRAME,
+]);
 
 // ---- helpers ------------------------------------------------------------
 
@@ -308,6 +321,160 @@ describe("FileService", () => {
           uploadedById: "user-1",
         }),
       ).rejects.toThrow("File content does not match MIME type video/mp4");
+
+      expect(writeFileMock).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+    });
+
+    it("accepts an MP3 with an ID3 signature and stores .mp3 metadata", async () => {
+      const { service, mocks } = await buildService({
+        createResult: {
+          ...SAMPLE_DOC_ROW,
+          id: "new-music",
+          category: "LANDING_BACKGROUND_MUSIC",
+          mimeType: "audio/mpeg",
+          extension: ".mp3",
+          thumbnailPath: null,
+        },
+      });
+
+      await service.upload({
+        buffer: VALID_MP3_ID3,
+        originalFilename: "landing.mp3",
+        mimeType: "audio/mpeg",
+        category: "LANDING_BACKGROUND_MUSIC",
+        uploadedById: "user-1",
+      });
+
+      const createArg = mocks.create.mock.calls[0]?.[0];
+      expect(createArg?.data.extension).toBe(".mp3");
+      expect(createArg?.data.storagePath).toMatch(
+        /LANDING_BACKGROUND_MUSIC\/[^/]+\.mp3$/,
+      );
+      expect(sharpMock).not.toHaveBeenCalled();
+    });
+
+    it("accepts an MP3 that starts with a valid MPEG frame", async () => {
+      const { service, mocks } = await buildService({
+        createResult: {
+          ...SAMPLE_DOC_ROW,
+          id: "new-frame-music",
+          category: "LANDING_BACKGROUND_MUSIC",
+          mimeType: "audio/mpeg",
+          extension: ".mp3",
+          thumbnailPath: null,
+        },
+      });
+
+      await service.upload({
+        buffer: VALID_MP3_FRAME,
+        originalFilename: "landing.mp3",
+        mimeType: "audio/mpeg",
+        category: "LANDING_BACKGROUND_MUSIC",
+        uploadedById: "user-1",
+      });
+
+      expect(mocks.create).toHaveBeenCalled();
+    });
+
+    it("accepts an ID3v2.4 footer followed by a valid MPEG frame", async () => {
+      const { service, mocks } = await buildService({
+        createResult: {
+          ...SAMPLE_DOC_ROW,
+          id: "new-footer-music",
+          category: "LANDING_BACKGROUND_MUSIC",
+          mimeType: "audio/mpeg",
+          extension: ".mp3",
+          thumbnailPath: null,
+        },
+      });
+
+      await service.upload({
+        buffer: VALID_MP3_ID3_V24_FOOTER,
+        originalFilename: "landing.mp3",
+        mimeType: "audio/mpeg",
+        category: "LANDING_BACKGROUND_MUSIC",
+        uploadedById: "user-1",
+      });
+
+      expect(mocks.create).toHaveBeenCalled();
+    });
+
+    it.each([
+      [
+        "an ID3 header without audio",
+        Buffer.from("ID3\x04\x00\x00\x00\x00\x00\x00"),
+      ],
+      [
+        "a truncated ID3 tag",
+        Buffer.from([
+          0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x01,
+        ]),
+      ],
+    ])("rejects %s", async (_description, buffer) => {
+      const { service, mocks } = await buildService();
+
+      await expect(
+        service.upload({
+          buffer,
+          originalFilename: "landing.mp3",
+          mimeType: "audio/mpeg",
+          category: "LANDING_BACKGROUND_MUSIC",
+          uploadedById: "user-1",
+        }),
+      ).rejects.toThrow("File content does not match MIME type audio/mpeg");
+
+      expect(writeFileMock).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects an MP3 MIME declaration without an MP3 signature", async () => {
+      const { service, mocks } = await buildService();
+
+      await expect(
+        service.upload({
+          buffer: Buffer.from("not an mp3"),
+          originalFilename: "landing.mp3",
+          mimeType: "audio/mpeg",
+          category: "LANDING_BACKGROUND_MUSIC",
+          uploadedById: "user-1",
+        }),
+      ).rejects.toThrow("File content does not match MIME type audio/mpeg");
+
+      expect(writeFileMock).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects a background music file without the .mp3 extension", async () => {
+      const { service, mocks } = await buildService();
+
+      await expect(
+        service.upload({
+          buffer: VALID_MP3_ID3,
+          originalFilename: "landing.wav",
+          mimeType: "audio/mpeg",
+          category: "LANDING_BACKGROUND_MUSIC",
+          uploadedById: "user-1",
+        }),
+      ).rejects.toThrow("must use .mp3 extension");
+
+      expect(writeFileMock).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+    });
+
+    it("enforces the 10 MB background music limit", async () => {
+      const { service, mocks } = await buildService();
+      const oversized = Buffer.alloc(10 * 1024 * 1024 + 1);
+
+      await expect(
+        service.upload({
+          buffer: oversized,
+          originalFilename: "landing.mp3",
+          mimeType: "audio/mpeg",
+          category: "LANDING_BACKGROUND_MUSIC",
+          uploadedById: "user-1",
+        }),
+      ).rejects.toThrow("File too large");
 
       expect(writeFileMock).not.toHaveBeenCalled();
       expect(mocks.create).not.toHaveBeenCalled();

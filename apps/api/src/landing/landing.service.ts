@@ -33,6 +33,7 @@ export interface LandingSettingsRow {
   vision: string | null;
   description: string | null;
   featuredVideoId: string | null;
+  backgroundMusicId: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;
@@ -92,6 +93,7 @@ export interface LandingPublicPayload {
   vision: string | null;
   description: string | null;
   featuredVideoUrl: string | null;
+  backgroundMusicUrl: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;
@@ -136,6 +138,11 @@ export class LandingService {
     await assertFileCategory(this.client, fileId, "LANDING_FEATURED_VIDEO");
   }
 
+  /** Validates a landing background music asset before saving settings. */
+  private async validateBackgroundMusic(fileId: string): Promise<void> {
+    await assertFileCategory(this.client, fileId, "LANDING_BACKGROUND_MUSIC");
+  }
+
   // -----------------------------------------------------------------------
   // Public API — LP-01: Admin Landing Settings
   // -----------------------------------------------------------------------
@@ -174,6 +181,9 @@ export class LandingService {
     if (dto.featuredVideoId !== undefined && dto.featuredVideoId !== null) {
       await this.validateFeaturedVideo(dto.featuredVideoId);
     }
+    if (dto.backgroundMusicId !== undefined && dto.backgroundMusicId !== null) {
+      await this.validateBackgroundMusic(dto.backgroundMusicId);
+    }
 
     // Build the update payload from only the fields that were actually provided.
     const data: Record<string, unknown> = {};
@@ -193,6 +203,8 @@ export class LandingService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.featuredVideoId !== undefined)
       data.featuredVideoId = dto.featuredVideoId;
+    if (dto.backgroundMusicId !== undefined)
+      data.backgroundMusicId = dto.backgroundMusicId;
     if (dto.contactTitle !== undefined) data.contactTitle = dto.contactTitle;
     if (dto.contactDescription !== undefined)
       data.contactDescription = dto.contactDescription;
@@ -247,6 +259,7 @@ export class LandingService {
       vision: normalizeCopy(settings?.vision),
       description: normalizeCopy(settings?.description),
       featuredVideoUrl: this.fileUrl(settings?.featuredVideoId),
+      backgroundMusicUrl: this.fileUrl(settings?.backgroundMusicId),
       contactTitle: normalizeCopy(settings?.contactTitle),
       contactDescription: normalizeCopy(settings?.contactDescription),
       contactEmail: normalizeCopy(settings?.contactEmail),

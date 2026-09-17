@@ -216,6 +216,35 @@ describe("FilesController", () => {
     });
   });
 
+  describe("POST /files/LANDING_BACKGROUND_MUSIC", () => {
+    it("delegates the dedicated music route to FileService", async () => {
+      const musicFile = {
+        originalname: "landing.mp3",
+        mimetype: "audio/mpeg",
+        size: 1024,
+        buffer: Buffer.from("ID3\x04\x00\x00\x00\x00\x00\x00"),
+      } as Express.Multer.File;
+      vi.mocked(fileService.upload).mockResolvedValue({
+        ...SAMPLE_FILE_RESPONSE,
+        category: FileCategory.LANDING_BACKGROUND_MUSIC,
+        mimeType: "audio/mpeg",
+      });
+
+      const result = await controller.uploadBackgroundMusic(musicFile, {
+        user: { id: "u-1", email: "a@b.com", displayName: "A" },
+      } as unknown as Request);
+
+      expect(fileService.upload).toHaveBeenCalledWith({
+        buffer: musicFile.buffer,
+        originalFilename: musicFile.originalname,
+        mimeType: musicFile.mimetype,
+        category: FileCategory.LANDING_BACKGROUND_MUSIC,
+        uploadedById: "u-1",
+      });
+      expect(result.category).toBe(FileCategory.LANDING_BACKGROUND_MUSIC);
+    });
+  });
+
   describe("FileInterceptor wiring (FU-06)", () => {
     it("applies FileInterceptor with fileSize limit on POST upload handler", () => {
       // The @UseInterceptors(FileInterceptor("file", { limits: { fileSize: ... } }))

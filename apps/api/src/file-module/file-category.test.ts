@@ -5,10 +5,12 @@
  * - Image categories: image/jpeg, image/png, image/webp, image/gif
  * - Document categories: image/* + application/pdf
  * - Featured video category: video/mp4
+ * - Landing background music category: audio/mpeg
  *
  * Approved vocabulary only: MISSION_HERO, PUBLICATION_FEATURED_IMAGE,
  * PUBLICATION_DOWNLOAD, LANDING_HERO, LANDING_VISUAL_BREAK,
- * LANDING_FEATURED_VIDEO, OTHER. Legacy POST_/OUTING_ values are NOT representable.
+ * LANDING_FEATURED_VIDEO, LANDING_BACKGROUND_MUSIC, OTHER. Legacy POST_/OUTING_
+ * values are NOT representable.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -16,6 +18,7 @@ import {
   IMAGE_MIMES,
   DOC_MIMES,
   VIDEO_MIMES,
+  AUDIO_MIMES,
   IMAGE_CATS,
   VIDEO_CATS,
   isAllowedMime,
@@ -31,6 +34,9 @@ describe("FileCategory enum", () => {
     expect(FileCategory.LANDING_HERO).toBe("LANDING_HERO");
     expect(FileCategory.LANDING_VISUAL_BREAK).toBe("LANDING_VISUAL_BREAK");
     expect(FileCategory.LANDING_FEATURED_VIDEO).toBe("LANDING_FEATURED_VIDEO");
+    expect(FileCategory.LANDING_BACKGROUND_MUSIC).toBe(
+      "LANDING_BACKGROUND_MUSIC",
+    );
     expect(FileCategory.OTHER).toBe("OTHER");
   });
 
@@ -79,6 +85,12 @@ describe("VIDEO_MIMES", () => {
   });
 });
 
+describe("AUDIO_MIMES", () => {
+  it("contains only audio/mpeg", () => {
+    expect(AUDIO_MIMES).toEqual(["audio/mpeg"]);
+  });
+});
+
 describe("IMAGE_CATS", () => {
   it("contains exactly the approved image-only categories", () => {
     expect(IMAGE_CATS).toBeInstanceOf(Set);
@@ -98,6 +110,20 @@ describe("IMAGE_CATS", () => {
 describe("VIDEO_CATS", () => {
   it("contains only LANDING_FEATURED_VIDEO", () => {
     expect(VIDEO_CATS).toEqual(new Set([FileCategory.LANDING_FEATURED_VIDEO]));
+  });
+});
+
+describe("background music category", () => {
+  it("accepts only audio/mpeg", () => {
+    expect(
+      isAllowedMime(FileCategory.LANDING_BACKGROUND_MUSIC, "audio/mpeg"),
+    ).toBe(true);
+    expect(
+      isAllowedMime(FileCategory.LANDING_BACKGROUND_MUSIC, "audio/ogg"),
+    ).toBe(false);
+    expect(
+      isAllowedMime(FileCategory.LANDING_BACKGROUND_MUSIC, "audio/mp3"),
+    ).toBe(false);
   });
 });
 

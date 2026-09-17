@@ -1949,6 +1949,50 @@ body[data-theme="public"].landing-body {
   }
 
   /* ---------------------------------------------------------------------------
+   * Background music — explicit user-controlled floating action
+   * ------------------------------------------------------------------------- */
+
+  .public-ui .landing-background-music {
+    position: fixed;
+    inset-block-end: 1.25rem;
+    inset-inline-end: 1.25rem;
+    z-index: 20;
+  }
+
+  .public-ui .landing-background-music__toggle {
+    display: inline-grid;
+    width: 3.5rem;
+    height: 3.5rem;
+    place-items: center;
+    color: var(--secondary-foreground);
+    background: var(--secondary);
+    border: 1px solid var(--secondary-foreground);
+    border-radius: 9999px;
+    box-shadow: var(--elevation-raised);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      background-color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .public-ui .landing-background-music__toggle:hover,
+  .public-ui .landing-background-music__toggle:focus-visible,
+  .public-ui .landing-background-music__toggle[data-playing="true"] {
+    color: var(--primary-foreground);
+    background: var(--primary);
+  }
+
+  .public-ui .landing-background-music__toggle:hover {
+    transform: translateY(-2px);
+  }
+
+  .public-ui .landing-background-music__toggle:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 4px;
+  }
+
+  /* ---------------------------------------------------------------------------
    * Publications — SSR horizontal scroll-snap carousel
    * ------------------------------------------------------------------------- */
 

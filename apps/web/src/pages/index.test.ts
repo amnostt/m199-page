@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import reactRenderer from "@astrojs/react/server.js";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Page from "./index.astro";
 
@@ -16,6 +17,7 @@ const LANDING_PAYLOAD = {
   vision: "Ver cada vida transformada",
   description: "Somos una comunidad de fe",
   featuredVideoUrl: null,
+  backgroundMusicUrl: null,
   contactTitle: "Hablemos.\nVamos juntos.",
   contactDescription: "Hablemos sobre la misión.",
   contactEmail: "contacto@m199.org",
@@ -88,6 +90,16 @@ function scriptless(html: string): string {
   return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
 }
 
+async function createContainer() {
+  const container = await AstroContainer.create();
+  container.addServerRenderer({ renderer: reactRenderer });
+  container.addClientRenderer({
+    name: "@astrojs/react",
+    entrypoint: "@astrojs/react/client.js",
+  });
+  return container;
+}
+
 describe("index.astro — independent landing, missions, and publications fetch", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
@@ -129,7 +141,7 @@ describe("index.astro — independent landing, missions, and publications fetch"
     );
 
     const response = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToResponse(Page, {
       request: new Request("http://localhost/"),
     });
@@ -181,7 +193,7 @@ describe("index.astro — independent landing, missions, and publications fetch"
       );
 
       const response = await (
-        await AstroContainer.create()
+        await createContainer()
       ).renderToResponse(Page, {
         request: new Request("http://localhost/"),
       });
@@ -248,7 +260,7 @@ describe("index.astro — independent landing, missions, and publications fetch"
     );
 
     const response = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToResponse(Page, {
       request: new Request("http://localhost/"),
     });
@@ -285,7 +297,7 @@ describe("index.astro — independent landing, missions, and publications fetch"
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToResponse(Page, {
       request: new Request("http://localhost/"),
     });
@@ -333,7 +345,7 @@ describe("index.astro — landing SSR boundaries", () => {
     );
 
     const response = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToResponse(Page, {
       request: new Request("http://localhost/"),
     });
