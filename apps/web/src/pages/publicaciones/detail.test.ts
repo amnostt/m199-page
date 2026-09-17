@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import reactRenderer from "@astrojs/react/server.js";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Page from "./[slug].astro";
-import { PUBLIC_IMAGE_FALLBACK_HANDLER } from "../../lib/public-image.js";
 
 const detail = (type: string, missions: object[] = []) => ({
   slug: "demo",
@@ -18,6 +18,17 @@ const detail = (type: string, missions: object[] = []) => ({
   activityStatus: "COMPLETED",
   documentationStatus: "DOCUMENTED",
 });
+
+const createContainer = async () =>
+  AstroContainer.create().then((container) => {
+    container.addServerRenderer({ renderer: reactRenderer });
+    container.addClientRenderer({
+      name: "@astrojs/react",
+      entrypoint: "@astrojs/react/client.js",
+    });
+    return container;
+  });
+
 describe("publication detail SSR", () => {
   beforeEach(() => {
     vi.stubEnv("ASTRO_API_BASE_URL", "http://api.test");
@@ -30,7 +41,7 @@ describe("publication detail SSR", () => {
       vi.fn().mockResolvedValue(new Response(JSON.stringify(detail(type)))),
     );
     const html = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToString(Page, {
       params: { slug: "demo" },
       request: new Request("http://localhost/publicaciones/demo"),
@@ -44,7 +55,10 @@ describe("publication detail SSR", () => {
     expect(html).toContain("Todas las publicaciones");
     expect(html).toContain('class="public-publication-detail__hero"');
     expect(html).toContain('src="/assets/template-picture.png"');
-    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
+    expect(html).toContain('data-testid="public-image-carousel"');
+    expect(html).toContain(
+      `aria-label="Ampliar imagen 1 de 1 de la publicación Demo"`,
+    );
     expect(html).toContain(
       type === "POST" ? "Historia" : type === "OUTING" ? "Salida" : "Evento",
     );
@@ -56,7 +70,8 @@ describe("publication detail SSR", () => {
           : "Ver evento",
     );
     expect(html).toContain("La historia continúa");
-    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("<script>bad()</script>");
+    expect(html).not.toContain("bad()");
     expect(html).not.toContain('data-testid="publication-missions"');
   });
 
@@ -75,7 +90,7 @@ describe("publication detail SSR", () => {
       ),
     );
     const html = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToString(Page, {
       params: { slug: "demo" },
       request: new Request("http://localhost/publicaciones/demo"),
@@ -102,7 +117,7 @@ describe("publication detail SSR", () => {
       ),
     );
     const html = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToString(Page, {
       params: { slug: "demo" },
       request: new Request("http://localhost/publicaciones/demo"),
@@ -111,8 +126,9 @@ describe("publication detail SSR", () => {
       html.indexOf("public-publication-detail__hero-copy"),
     );
     expect(html).toContain('src="/files/cover"');
-    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
+    expect(html).toContain('data-testid="public-image-carousel"');
   });
+
   it("renders a controlled failure", async () => {
     for (const failure of [
       new Response("unavailable", { status: 503 }),
@@ -127,7 +143,7 @@ describe("publication detail SSR", () => {
         }),
       );
       const response = await (
-        await AstroContainer.create()
+        await createContainer()
       ).renderToResponse(Page, {
         params: { slug: "missing" },
         request: new Request("http://localhost/publicaciones/missing"),
@@ -147,7 +163,7 @@ describe("publication detail SSR", () => {
         vi.fn().mockResolvedValue(new Response("not found", { status: 404 })),
       );
       const response = await (
-        await AstroContainer.create()
+        await createContainer()
       ).renderToResponse(Page, {
         params: { slug },
         request: new Request(`http://localhost/publicaciones/${slug}`),
