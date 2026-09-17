@@ -1,13 +1,9 @@
 ---
-import {
-  PUBLIC_IMAGE_FALLBACK_HANDLER,
-  resolvePublicImageUrl,
-} from "../../lib/public-image.js";
 import PublicationBadges from "./PublicationBadges.astro";
 import PublicationContent from "./PublicationContent.astro";
 import PublicationMissionsList from "./PublicationMissionsList.astro";
-import PublicationGallery from "./PublicationGallery.astro";
 import PublicationPageNav from "./PublicationPageNav.astro";
+import PublicImageCarousel from "../public/PublicImageCarousel.js";
 import {
   formatPublicDate,
   getPublicationCta,
@@ -24,7 +20,7 @@ const publicationTypeLabels: Record<string, string> = {
 const { publication } = Astro.props;
 const typeLabel = publicationTypeLabels[publication.type] ?? publication.type;
 const imageUrls = Array.isArray(publication.imageUrls) ? publication.imageUrls : [];
-const imageSrc = resolvePublicImageUrl(imageUrls[0] ?? publication.featuredImageUrl);
+const carouselImages = imageUrls.length > 0 ? imageUrls : [publication.featuredImageUrl];
 const dateValue = getPublicationDate(publication);
 const timelineLabel = getPublicationTimelineLabel(publication);
 ---
@@ -41,7 +37,12 @@ const timelineLabel = getPublicationTimelineLabel(publication);
 
   <section class="public-publication-detail__hero" aria-labelledby="publication-title">
     <div class="public-publication-detail__hero-media">
-      <img src={imageSrc} alt="" onerror={PUBLIC_IMAGE_FALLBACK_HANDLER} />
+      <PublicImageCarousel
+        images={carouselImages}
+        label={`la publicación ${publication.title}`}
+        heading="Más de esta historia"
+        client:load
+      />
     </div>
     <div class="public-publication-detail__hero-copy">
       <p class="public-publication-detail__type">{typeLabel}</p>
@@ -71,8 +72,6 @@ const timelineLabel = getPublicationTimelineLabel(publication);
     </div>
     <PublicationContent content={publication.content} />
   </section>
-
-  <PublicationGallery imageUrls={imageUrls} />
 
   <PublicationMissionsList missions={publication.missions} />
 </main>

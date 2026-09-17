@@ -4,13 +4,18 @@ import {
   resolvePublicImageUrl,
 } from "../../lib/public-image.js";
 import MissionFinishedBadge from "./MissionFinishedBadge.astro";
-import MissionGallery from "./MissionGallery.astro";
 import MissionPublicationItem from "./MissionPublicationItem.astro";
 import MissionPageNav from "./MissionPageNav.astro";
+import PublicImageCarousel from "../public/PublicImageCarousel.js";
 const { mission } = Astro.props;
 const publications = mission.publications ?? [];
 const gallery = mission.gallery ?? [];
-const imageSrc = resolvePublicImageUrl(mission.heroImageUrl);
+const imageUrls = [
+  mission.heroImageUrl,
+  ...gallery.map((image: { imageUrl: string }) => image.imageUrl),
+]
+  .map(resolvePublicImageUrl)
+  .filter((image, index, images) => images.indexOf(image) === index);
 const profileImageSrc = mission.profileImageUrl
   ? resolvePublicImageUrl(mission.profileImageUrl)
   : null;
@@ -20,7 +25,12 @@ const profileImageSrc = mission.profileImageUrl
 
   <section class="public-mission-detail__hero" aria-labelledby="mission-title">
     <div class="public-mission-detail__hero-media">
-      <img src={imageSrc} alt="" onerror={PUBLIC_IMAGE_FALLBACK_HANDLER} />
+      <PublicImageCarousel
+        images={imageUrls}
+        label={`la misión ${mission.title}`}
+        heading="La Misión en imágenes"
+        client:load
+      />
     </div>
     <div class="public-mission-detail__hero-copy">
       {profileImageSrc && (
@@ -42,8 +52,6 @@ const profileImageSrc = mission.profileImageUrl
       )}
     </div>
   </section>
-
-  <MissionGallery gallery={gallery} />
 
   <section
     class="public-mission-detail__publications"

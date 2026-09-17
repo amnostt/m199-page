@@ -1,5 +1,6 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import reactRenderer from "@astrojs/react/server.js";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Page from "./[slug].astro";
 import { PUBLIC_IMAGE_FALLBACK_HANDLER } from "../../lib/public-image.js";
@@ -26,8 +27,24 @@ const activeDetail = {
   gallery: [{ imageUrl: "/files/f-2" }],
 };
 
+const createContainer = async () =>
+  AstroContainer.create().then((container) => {
+    container.addServerRenderer({ renderer: reactRenderer });
+    container.addClientRenderer({
+      name: "@astrojs/react",
+      entrypoint: "@astrojs/react/client.js",
+    });
+    return container;
+  });
+
 describe("mission detail SSR", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    vi.stubEnv("ASTRO_API_BASE_URL", "http://api.test");
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
 
   it("renders the active mission detail with the closed public projection", async () => {
     vi.stubGlobal(
@@ -35,7 +52,7 @@ describe("mission detail SSR", () => {
       vi.fn().mockResolvedValue(new Response(JSON.stringify(activeDetail))),
     );
     const response = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToResponse(Page, {
       params: { slug: "one" },
       request: new Request("http://localhost/misiones/one"),
@@ -47,14 +64,14 @@ describe("mission detail SSR", () => {
     expect(html).toContain('data-testid="mission-detail"');
     expect(html).toContain('href="/"');
     expect(html).toContain("Todas las misiones");
-    expect(html).toContain('data-testid="mission-gallery"');
+    expect(html).toContain('data-testid="public-image-carousel"');
     expect(html).toContain('src="/files/f-1"');
     expect(html).toContain('src="/files/p-1"');
     expect(html).toContain('alt="Logotipo de One"');
     expect(html).toContain('src="/files/f-2"');
-    expect(
-      html.match(new RegExp(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}`, "g")),
-    ).toHaveLength(4);
+    expect(html).toContain(
+      'aria-label="Ampliar imagen 1 de 2 de la misión One"',
+    );
     expect(html).toContain("La Misión en imágenes");
     expect(html).toContain("Story One");
     expect(html).toContain("Explorar publicaciones");
@@ -70,16 +87,18 @@ describe("mission detail SSR", () => {
           new Response(JSON.stringify({ ...activeDetail, heroImageUrl: "" })),
         ),
     );
-
     const html = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToString(Page, {
       params: { slug: "one" },
       request: new Request("http://localhost/misiones/one"),
     });
 
     expect(html).toContain('src="/assets/template-picture.png"');
-    expect(html).toContain(`onerror="${PUBLIC_IMAGE_FALLBACK_HANDLER}"`);
+    expect(html).toContain('data-testid="public-image-carousel"');
+    expect(html).toContain(
+      'aria-label="Ampliar imagen 1 de 2 de la misión One"',
+    );
   });
 
   it("uses the public image fallback for a related publication without an image", async () => {
@@ -96,9 +115,8 @@ describe("mission detail SSR", () => {
         ),
       ),
     );
-
     const html = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToString(Page, {
       params: { slug: "one" },
       request: new Request("http://localhost/misiones/one"),
@@ -120,7 +138,7 @@ describe("mission detail SSR", () => {
         ),
     );
     const response = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToResponse(Page, {
       params: { slug: "one" },
       request: new Request("http://localhost/misiones/one"),
@@ -142,9 +160,8 @@ describe("mission detail SSR", () => {
           ),
         ),
     );
-
     const html = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToString(Page, {
       params: { slug: "one" },
       request: new Request("http://localhost/misiones/one"),
@@ -167,7 +184,7 @@ describe("mission detail SSR", () => {
         }),
       );
       const response = await (
-        await AstroContainer.create()
+        await createContainer()
       ).renderToResponse(Page, {
         params: { slug: "one" },
         request: new Request("http://localhost/misiones/one"),
@@ -193,7 +210,7 @@ describe("mission detail SSR", () => {
       ),
     );
     const response = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToResponse(Page, {
       params: { slug: "archived" },
       request: new Request("http://localhost/misiones/archived"),
@@ -209,7 +226,7 @@ describe("mission detail SSR", () => {
       vi.fn().mockResolvedValue(new Response("not found", { status: 404 })),
     );
     const response = await (
-      await AstroContainer.create()
+      await createContainer()
     ).renderToResponse(Page, {
       params: { slug },
       request: new Request(`http://localhost/misiones/${slug}`),
