@@ -2,12 +2,12 @@
  * landing.ts — safe public landing payload fetching for the Astro SSR.
  *
  * PR2 scope (safe landing data):
- *  - `validateFeaturedVideoUrl`: an explicit safe protocol/origin
- *    allowlist for the iframe URL. Invalid values are omitted
+ *  - `validateFeaturedVideoUrl`: a local FileAsset URL policy. Invalid values
+ *    are omitted
  *    (returns null) rather than rendered. Never throws.
  *  - `validateLandingPublicPayload`: typed schema validation for the
  *    `GET /landing/public` contract defined in
- *    `apps/api/src/landing/landing.service.ts`. Runs the video-URL
+ *    `apps/api/src/landing/landing.service.ts`. Runs the local video URL
  *    policy on the way in.
  *  - `fetchLandingPublicPayload`: bounded fetch with AbortSignal +
  *    timeout, mapping timeout, network, non-2xx, and invalid-payload
@@ -59,48 +59,19 @@ export interface LandingPublicPayload {
 }
 
 // ---------------------------------------------------------------------------
-// Safe featuredVideoUrl policy (Task 2.1 / A-006)
+// Safe featuredVideoUrl policy (Task 2.1 / LFV-2)
 // ---------------------------------------------------------------------------
 
-/** Trusted video origin allowlist — YouTube and Vimeo families. */
-const SAFE_VIDEO_ORIGINS: ReadonlySet<string> = new Set([
-  "www.youtube.com",
-  "youtube.com",
-  "youtu.be",
-  "youtube-nocookie.com",
-  "www.youtube-nocookie.com",
-  "vimeo.com",
-  "www.vimeo.com",
-  "player.vimeo.com",
-]);
-
 /**
- * Validate `featuredVideoUrl` against the safe iframe policy. Returns
- * the canonical URL when it is an absolute https URL whose host is in
- * {@link SAFE_VIDEO_ORIGINS}, has no credentials or fragment, and has
- * a non-empty path. Returns null for every invalid value. Never throws
- * so the renderer can always render whatever it returns.
+ * Validate `featuredVideoUrl` as a local FileAsset URL. Returns the trimmed
+ * `/files/<id>` path and rejects external origins, credentials, queries,
+ * fragments, traversal, and empty IDs. Returns null for every invalid value.
+ * Never throws so the renderer can always render whatever it returns.
  */
 export function validateFeaturedVideoUrl(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const candidate = raw.trim();
-  if (candidate === "") return null;
-  let parsed: URL;
-  try {
-    parsed = new URL(candidate);
-  } catch {
-    return null;
-  }
-  if (parsed.protocol !== "https:") return null;
-  if (parsed.username || parsed.password) return null;
-  // Fragments rejected (can drive postMessage between iframe and
-  // parent); queries kept (trusted providers use them, e.g. ?v=).
-  if (parsed.hash !== "") return null;
-  if (!parsed.hostname) return null;
-  if (!SAFE_VIDEO_ORIGINS.has(parsed.hostname.toLowerCase())) return null;
-  if (parsed.pathname === "" || parsed.pathname === "/") return null;
-  parsed.port = "";
-  return parsed.toString();
+  return /^\/files\/[^/?#]+$/.test(candidate) ? candidate : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -150,7 +121,7 @@ function validateCurrentVerse(raw: unknown): CurrentVersePayload | null {
 
 /**
  * Validate a `GET /landing/public` response body and sanitize
- * `featuredVideoUrl` through the safe-iframe policy. Throws
+ * `featuredVideoUrl` through the local FileAsset URL policy. Throws
  * {@link InvalidLandingPayloadError} on any deviation from the
  * contract; the fetch helper maps that to "invalid_payload".
  */

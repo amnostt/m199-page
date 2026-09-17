@@ -49,6 +49,8 @@ export interface FileUploadWidgetProps {
   preview?: boolean;
   previewAlt?: string;
   previewVariant?: "logo" | "hero";
+  fileLabel?: string;
+  inputLabel?: string;
   description?: string;
   "data-testid"?: string;
 }
@@ -84,6 +86,8 @@ export function FileUploadWidget({
   preview = false,
   previewAlt = "Vista previa del archivo",
   previewVariant = "logo",
+  fileLabel = "imagen",
+  inputLabel = "archivo",
   description,
   "data-testid": dataTestId,
 }: FileUploadWidgetProps) {
@@ -169,13 +173,16 @@ export function FileUploadWidget({
         : state
       : undefined;
   const attachmentTitle =
-    state !== "idle" && lastFile ? lastFile.name : "Imagen actual";
+    state !== "idle" && lastFile
+      ? lastFile.name
+      : `${fileLabel[0]?.toUpperCase() ?? ""}${fileLabel.slice(1)} actual`;
+  const errorFileLabel = fileLabel === "imagen" ? "archivo" : fileLabel;
   const attachmentDescription =
     state === "uploading"
-      ? "Cargando imagen…"
+      ? `Cargando ${fileLabel}…`
       : state === "error"
-        ? "No se pudo cargar la imagen."
-        : "Imagen cargada y lista para guardar.";
+        ? `No se pudo cargar el ${errorFileLabel}.`
+        : `${fileLabel[0]?.toUpperCase() ?? ""}${fileLabel.slice(1)} cargada y lista para guardar.`;
 
   // prettier-ignore
   return (
@@ -227,7 +234,7 @@ export function FileUploadWidget({
             {fileId && onRemove && (
               <AttachmentAction
                 type="button"
-                aria-label="Quitar imagen"
+                aria-label={`Quitar ${fileLabel}`}
                 data-testid="file-upload-remove"
                 onClick={handleRemove}
                 disabled={state === "uploading"}
@@ -243,7 +250,7 @@ export function FileUploadWidget({
         data-testid="file-upload-input"
         accept={accept}
         aria-describedby={descriptionId}
-        aria-label="Subir archivo"
+        aria-label={`Subir ${inputLabel}`}
         onChange={handleFileChange}
         disabled={state === "uploading"}
       />
@@ -265,7 +272,7 @@ export function FileUploadWidget({
 
       {state === "error" && (
         <span data-testid="file-upload-error" role="alert">
-          No se pudo cargar el archivo.
+          No se pudo cargar el {errorFileLabel}.
         </span>
       )}
 

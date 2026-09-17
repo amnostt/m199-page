@@ -66,6 +66,7 @@ enum FileCategory {
   PUBLICATION_DOWNLOAD
   LANDING_HERO
   LANDING_VISUAL_BREAK
+  LANDING_FEATURED_VIDEO
   OTHER
 }
 
@@ -184,6 +185,7 @@ model FileAsset {
   publicationImages      PublicationImage[]
   landingHeroes          LandingSettings[]  @relation("LandingHero")
   landingVisualBreaks    LandingSettings[]  @relation("LandingVisualBreak")
+  landingFeaturedVideos  LandingSettings[]  @relation("LandingFeaturedVideo")
 
   @@index([category])
   @@index([uploadedById])
@@ -280,7 +282,7 @@ model LandingSettings {
   mission          String?
   vision           String?
   description      String?
-  featuredVideoUrl String?
+  featuredVideoId  String?
   contactTitle     String?
   contactDescription String?
   contactEmail     String?
@@ -292,6 +294,7 @@ model LandingSettings {
 
   heroImage         FileAsset? @relation("LandingHero", fields: [heroImageId], references: [id])
   visualBreakImage  FileAsset? @relation("LandingVisualBreak", fields: [visualBreakImageId], references: [id], onDelete: SetNull)
+  featuredVideo     FileAsset? @relation("LandingFeaturedVideo", fields: [featuredVideoId], references: [id], onDelete: SetNull)
 }
 
 // APP-tier invariants: FileAsset upload validation per FileCategory; type-change

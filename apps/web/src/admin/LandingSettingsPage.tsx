@@ -51,7 +51,7 @@ const EMPTY: LandingSettingsForm = {
   publicationsDescription: "",
   aboutTitle: "",
   description: "",
-  featuredVideoUrl: "",
+  featuredVideoId: null,
   contactTitle: "",
   contactDescription: "",
   contactEmail: "",
@@ -71,7 +71,7 @@ const fields: Array<keyof LandingSettingsForm> = [
   "publicationsDescription",
   "aboutTitle",
   "description",
-  "featuredVideoUrl",
+  "featuredVideoId",
   "contactTitle",
   "contactDescription",
   "contactEmail",
@@ -103,7 +103,7 @@ export function normalizeLandingSettings(
     publicationsDescription: data.publicationsDescription ?? "",
     aboutTitle: data.aboutTitle ?? "",
     description: data.description ?? "",
-    featuredVideoUrl: data.featuredVideoUrl ?? "",
+    featuredVideoId: data.featuredVideoId,
     contactTitle: data.contactTitle ?? "",
     contactDescription: data.contactDescription ?? "",
     contactEmail: data.contactEmail ?? "",
@@ -174,7 +174,7 @@ export function LandingSettingsPage({
   const handleChange = (
     field: Exclude<
       keyof LandingSettingsForm,
-      "heroImageId" | "visualBreakImageId"
+      "heroImageId" | "visualBreakImageId" | "featuredVideoId"
     >,
     value: string,
   ) => {
@@ -201,6 +201,16 @@ export function LandingSettingsPage({
     );
   };
 
+  const handleFeaturedVideoUploaded = (asset: { id: string }) => {
+    setSettings((prev) =>
+      prev ? { ...prev, featuredVideoId: asset.id } : null,
+    );
+  };
+
+  const handleFeaturedVideoRemoved = () => {
+    setSettings((prev) => (prev ? { ...prev, featuredVideoId: null } : null));
+  };
+
   const saveSettings = async () => {
     if (!settings || saving) return;
     setSaving(true);
@@ -209,7 +219,7 @@ export function LandingSettingsPage({
       const {
         heroImageId,
         visualBreakImageId,
-        featuredVideoUrl,
+        featuredVideoId,
         verseText,
         verseReference,
         ...copySettings
@@ -219,7 +229,7 @@ export function LandingSettingsPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...copySettings,
-          featuredVideoUrl: featuredVideoUrl.trim() || null,
+          featuredVideoId,
           verseText: verseText.trim(),
           verseReference: verseReference.trim(),
           heroImageId,
@@ -594,23 +604,24 @@ export function LandingSettingsPage({
               <FieldSet>
                 <FieldLegend>Video destacado</FieldLegend>
                 <FieldDescription>
-                  Muestra un video en una sección independiente de la landing.
-                  Si no cargas una URL, la sección permanecerá oculta.
+                  Muestra un video MP4 en una sección independiente de la
+                  landing. Si no cargas un video, la sección permanecerá oculta.
                 </FieldDescription>
                 <FieldGroup>
                   <Field>
-                    <FieldLabel htmlFor="ls-video">
-                      URL del video destacado
-                    </FieldLabel>
-                    <Input
-                      id="ls-video"
-                      type="url"
-                      className="min-h-10"
-                      value={settings.featuredVideoUrl}
-                      onChange={(e) =>
-                        handleChange("featuredVideoUrl", e.target.value)
-                      }
-                      disabled={saving}
+                    <FieldTitle>Archivo de video destacado</FieldTitle>
+                    <FileUploadWidget
+                      category="LANDING_FEATURED_VIDEO"
+                      fileId={settings.featuredVideoId}
+                      onUploaded={handleFeaturedVideoUploaded}
+                      onRemove={handleFeaturedVideoRemoved}
+                      accept="video/mp4"
+                      acceptedFormats="MP4"
+                      maxSizeBytes={100 * 1024 * 1024}
+                      fileLabel="video"
+                      inputLabel="video"
+                      description="Formato: MP4 (video/mp4). Tamaño máximo: 100 MB."
+                      data-testid="landing-featured-video-upload-widget"
                     />
                   </Field>
                 </FieldGroup>

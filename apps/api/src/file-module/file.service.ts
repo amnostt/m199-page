@@ -13,6 +13,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  PayloadTooLargeException,
 } from "@nestjs/common";
 import { DbService } from "../db/db.service.js";
 import {
@@ -23,6 +24,73 @@ import {
 import type { FileAssetResponse } from "./dto/file-response.dto.js";
 import { randomUUID } from "crypto";
 import path from "path";
+
+const DEFAULT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_LANDING_FEATURED_VIDEO_BYTES = 100 * 1024 * 1024;
+
+const MP4_BRANDS = new Set([
+  "isom",
+  "iso2",
+  "iso3",
+  "iso4",
+  "iso5",
+  "iso6",
+  "mp41",
+  "mp42",
+  "mp71",
+  "mp72",
+  "mp81",
+  "avc1",
+  "M4V ",
+  "M4A ",
+  "M4B ",
+  "M4P ",
+  "M4H ",
+  "M4F ",
+  "3gp4",
+  "3gp5",
+  "3gp6",
+  "3g2a",
+  "3g2b",
+  "F4V ",
+  "F4A ",
+  "F4B ",
+]);
+
+function hasMp4FtypSignature(buffer: Buffer): boolean {
+  if (buffer.length < 16) return false;
+
+  const boxSize = buffer.readUInt32BE(0);
+  const boxType = buffer.subarray(4, 8).toString("ascii");
+  if (boxType !== "ftyp") return false;
+
+  let brandOffset = 8;
+  let boxEnd = boxSize === 0 ? buffer.length : boxSize;
+  if (boxSize === 1) {
+    if (buffer.length < 24) return false;
+    const largeSize = Number(buffer.readBigUInt64BE(8));
+    if (!Number.isSafeInteger(largeSize)) return false;
+    boxEnd = largeSize;
+    brandOffset = 16;
+  }
+
+  if (boxEnd < brandOffset + 8 || boxEnd > buffer.length) return false;
+  if ((boxEnd - brandOffset) % 4 !== 0) return false;
+  if (
+    MP4_BRANDS.has(
+      buffer.subarray(brandOffset, brandOffset + 4).toString("ascii"),
+    )
+  ) {
+    return true;
+  }
+
+  for (let offset = brandOffset + 8; offset + 4 <= boxEnd; offset += 4) {
+    const brand = buffer.subarray(offset, offset + 4).toString("ascii");
+    if (MP4_BRANDS.has(brand)) return true;
+  }
+
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 // Minimal Prisma-model interfaces
@@ -113,6 +181,14 @@ export class FileService {
       throw new BadRequestException(
         `MIME type ${mimeType} is not allowed for category ${category}`,
       );
+    }
+
+    const maxSize =
+      category === FileCategory.LANDING_FEATURED_VIDEO
+        ? MAX_LANDING_FEATURED_VIDEO_BYTES
+        : Number(process.env["MAX_FILE_SIZE"]) || DEFAULT_MAX_FILE_SIZE_BYTES;
+    if (buffer.length > maxSize) {
+      throw new PayloadTooLargeException("File too large");
     }
 
     this.assertMagicBytesMatchMime(buffer, mimeType);
@@ -259,6 +335,7 @@ export class FileService {
       "image/webp": ".webp",
       "image/gif": ".gif",
       "application/pdf": ".pdf",
+      "video/mp4": ".mp4",
     };
     return map[mimeType] ?? "";
   }
@@ -299,6 +376,8 @@ export class FileService {
             buffer.length >= 5 &&
             buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))
           );
+        case "video/mp4":
+          return hasMp4FtypSignature(buffer);
         default:
           return false;
       }

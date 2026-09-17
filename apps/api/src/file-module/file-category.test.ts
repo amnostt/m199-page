@@ -4,17 +4,20 @@
  * Tests the isAllowedMime() function against the spec's MIME allowlists:
  * - Image categories: image/jpeg, image/png, image/webp, image/gif
  * - Document categories: image/* + application/pdf
+ * - Featured video category: video/mp4
  *
  * Approved vocabulary only: MISSION_HERO, PUBLICATION_FEATURED_IMAGE,
- * PUBLICATION_DOWNLOAD, LANDING_HERO, LANDING_VISUAL_BREAK, OTHER. Legacy POST_/OUTING_ values
- * are NOT representable.
+ * PUBLICATION_DOWNLOAD, LANDING_HERO, LANDING_VISUAL_BREAK,
+ * LANDING_FEATURED_VIDEO, OTHER. Legacy POST_/OUTING_ values are NOT representable.
  */
 import { describe, it, expect } from "vitest";
 import {
   FileCategory,
   IMAGE_MIMES,
   DOC_MIMES,
+  VIDEO_MIMES,
   IMAGE_CATS,
+  VIDEO_CATS,
   isAllowedMime,
 } from "./file-category.js";
 
@@ -27,6 +30,7 @@ describe("FileCategory enum", () => {
     expect(FileCategory.PUBLICATION_DOWNLOAD).toBe("PUBLICATION_DOWNLOAD");
     expect(FileCategory.LANDING_HERO).toBe("LANDING_HERO");
     expect(FileCategory.LANDING_VISUAL_BREAK).toBe("LANDING_VISUAL_BREAK");
+    expect(FileCategory.LANDING_FEATURED_VIDEO).toBe("LANDING_FEATURED_VIDEO");
     expect(FileCategory.OTHER).toBe("OTHER");
   });
 
@@ -69,6 +73,12 @@ describe("DOC_MIMES", () => {
   });
 });
 
+describe("VIDEO_MIMES", () => {
+  it("contains only video/mp4", () => {
+    expect(VIDEO_MIMES).toEqual(["video/mp4"]);
+  });
+});
+
 describe("IMAGE_CATS", () => {
   it("contains exactly the approved image-only categories", () => {
     expect(IMAGE_CATS).toBeInstanceOf(Set);
@@ -82,6 +92,12 @@ describe("IMAGE_CATS", () => {
 
   it("does NOT contain PUBLICATION_DOWNLOAD (document category)", () => {
     expect(IMAGE_CATS.has(FileCategory.PUBLICATION_DOWNLOAD)).toBe(false);
+  });
+});
+
+describe("VIDEO_CATS", () => {
+  it("contains only LANDING_FEATURED_VIDEO", () => {
+    expect(VIDEO_CATS).toEqual(new Set([FileCategory.LANDING_FEATURED_VIDEO]));
   });
 });
 
@@ -171,6 +187,20 @@ describe("isAllowedMime (FU-05)", () => {
       for (const cat of docCats) {
         expect(isAllowedMime(cat, "application/octet-stream")).toBe(false);
       }
+    });
+  });
+
+  describe("for the featured video category", () => {
+    it("accepts only video/mp4", () => {
+      expect(
+        isAllowedMime(FileCategory.LANDING_FEATURED_VIDEO, "video/mp4"),
+      ).toBe(true);
+      expect(
+        isAllowedMime(FileCategory.LANDING_FEATURED_VIDEO, "video/quicktime"),
+      ).toBe(false);
+      expect(
+        isAllowedMime(FileCategory.LANDING_FEATURED_VIDEO, "application/pdf"),
+      ).toBe(false);
     });
   });
 });

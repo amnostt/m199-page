@@ -31,7 +31,7 @@ function fullPayload(): LandingPayloadShape {
     mission: "Alcanzar a cada persona",
     vision: "Ver cada vida transformada",
     description: "Somos una comunidad de fe",
-    featuredVideoUrl: "https://www.youtube.com/embed/abc",
+    featuredVideoUrl: "/files/video-001",
     contactTitle: "Hablemos.\nVamos juntos.",
     contactDescription:
       "¿Quieres servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos.",
@@ -558,20 +558,22 @@ describe("Landing.astro — no OpenDesign API URLs or placeholder payload values
   });
 });
 
-describe("Landing.astro — iframe omission and safety", () => {
-  it("omits the iframe entirely when featuredVideoUrl is null", async () => {
+describe("Landing.astro — featured video omission and safety", () => {
+  it("omits the video entirely when featuredVideoUrl is null", async () => {
     const html = await render({ ...fullPayload(), featuredVideoUrl: null });
-    expect(html).not.toContain("<iframe");
+    expect(html).not.toContain("<video");
     expect(html).not.toContain('data-testid="featured-video"');
     expect(html).not.toContain('data-testid="video-section"');
   });
 
-  it("emits the iframe only inside the .public-media wrapper, with a title", async () => {
+  it("emits the video only inside the .public-media wrapper, with controls", async () => {
     const html = await render(fullPayload());
     expect(html).toMatch(
-      /class="[^"]*\bpublic-media--cover\b[^"]*"[^]*<iframe[^>]*data-testid="featured-video"/,
+      /class="[^"]*\bpublic-media--cover\b[^"]*"[^]*<video[^>]*data-testid="featured-video"/,
     );
-    expect(html).toContain('src="https://www.youtube.com/embed/abc"');
-    expect(html).toMatch(/<iframe[^>]*title="Misión 1-99 en acción"/);
+    expect(html).toContain('src="/files/video-001"');
+    expect(html).toMatch(/<video[^>]*title="Misión 1-99 en acción"/);
+    expect(html).toContain('preload="metadata"');
+    expect(html).not.toContain("autoplay");
   });
 });

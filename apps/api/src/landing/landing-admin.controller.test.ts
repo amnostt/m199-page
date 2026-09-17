@@ -31,7 +31,7 @@ export interface LandingSettingsRow {
   mission: string | null;
   vision: string | null;
   description: string | null;
-  featuredVideoUrl: string | null;
+  featuredVideoId: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;
@@ -54,7 +54,7 @@ const FULL_SETTINGS: LandingSettingsRow = {
   mission: "Nuestra misión es servir",
   vision: "Ser referencia en la comunidad",
   description: "Somos una organización dedicada a...",
-  featuredVideoUrl: "https://youtube.com/watch?v=abc",
+  featuredVideoId: "video-001",
   contactTitle: "Hablemos. Vamos juntos.",
   contactDescription: "Conoce más sobre una misión.",
   contactEmail: "info@m199.org",
@@ -148,11 +148,11 @@ describe("LandingAdminController", () => {
       expect(service.updateSettings).toHaveBeenCalledWith(dto);
     });
 
-    it("rejects unsafe video URLs when validating the DTO directly", async () => {
+    it("rejects an empty featured video ID when validating the DTO directly", async () => {
       const pipe = new ValidationPipe({ whitelist: true, transform: true });
       try {
         await pipe.transform(
-          { featuredVideoUrl: "javascript:alert(1)" },
+          { featuredVideoId: "" },
           { type: "body", metatype: UpdateLandingSettingsDto },
         );
         expect.unreachable("Expected BadRequestException");
@@ -164,11 +164,11 @@ describe("LandingAdminController", () => {
     it("accepts null to clear the optional featured video", async () => {
       const pipe = new ValidationPipe({ whitelist: true, transform: true });
       const result = await pipe.transform(
-        { featuredVideoUrl: null },
+        { featuredVideoId: null },
         { type: "body", metatype: UpdateLandingSettingsDto },
       );
 
-      expect(result.featuredVideoUrl).toBeNull();
+      expect(result.featuredVideoId).toBeNull();
     });
 
     it("accepts null to clear either landing image", async () => {
@@ -196,7 +196,7 @@ describe("LandingAdminController", () => {
       },
     );
 
-    it("rejects unsafe video URLs through the real Nest route", async () => {
+    it("rejects an empty featured video ID through the real Nest route", async () => {
       const landingService = mockLandingService();
       const module = await Test.createTestingModule({
         controllers: [LandingAdminController],
@@ -214,7 +214,7 @@ describe("LandingAdminController", () => {
       try {
         const res = await request(app.getHttpServer())
           .put("/landing/admin")
-          .send({ featuredVideoUrl: "javascript:alert(1)" });
+          .send({ featuredVideoId: "" });
 
         expect(res.status).toBe(400);
         expect(landingService.updateSettings).not.toHaveBeenCalled();

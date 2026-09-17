@@ -19,15 +19,16 @@ const { featuredVideoUrl } = Astro.props;
         <h2 id="featured-video-title">Video destacado</h2>
       </header>
       <div class="public-media public-media--cover landing-featured-video__media">
-        <iframe
+        <video
           src={featuredVideoUrl}
           title="Misión 1-99 en acción"
           data-testid="featured-video"
-          loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerpolicy="strict-origin-when-cross-origin"
-          allowfullscreen
-        ></iframe>
+          controls
+          preload="metadata"
+          style="display: block; width: 100%; height: 100%; object-fit: cover;"
+        >
+          Tu navegador no admite la reproducción de video.
+        </video>
       </div>
     </div>
   </section>

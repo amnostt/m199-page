@@ -18,7 +18,7 @@ interface LandingSettingsRow {
   mission: string | null;
   vision: string | null;
   description: string | null;
-  featuredVideoUrl: string | null;
+  featuredVideoId: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;
@@ -46,7 +46,7 @@ const FULL_SETTINGS: LandingSettingsRow = {
   mission: "Nuestra misión es servir",
   vision: "Ser referencia en la comunidad",
   description: "Somos una organización dedicada a...",
-  featuredVideoUrl: "https://youtube.com/watch?v=abc",
+  featuredVideoId: "video-001",
   contactTitle: "Hablemos.\nVamos juntos.",
   contactDescription: "Hablemos sobre la misión.",
   contactEmail: "info@m199.org",
@@ -188,6 +188,57 @@ describe("LandingService", () => {
       );
     });
 
+    it("validates a featured video asset with its dedicated category", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        fileAssetReturn: {
+          id: "video-asset",
+          category: "LANDING_FEATURED_VIDEO",
+        },
+      });
+
+      await service.updateSettings({ featuredVideoId: "video-asset" });
+
+      expect(mocks.fileAssetFindUnique).toHaveBeenCalledWith({
+        where: { id: "video-asset" },
+      });
+      expect(mocks.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: { featuredVideoId: "video-asset" },
+        }),
+      );
+    });
+
+    it("allows explicit clearing of the featured video", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+      });
+
+      await service.updateSettings({ featuredVideoId: null });
+
+      expect(mocks.fileAssetFindUnique).not.toHaveBeenCalled();
+      expect(mocks.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: { featuredVideoId: null },
+        }),
+      );
+    });
+
+    it("rejects a featured video asset from another category", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        fileAssetReturn: {
+          id: "image-asset",
+          category: "LANDING_HERO",
+        },
+      });
+
+      await expect(
+        service.updateSettings({ featuredVideoId: "image-asset" }),
+      ).rejects.toThrow("must have category LANDING_FEATURED_VIDEO");
+      expect(mocks.upsert).not.toHaveBeenCalled();
+    });
+
     it("rejects a missing hero asset before saving settings", async () => {
       const { service, mocks } = await buildService({
         settingsReturn: FULL_SETTINGS,
@@ -227,6 +278,7 @@ describe("LandingService", () => {
 
       expect(result.heroImageUrl).toBe("/files/img-001");
       expect(result.visualBreakImageUrl).toBe("/files/break-001");
+      expect(result.featuredVideoUrl).toBe("/files/video-001");
       expect(result.missionsTitle).toBe("Proyectos reales.");
       expect(result.currentVerse).toEqual({
         text: "Todo lo puedo en Cristo que me fortalece",

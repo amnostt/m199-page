@@ -32,7 +32,7 @@ export interface LandingSettingsRow {
   mission: string | null;
   vision: string | null;
   description: string | null;
-  featuredVideoUrl: string | null;
+  featuredVideoId: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;
@@ -117,9 +117,9 @@ export class LandingService {
     return this.dbService.client as unknown as LandingPrismaClient;
   }
 
-  /** Resolves a file ID to a public URL path, or null if no ID. */
+  /** Resolves a file ID to a local public URL path, or null if no ID. */
   private fileUrl(fileId: string | null | undefined): string | null {
-    if (!fileId) return null;
+    if (!fileId || fileId.includes("/")) return null;
     return `/files/${fileId}`;
   }
 
@@ -129,6 +129,11 @@ export class LandingService {
     category: "LANDING_HERO" | "LANDING_VISUAL_BREAK",
   ): Promise<void> {
     await assertFileCategory(this.client, fileId, category);
+  }
+
+  /** Validates that a featured video asset exists and has the video category. */
+  private async validateFeaturedVideo(fileId: string): Promise<void> {
+    await assertFileCategory(this.client, fileId, "LANDING_FEATURED_VIDEO");
   }
 
   // -----------------------------------------------------------------------
@@ -166,6 +171,9 @@ export class LandingService {
         "LANDING_VISUAL_BREAK",
       );
     }
+    if (dto.featuredVideoId !== undefined && dto.featuredVideoId !== null) {
+      await this.validateFeaturedVideo(dto.featuredVideoId);
+    }
 
     // Build the update payload from only the fields that were actually provided.
     const data: Record<string, unknown> = {};
@@ -183,8 +191,8 @@ export class LandingService {
     if (dto.mission !== undefined) data.mission = dto.mission;
     if (dto.vision !== undefined) data.vision = dto.vision;
     if (dto.description !== undefined) data.description = dto.description;
-    if (dto.featuredVideoUrl !== undefined)
-      data.featuredVideoUrl = dto.featuredVideoUrl;
+    if (dto.featuredVideoId !== undefined)
+      data.featuredVideoId = dto.featuredVideoId;
     if (dto.contactTitle !== undefined) data.contactTitle = dto.contactTitle;
     if (dto.contactDescription !== undefined)
       data.contactDescription = dto.contactDescription;
@@ -238,7 +246,7 @@ export class LandingService {
       mission: normalizeCopy(settings?.mission),
       vision: normalizeCopy(settings?.vision),
       description: normalizeCopy(settings?.description),
-      featuredVideoUrl: settings?.featuredVideoUrl ?? null,
+      featuredVideoUrl: this.fileUrl(settings?.featuredVideoId),
       contactTitle: normalizeCopy(settings?.contactTitle),
       contactDescription: normalizeCopy(settings?.contactDescription),
       contactEmail: normalizeCopy(settings?.contactEmail),

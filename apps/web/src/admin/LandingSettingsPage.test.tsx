@@ -52,7 +52,7 @@ const SAMPLE_SETTINGS = {
   mission: "Our mission text",
   vision: "Our vision text",
   description: "Our description text",
-  featuredVideoUrl: "https://video.example.com/embed",
+  featuredVideoId: "existing-video",
   contactTitle: "Contact us",
   contactDescription: "Contact description",
   contactEmail: "contact@example.com",
@@ -150,9 +150,16 @@ describe("LandingSettingsPage load", () => {
         }) as HTMLTextAreaElement
       ).value,
     ).toBe(SAMPLE_SETTINGS.description);
+    const videoWidget = screen.getByTestId(
+      "landing-featured-video-upload-widget",
+    );
+    expect(videoWidget).toBeTruthy();
+    expect(within(videoWidget).getByTestId("file-upload-remove")).toBeTruthy();
     expect(
-      (screen.getByLabelText(/video destacado/i) as HTMLInputElement).value,
-    ).toBe(SAMPLE_SETTINGS.featuredVideoUrl);
+      within(videoWidget)
+        .getByTestId("file-upload-input")
+        .getAttribute("accept"),
+    ).toBe("video/mp4");
     expect(
       (screen.getByLabelText(/correo electrónico/i) as HTMLInputElement).value,
     ).toBe(SAMPLE_SETTINGS.contactEmail);
@@ -192,8 +199,8 @@ describe("LandingSettingsPage load", () => {
       ).value,
     ).toBe("");
     expect(
-      (screen.getByLabelText(/video destacado/i) as HTMLInputElement).value,
-    ).toBe("");
+      screen.getByTestId("landing-featured-video-upload-widget"),
+    ).toBeTruthy();
     expect(
       (screen.getByLabelText(/correo electrónico/i) as HTMLInputElement).value,
     ).toBe("");
@@ -249,7 +256,7 @@ describe("LandingSettingsPage load", () => {
           mission: "Only mission set",
           vision: null,
           description: null,
-          featuredVideoUrl: null,
+          featuredVideoId: null,
           contactEmail: null,
           contactPhone: null,
         }),
@@ -322,15 +329,6 @@ describe("LandingSettingsPage edit and save", () => {
     });
     expect((descriptionField as HTMLTextAreaElement).value).toBe(
       "Updated description",
-    );
-
-    // Video URL field is editable (input)
-    const videoField = screen.getByLabelText(/video destacado/i);
-    fireEvent.change(videoField, {
-      target: { value: "https://new-video.example.com" },
-    });
-    expect((videoField as HTMLInputElement).value).toBe(
-      "https://new-video.example.com",
     );
 
     const verseText = screen.getByLabelText("Texto", {
@@ -460,7 +458,7 @@ describe("LandingSettingsPage edit and save", () => {
       SAMPLE_SETTINGS.publicationsDescription,
     );
     expect(body.aboutTitle).toBe(SAMPLE_SETTINGS.aboutTitle);
-    expect(body.featuredVideoUrl).toBe(SAMPLE_SETTINGS.featuredVideoUrl);
+    expect(body.featuredVideoId).toBe(SAMPLE_SETTINGS.featuredVideoId);
     expect(body.contactTitle).toBe(SAMPLE_SETTINGS.contactTitle);
     expect(body.contactDescription).toBe(SAMPLE_SETTINGS.contactDescription);
     expect(body.contactEmail).toBe(SAMPLE_SETTINGS.contactEmail);
@@ -470,21 +468,81 @@ describe("LandingSettingsPage edit and save", () => {
     expect(body.visualBreakImageId).toBe(SAMPLE_SETTINGS.visualBreakImageId);
   });
 
-  it("sends an empty featured video URL as null", async () => {
+  it("sends a removed featured video ID as null", async () => {
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ ...SAMPLE_SETTINGS, featuredVideoUrl: null }),
+        json: () => Promise.resolve(SAMPLE_SETTINGS),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(SAMPLE_SETTINGS),
+        json: () =>
+          Promise.resolve({ ...SAMPLE_SETTINGS, featuredVideoId: null }),
       });
     render(<LandingSettingsPage />);
     await waitFor(() => {
       expect(screen.getByTestId("landing-settings-form")).toBeTruthy();
+    });
+
+    fireEvent.click(
+      within(
+        screen.getByTestId("landing-featured-video-upload-widget"),
+      ).getByTestId("file-upload-remove"),
+    );
+
+    await confirmSave();
+
+    await waitFor(() => {
+      const putCall = (
+        globalThis.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+      );
+      const body = JSON.parse(
+        (putCall![1] as RequestInit).body as string,
+      ) as Record<string, unknown>;
+      expect(body.featuredVideoId).toBeNull();
+    });
+  });
+
+  it("stages an MP4 featured video upload and saves its asset ID", async () => {
+    await renderWithSettings();
+
+    const uploadedAsset = {
+      id: "new-video",
+      url: "/files/new-video",
+      thumbnailUrl: null,
+      mimeType: "video/mp4",
+      fileSize: 1024,
+      originalFilename: "featured.mp4",
+      category: "LANDING_FEATURED_VIDEO",
+      createdAt: "2026-09-17T00:00:00.000Z",
+    };
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(uploadedAsset),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ ...SAMPLE_SETTINGS, featuredVideoId: "new-video" }),
+      });
+
+    const widget = screen.getByTestId("landing-featured-video-upload-widget");
+    fireEvent.change(within(widget).getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["mp4"], "featured.mp4", { type: "video/mp4" })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/files/LANDING_FEATURED_VIDEO",
+        expect.objectContaining({ method: "POST" }),
+      );
     });
 
     await confirmSave();
@@ -498,7 +556,7 @@ describe("LandingSettingsPage edit and save", () => {
       const body = JSON.parse(
         (putCall![1] as RequestInit).body as string,
       ) as Record<string, unknown>;
-      expect(body.featuredVideoUrl).toBeNull();
+      expect(body.featuredVideoId).toBe("new-video");
     });
   });
 

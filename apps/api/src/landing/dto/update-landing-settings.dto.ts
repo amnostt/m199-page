@@ -4,7 +4,7 @@
  * LP-01: All fields are optional strings. The service layer applies
  * a partial merge — omitted fields retain their current values.
  */
-import { IsNotEmpty, IsOptional, IsString, IsUrl } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class UpdateLandingSettingsDto {
   @IsOptional()
@@ -61,11 +61,9 @@ export class UpdateLandingSettingsDto {
   contactDescription?: string;
 
   @IsOptional()
-  @IsUrl(
-    { protocols: ["http", "https"] },
-    { message: "featuredVideoUrl must be a valid http or https URL" },
-  )
-  featuredVideoUrl?: string | null;
+  @IsString()
+  @IsNotEmpty()
+  featuredVideoId?: string | null;
 
   @IsOptional()
   @IsString()

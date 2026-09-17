@@ -16,20 +16,23 @@ describe("LandingFeaturedVideo.astro", () => {
     });
 
     expect(html).not.toContain('data-testid="video-section"');
-    expect(html).not.toContain("<iframe");
+    expect(html).not.toContain("<video");
   });
 
-  it("renders a titled standalone section for the safe video URL", async () => {
+  it("renders a titled standalone section for the local video URL", async () => {
     const html = await container.renderToString(LandingFeaturedVideo, {
       props: {
-        featuredVideoUrl: "https://www.youtube.com/embed/abc",
+        featuredVideoUrl: "/files/video-001",
       },
     });
 
     expect(html).toContain('data-testid="video-section"');
     expect(html).toContain('id="video-destacado"');
     expect(html).toContain('data-testid="featured-video"');
-    expect(html).toContain('src="https://www.youtube.com/embed/abc"');
+    expect(html).toContain('src="/files/video-001"');
     expect(html).toContain('title="Misión 1-99 en acción"');
+    expect(html).toContain(" controls");
+    expect(html).toContain('preload="metadata"');
+    expect(html).not.toContain("autoplay");
   });
 });

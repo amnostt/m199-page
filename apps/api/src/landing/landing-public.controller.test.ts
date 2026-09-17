@@ -35,7 +35,7 @@ const FULL_PAYLOAD: LandingPublicPayload = {
   mission: "Nuestra misión es servir",
   vision: "Ser referencia en la comunidad",
   description: "Somos una organización dedicada a...",
-  featuredVideoUrl: "https://youtube.com/watch?v=abc",
+  featuredVideoUrl: "/files/video-001",
   contactTitle: "Hablemos.\nVamos juntos.",
   contactDescription: "Hablemos sobre la misión.",
   contactEmail: "info@m199.org",

@@ -97,6 +97,10 @@ const SAMPLE_DOC_ROW: FileAssetRow = {
 const VALID_JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
 const VALID_PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const VALID_PDF = Buffer.from("%PDF-1.7\n");
+const VALID_MP4 = Buffer.from([
+  0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d, 0x00,
+  0x00, 0x02, 0x00, 0x6d, 0x70, 0x34, 0x32, 0x6d, 0x70, 0x34, 0x32,
+]);
 
 // ---- helpers ------------------------------------------------------------
 
@@ -261,6 +265,70 @@ describe("FileService", () => {
       });
 
       expect(mocks.create).toHaveBeenCalled();
+    });
+
+    it("accepts a valid ISO BMFF MP4 for LANDING_FEATURED_VIDEO", async () => {
+      const { service, mocks } = await buildService({
+        createResult: {
+          ...SAMPLE_DOC_ROW,
+          id: "new-video",
+          category: "LANDING_FEATURED_VIDEO",
+          mimeType: "video/mp4",
+          extension: ".mp4",
+          thumbnailPath: null,
+        },
+      });
+
+      await service.upload({
+        buffer: VALID_MP4,
+        originalFilename: "video.mp4",
+        mimeType: "video/mp4",
+        category: "LANDING_FEATURED_VIDEO",
+        uploadedById: "user-1",
+      });
+
+      expect(mocks.create).toHaveBeenCalled();
+      const createArg = mocks.create.mock.calls[0]?.[0];
+      expect(createArg?.data.extension).toBe(".mp4");
+      expect(createArg?.data.storagePath).toMatch(
+        /LANDING_FEATURED_VIDEO\/[^/]+\.mp4$/,
+      );
+      expect(sharpMock).not.toHaveBeenCalled();
+    });
+
+    it("rejects an MP4 MIME declaration without a valid ftyp signature", async () => {
+      const { service, mocks } = await buildService();
+
+      await expect(
+        service.upload({
+          buffer: Buffer.from("not an mp4"),
+          originalFilename: "video.mp4",
+          mimeType: "video/mp4",
+          category: "LANDING_FEATURED_VIDEO",
+          uploadedById: "user-1",
+        }),
+      ).rejects.toThrow("File content does not match MIME type video/mp4");
+
+      expect(writeFileMock).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+    });
+
+    it("enforces the 100 MB featured video limit", async () => {
+      const { service, mocks } = await buildService();
+      const oversized = Buffer.alloc(100 * 1024 * 1024 + 1);
+
+      await expect(
+        service.upload({
+          buffer: oversized,
+          originalFilename: "video.mp4",
+          mimeType: "video/mp4",
+          category: "LANDING_FEATURED_VIDEO",
+          uploadedById: "user-1",
+        }),
+      ).rejects.toThrow("File too large");
+
+      expect(writeFileMock).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
     });
 
     it("stores absolute paths under relative UPLOAD_DIR", async () => {

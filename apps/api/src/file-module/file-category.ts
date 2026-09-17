@@ -6,8 +6,8 @@
  *
  * The approved vocabulary is the Mission/Publication domain reset
  * subset: MISSION_HERO, PUBLICATION_FEATURED_IMAGE, PUBLICATION_DOWNLOAD,
- * LANDING_HERO, LANDING_VISUAL_BREAK, OTHER. Legacy POST_/OUTING_-only values are not
- * representable in the regenerated Prisma enum.
+ * LANDING_HERO, LANDING_VISUAL_BREAK, LANDING_FEATURED_VIDEO, OTHER. Legacy
+ * POST_/OUTING_-only values are not representable in the regenerated Prisma enum.
  */
 import { FileCategory } from "@prisma/client";
 
@@ -19,6 +19,7 @@ const IMAGE_MIMES = [
 ] as const;
 
 const DOC_MIMES = [...IMAGE_MIMES, "application/pdf"] as const;
+const VIDEO_MIMES = ["video/mp4"] as const;
 
 /**
  * Image-only categories — Mission hero, Publication featured image,
@@ -33,12 +34,18 @@ const IMAGE_CATS = new Set<FileCategory>([
   FileCategory.OTHER,
 ]);
 
+const VIDEO_CATS = new Set<FileCategory>([FileCategory.LANDING_FEATURED_VIDEO]);
+
 /**
  * Returns true when the MIME type is allowed for the given FileCategory.
  * - Image categories: only image/*
+ * - Video categories: only video/mp4
  * - Document categories: image/* + application/pdf
  */
 function isAllowedMime(c: FileCategory, m: string): boolean {
+  if (VIDEO_CATS.has(c)) {
+    return VIDEO_MIMES.includes(m as (typeof VIDEO_MIMES)[number]);
+  }
   return (IMAGE_CATS.has(c) ? IMAGE_MIMES : DOC_MIMES).includes(
     m as (typeof IMAGE_MIMES)[number],
   );
@@ -52,7 +59,9 @@ export {
   FileCategory,
   IMAGE_MIMES,
   DOC_MIMES,
+  VIDEO_MIMES,
   IMAGE_CATS,
+  VIDEO_CATS,
   isAllowedMime,
   isFileCategory,
 };

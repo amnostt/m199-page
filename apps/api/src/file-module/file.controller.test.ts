@@ -187,6 +187,35 @@ describe("FilesController", () => {
     });
   });
 
+  describe("POST /files/LANDING_FEATURED_VIDEO", () => {
+    it("delegates the dedicated video route to FileService", async () => {
+      const videoFile = {
+        originalname: "featured.mp4",
+        mimetype: "video/mp4",
+        size: 1024,
+        buffer: Buffer.from("mp4"),
+      } as Express.Multer.File;
+      vi.mocked(fileService.upload).mockResolvedValue({
+        ...SAMPLE_FILE_RESPONSE,
+        category: FileCategory.LANDING_FEATURED_VIDEO,
+        mimeType: "video/mp4",
+      });
+
+      const result = await controller.uploadFeaturedVideo(videoFile, {
+        user: { id: "u-1", email: "a@b.com", displayName: "A" },
+      } as unknown as Request);
+
+      expect(fileService.upload).toHaveBeenCalledWith({
+        buffer: videoFile.buffer,
+        originalFilename: videoFile.originalname,
+        mimeType: videoFile.mimetype,
+        category: FileCategory.LANDING_FEATURED_VIDEO,
+        uploadedById: "u-1",
+      });
+      expect(result.category).toBe(FileCategory.LANDING_FEATURED_VIDEO);
+    });
+  });
+
   describe("FileInterceptor wiring (FU-06)", () => {
     it("applies FileInterceptor with fileSize limit on POST upload handler", () => {
       // The @UseInterceptors(FileInterceptor("file", { limits: { fileSize: ... } }))
