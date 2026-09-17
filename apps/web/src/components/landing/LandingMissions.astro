@@ -24,15 +24,25 @@ import {
   PUBLIC_IMAGE_FALLBACK_HANDLER,
   resolvePublicImageUrl,
 } from "../../lib/public-image.js";
+import { normalizeLandingCopy } from "./landing-shape.js";
 
 interface Props {
   missions: MissionListItem[] | null;
+  title?: string | null;
+  description?: string | null;
 }
 
-const { missions } = Astro.props;
+const {
+  missions,
+  title = "Proyectos reales.",
+  description = "Cada salida, conversación y servicio es una oportunidad para buscar al uno.",
+} = Astro.props;
 const hasMissions = Boolean(missions && missions.length > 0);
 const showControls = hasMissions && (missions?.length ?? 0) > 1;
 const trackId = "missions-track";
+const normalizedTitle = normalizeLandingCopy(title);
+const normalizedDescription = normalizeLandingCopy(description);
+const titleParts = normalizedTitle?.match(/^(.*?)(\S+)\s*$/s);
 ---
 
 {hasMissions && (
@@ -40,14 +50,18 @@ const trackId = "missions-track";
     class="public-section landing-missions"
     id="misiones"
     data-testid="missions-section"
-    aria-labelledby="missions-title"
+    aria-labelledby={normalizedTitle ? "missions-title" : undefined}
+    aria-label={normalizedTitle ? undefined : "Misiones"}
   >
     <header class="landing-missions__header">
       <div class="landing-missions__heading">
         <p class="landing-missions__eyebrow">Misiones</p>
-        <h2 id="missions-title" class="landing-missions__title">
-          Proyectos <span class="landing-missions__underline">reales.</span>
-        </h2>
+        {normalizedTitle && (
+          <h2 id="missions-title" class="landing-missions__title">
+            {titleParts?.[1]}
+            <span class="landing-missions__underline">{titleParts?.[2]}</span>
+          </h2>
+        )}
       </div>
       <a class="landing-missions__status" href="/misiones" data-testid="missions-view-all">
         Ver todas las misiones
@@ -57,9 +71,11 @@ const trackId = "missions-track";
 
     <div class="landing-missions__carousel">
       <div class="landing-missions__carousel-head">
-        <p class="landing-missions__note" data-testid="missions-subtitle">
-          Cada salida, conversación y servicio es una oportunidad para buscar al uno.
-        </p>
+        {normalizedDescription && (
+          <p class="landing-missions__note" data-testid="missions-subtitle">
+            {normalizedDescription}
+          </p>
+        )}
         {showControls && (
           <div
             class="landing-missions__controls"

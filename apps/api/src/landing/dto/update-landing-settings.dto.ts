@@ -4,7 +4,7 @@
  * LP-01: All fields are optional strings. The service layer applies
  * a partial merge — omitted fields retain their current values.
  */
-import { IsOptional, IsString, IsUrl, ValidateIf } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, IsUrl } from "class-validator";
 
 export class UpdateLandingSettingsDto {
   @IsOptional()
@@ -15,9 +15,30 @@ export class UpdateLandingSettingsDto {
   @IsString()
   heroSubtitle?: string;
 
-  @ValidateIf((_object, value) => value !== undefined)
+  @IsOptional()
   @IsString()
-  heroImageId?: string;
+  @IsNotEmpty()
+  heroImageId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  missionsTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  missionsDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  publicationsTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  publicationsDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  aboutTitle?: string;
 
   @IsOptional()
   @IsString()
@@ -30,6 +51,14 @@ export class UpdateLandingSettingsDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  contactTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  contactDescription?: string;
 
   @IsOptional()
   @IsUrl(
@@ -53,4 +82,9 @@ export class UpdateLandingSettingsDto {
   @IsOptional()
   @IsString()
   verseReference?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  visualBreakImageId?: string | null;
 }

@@ -1,19 +1,29 @@
 ---
 /**
  * LandingBanner.astro — visual pause between the verse and the
- * missions block. Reuses the bundled OpenDesign `banner.png` asset.
+ * missions block. Uses an optional CMS asset and the bundled OpenDesign
+ * `banner.png` asset as its fallback.
  * The image is decorative so the figure is collapsed to aria-label
  * semantics and the image carries an empty alt.
  */
+interface Props {
+  visualBreakImageUrl?: string | null;
+}
+
+const { visualBreakImageUrl = null } = Astro.props;
+const fallbackSrc = "/assets/redesign/banner.png";
+const imageSrc = visualBreakImageUrl?.trim() || fallbackSrc;
 ---
 
 <figure class="landing-banner" data-testid="banner-section">
   <img
-    src="/assets/redesign/banner.png"
+    src={imageSrc}
     alt=""
     loading="lazy"
     decoding="async"
     class="landing-banner__image"
     data-testid="banner-image"
+    data-cms-image={imageSrc === fallbackSrc ? "fallback" : "present"}
+    onerror={`this.onerror=null;this.src='${fallbackSrc}';`}
   />
 </figure>

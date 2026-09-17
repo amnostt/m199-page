@@ -1,9 +1,16 @@
 type LandingSeedTextField =
   | "heroTitle"
   | "heroSubtitle"
+  | "missionsTitle"
+  | "missionsDescription"
+  | "publicationsTitle"
+  | "publicationsDescription"
+  | "aboutTitle"
   | "mission"
   | "vision"
   | "description"
+  | "contactTitle"
+  | "contactDescription"
   | "contactEmail"
   | "contactPhone"
   | "verseText"
@@ -30,12 +37,22 @@ export const DEFAULT_LANDING_SETTINGS: NullableLandingSeedText = {
   heroTitle: "Misión 1-99",
   heroSubtitle:
     "Acompañamos a comunidades y familias con esperanza, servicio y fe.",
+  missionsTitle: "Proyectos reales.",
+  missionsDescription:
+    "Cada salida, conversación y servicio es una oportunidad para buscar al uno.",
+  publicationsTitle: "Lo que estamos viviendo.",
+  publicationsDescription:
+    "Historias, salidas y momentos que mantienen viva la misión.",
+  aboutTitle: "No esperamos.\nSalimos.",
   mission:
     "Servir con amor, construir vínculos y compartir recursos que transformen vidas.",
   vision:
     "Ver comunidades fortalecidas, unidas y activas en el cuidado de cada persona.",
   description:
     "Somos una misión comprometida con acercar ayuda concreta, acompañamiento espiritual y oportunidades de encuentro para quienes más lo necesitan.",
+  contactTitle: "Hablemos.\nVamos juntos.",
+  contactDescription:
+    "¿Quieres servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos.",
   contactEmail: "contacto@mision199.org",
   contactPhone: "+54 9 11 0000-0000",
   verseText: "No nos cansemos de hacer el bien.",

@@ -24,14 +24,22 @@ export interface LandingSettingsRow {
   heroTitle: string | null;
   heroSubtitle: string | null;
   heroImageId: string | null;
+  missionsTitle: string | null;
+  missionsDescription: string | null;
+  publicationsTitle: string | null;
+  publicationsDescription: string | null;
+  aboutTitle: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
   featuredVideoUrl: string | null;
+  contactTitle: string | null;
+  contactDescription: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
   verseText: string | null;
   verseReference: string | null;
+  visualBreakImageId: string | null;
 }
 
 interface FileAssetRow {
@@ -75,12 +83,20 @@ export interface LandingPublicPayload {
   heroTitle: string | null;
   heroSubtitle: string | null;
   heroImageUrl: string | null;
+  missionsTitle: string | null;
+  missionsDescription: string | null;
+  publicationsTitle: string | null;
+  publicationsDescription: string | null;
+  aboutTitle: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
   featuredVideoUrl: string | null;
+  contactTitle: string | null;
+  contactDescription: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  visualBreakImageUrl: string | null;
   currentVerse: CurrentVersePayload | null;
 }
 
@@ -107,9 +123,12 @@ export class LandingService {
     return `/files/${fileId}`;
   }
 
-  /** Validates that a hero asset exists and belongs to the hero category. */
-  private async validateHeroImage(fileId: string): Promise<void> {
-    await assertFileCategory(this.client, fileId, "LANDING_HERO");
+  /** Validates that a landing asset exists and belongs to its category. */
+  private async validateLandingImage(
+    fileId: string,
+    category: "LANDING_HERO" | "LANDING_VISUAL_BREAK",
+  ): Promise<void> {
+    await assertFileCategory(this.client, fileId, category);
   }
 
   // -----------------------------------------------------------------------
@@ -135,8 +154,17 @@ export class LandingService {
   async updateSettings(
     dto: UpdateLandingSettingsDto,
   ): Promise<LandingSettingsRow> {
-    if (dto.heroImageId !== undefined) {
-      await this.validateHeroImage(dto.heroImageId);
+    if (dto.heroImageId !== undefined && dto.heroImageId !== null) {
+      await this.validateLandingImage(dto.heroImageId, "LANDING_HERO");
+    }
+    if (
+      dto.visualBreakImageId !== undefined &&
+      dto.visualBreakImageId !== null
+    ) {
+      await this.validateLandingImage(
+        dto.visualBreakImageId,
+        "LANDING_VISUAL_BREAK",
+      );
     }
 
     // Build the update payload from only the fields that were actually provided.
@@ -144,16 +172,29 @@ export class LandingService {
     if (dto.heroTitle !== undefined) data.heroTitle = dto.heroTitle;
     if (dto.heroSubtitle !== undefined) data.heroSubtitle = dto.heroSubtitle;
     if (dto.heroImageId !== undefined) data.heroImageId = dto.heroImageId;
+    if (dto.missionsTitle !== undefined) data.missionsTitle = dto.missionsTitle;
+    if (dto.missionsDescription !== undefined)
+      data.missionsDescription = dto.missionsDescription;
+    if (dto.publicationsTitle !== undefined)
+      data.publicationsTitle = dto.publicationsTitle;
+    if (dto.publicationsDescription !== undefined)
+      data.publicationsDescription = dto.publicationsDescription;
+    if (dto.aboutTitle !== undefined) data.aboutTitle = dto.aboutTitle;
     if (dto.mission !== undefined) data.mission = dto.mission;
     if (dto.vision !== undefined) data.vision = dto.vision;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.featuredVideoUrl !== undefined)
       data.featuredVideoUrl = dto.featuredVideoUrl;
+    if (dto.contactTitle !== undefined) data.contactTitle = dto.contactTitle;
+    if (dto.contactDescription !== undefined)
+      data.contactDescription = dto.contactDescription;
     if (dto.contactEmail !== undefined) data.contactEmail = dto.contactEmail;
     if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
     if (dto.verseText !== undefined) data.verseText = dto.verseText;
     if (dto.verseReference !== undefined)
       data.verseReference = dto.verseReference;
+    if (dto.visualBreakImageId !== undefined)
+      data.visualBreakImageId = dto.visualBreakImageId;
 
     return this.client.landingSettings.upsert({
       where: { id: 1 },
@@ -180,17 +221,29 @@ export class LandingService {
 
     const verseText = settings?.verseText?.trim() ?? "";
     const verseReference = settings?.verseReference?.trim() ?? "";
+    const normalizeCopy = (value: string | null | undefined): string | null => {
+      const normalized = value?.trim() ?? "";
+      return normalized || null;
+    };
 
     return {
-      heroTitle: settings?.heroTitle ?? null,
-      heroSubtitle: settings?.heroSubtitle ?? null,
+      heroTitle: normalizeCopy(settings?.heroTitle),
+      heroSubtitle: normalizeCopy(settings?.heroSubtitle),
       heroImageUrl: this.fileUrl(settings?.heroImageId),
-      mission: settings?.mission ?? null,
-      vision: settings?.vision ?? null,
-      description: settings?.description ?? null,
+      missionsTitle: normalizeCopy(settings?.missionsTitle),
+      missionsDescription: normalizeCopy(settings?.missionsDescription),
+      publicationsTitle: normalizeCopy(settings?.publicationsTitle),
+      publicationsDescription: normalizeCopy(settings?.publicationsDescription),
+      aboutTitle: normalizeCopy(settings?.aboutTitle),
+      mission: normalizeCopy(settings?.mission),
+      vision: normalizeCopy(settings?.vision),
+      description: normalizeCopy(settings?.description),
       featuredVideoUrl: settings?.featuredVideoUrl ?? null,
-      contactEmail: settings?.contactEmail ?? null,
-      contactPhone: settings?.contactPhone ?? null,
+      contactTitle: normalizeCopy(settings?.contactTitle),
+      contactDescription: normalizeCopy(settings?.contactDescription),
+      contactEmail: normalizeCopy(settings?.contactEmail),
+      contactPhone: normalizeCopy(settings?.contactPhone),
+      visualBreakImageUrl: this.fileUrl(settings?.visualBreakImageId),
       currentVerse:
         verseText && verseReference
           ? { text: verseText, reference: verseReference }

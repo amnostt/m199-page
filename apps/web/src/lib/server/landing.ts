@@ -36,6 +36,11 @@ export interface LandingPublicPayload {
   heroTitle: string | null;
   heroSubtitle: string | null;
   heroImageUrl: string | null;
+  missionsTitle: string | null;
+  missionsDescription: string | null;
+  publicationsTitle: string | null;
+  publicationsDescription: string | null;
+  aboutTitle: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
@@ -45,8 +50,11 @@ export interface LandingPublicPayload {
    * string; unsafe values are omitted on the way in.
    */
   featuredVideoUrl: string | null;
+  contactTitle: string | null;
+  contactDescription: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  visualBreakImageUrl: string | null;
   currentVerse: CurrentVersePayload | null;
 }
 
@@ -159,14 +167,25 @@ export function validateLandingPublicPayload(
     heroTitle: requireNullableString(c, "heroTitle"),
     heroSubtitle: requireNullableString(c, "heroSubtitle"),
     heroImageUrl: requireNullableString(c, "heroImageUrl"),
+    missionsTitle: requireNullableString(c, "missionsTitle"),
+    missionsDescription: requireNullableString(c, "missionsDescription"),
+    publicationsTitle: requireNullableString(c, "publicationsTitle"),
+    publicationsDescription: requireNullableString(
+      c,
+      "publicationsDescription",
+    ),
+    aboutTitle: requireNullableString(c, "aboutTitle"),
     mission: requireNullableString(c, "mission"),
     vision: requireNullableString(c, "vision"),
     description: requireNullableString(c, "description"),
     featuredVideoUrl: validateFeaturedVideoUrl(
       requireNullableString(c, "featuredVideoUrl"),
     ),
+    contactTitle: requireNullableString(c, "contactTitle"),
+    contactDescription: requireNullableString(c, "contactDescription"),
     contactEmail: requireNullableString(c, "contactEmail"),
     contactPhone: requireNullableString(c, "contactPhone"),
+    visualBreakImageUrl: requireNullableString(c, "visualBreakImageUrl"),
     currentVerse: validateCurrentVerse(c.currentVerse),
   };
 }

@@ -15,14 +15,25 @@
  *     payload exposes at least one contact channel (the parent
  *     passes `hasContact`).
  */
-import type { LandingPayloadShape } from "./landing-shape.js";
+import {
+  normalizeLandingCopy,
+  type LandingPayloadShape,
+} from "./landing-shape.js";
 
 interface Props extends Pick<LandingPayloadShape, "mission" | "vision" | "description"> {
+  aboutTitle?: string | null;
   hasContact: boolean;
 }
 
-const { mission, vision, description, hasContact } = Astro.props;
-const narrative = description?.trim() || mission?.trim() || vision?.trim();
+const {
+  aboutTitle = "No esperamos.\nSalimos.",
+  mission,
+  vision,
+  description,
+  hasContact,
+} = Astro.props;
+const normalizedTitle = normalizeLandingCopy(aboutTitle);
+const narrative = normalizeLandingCopy(description) || normalizeLandingCopy(mission) || normalizeLandingCopy(vision);
 const hasContent = Boolean(narrative);
 const galleryImages = [
   {
@@ -45,15 +56,24 @@ const galleryImages = [
     class="public-section landing-about"
     id="nosotros"
     data-testid="about-section"
-    aria-labelledby="about-title"
+    aria-labelledby={normalizedTitle ? "about-title" : undefined}
+    aria-label={normalizedTitle ? undefined : "Nosotros"}
   >
     <div class="landing-about__inner">
       <div class="landing-about__intro">
         <p class="landing-about__eyebrow">Nosotros</p>
-        <h2 id="about-title" class="landing-about__title">
-          No esperamos.<br />
-          <span class="landing-about__underline">Salimos.</span>
-        </h2>
+        {normalizedTitle && (
+          <h2 id="about-title" class="landing-about__title">
+            {normalizedTitle.split(/\r?\n/).map((line, index) => (
+              <span>
+                {index > 0 && <br />}
+                {index === normalizedTitle.split(/\r?\n/).length - 1 ? (
+                  <span class="landing-about__underline">{line}</span>
+                ) : line}
+              </span>
+            ))}
+          </h2>
+        )}
         {narrative && (
           <p class="landing-about__copy" data-testid="about-description">{narrative}</p>
         )}

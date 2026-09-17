@@ -24,12 +24,17 @@
  *   - The isotype image is always decorative (empty alt,
  *     aria-hidden).
  */
-import type { LandingPayloadShape } from "./landing-shape.js";
+import {
+  normalizeLandingCopy,
+  type LandingPayloadShape,
+} from "./landing-shape.js";
 
 interface Props extends Pick<LandingPayloadShape, "heroTitle" | "heroSubtitle" | "heroImageUrl"> {}
 
 const { heroTitle, heroSubtitle, heroImageUrl } = Astro.props;
-const hasTitle = Boolean(heroTitle);
+const normalizedTitle = normalizeLandingCopy(heroTitle);
+const normalizedSubtitle = normalizeLandingCopy(heroSubtitle);
+const hasTitle = Boolean(normalizedTitle);
 const foregroundSrc = heroImageUrl || "/assets/redesign/hero-final.png";
 const isDecorativeForeground = !heroImageUrl;
 const isotypeSrc = "/assets/brand/isotipo-white.png";
@@ -45,13 +50,13 @@ const isotypeSrc = "/assets/brand/isotipo-white.png";
   <div class="public-hero__background" aria-hidden="true"></div>
   <div class="public-hero__grid">
     <div class="public-hero__copy">
-      {heroTitle && <h1 id="hero-title" data-testid="hero-title">{heroTitle}</h1>}
-      {heroSubtitle && <p data-testid="hero-subtitle">{heroSubtitle}</p>}
+      {normalizedTitle && <h1 id="hero-title" data-testid="hero-title">{normalizedTitle}</h1>}
+      {normalizedSubtitle && <p data-testid="hero-subtitle">{normalizedSubtitle}</p>}
     </div>
     <div class="public-hero__visual" data-testid="hero-visual">
       <img
         src={foregroundSrc}
-        alt={heroTitle ?? ""}
+        alt={normalizedTitle ?? ""}
         class="public-hero__image"
         data-testid="hero-image"
         aria-hidden={hasTitle ? undefined : "true"}

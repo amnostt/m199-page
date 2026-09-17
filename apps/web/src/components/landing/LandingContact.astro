@@ -18,12 +18,28 @@
  *     carries the brand wordmark, responsible access, an editorial
  *     line, and the obligatory copyright.
  */
-import type { LandingPayloadShape } from "./landing-shape.js";
+import {
+  normalizeLandingCopy,
+  type LandingPayloadShape,
+} from "./landing-shape.js";
 
-interface Props extends Pick<LandingPayloadShape, "contactEmail" | "contactPhone"> {}
+interface Props extends Pick<LandingPayloadShape, "contactEmail" | "contactPhone"> {
+  contactTitle?: string | null;
+  contactDescription?: string | null;
+}
 
-const email = Astro.props.contactEmail?.trim() || null;
-const phone = Astro.props.contactPhone?.trim() || null;
+const title = normalizeLandingCopy(
+  Astro.props.contactTitle === undefined
+    ? "Hablemos.\nVamos juntos."
+    : Astro.props.contactTitle,
+);
+const description = normalizeLandingCopy(
+  Astro.props.contactDescription === undefined
+    ? "¿Quieres servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos."
+    : Astro.props.contactDescription,
+);
+const email = normalizeLandingCopy(Astro.props.contactEmail);
+const phone = normalizeLandingCopy(Astro.props.contactPhone);
 const phoneHref = phone?.replace(/[^+\d]/g, "");
 ---
 
@@ -32,17 +48,23 @@ const phoneHref = phone?.replace(/[^+\d]/g, "");
     class="public-section landing-contact"
     id="contacto"
     data-testid="contact-section"
-    aria-labelledby="contact-title"
+    aria-labelledby={title ? "contact-title" : undefined}
+    aria-label={title ? undefined : "Contacto"}
   >
     <div class="landing-contact__inner">
       <div class="landing-contact__intro">
         <p class="landing-contact__eyebrow">Contacto</p>
-        <h2 id="contact-title" class="landing-contact__title">
-          Hablemos.<br />Vamos juntos.
-        </h2>
-        <p class="landing-contact__copy">
-          ¿Quieres servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos.
-        </p>
+        {title && (
+          <h2 id="contact-title" class="landing-contact__title">
+            {title.split(/\r?\n/).map((line, index) => (
+              <span>
+                {index > 0 && <br />}
+                {line}
+              </span>
+            ))}
+          </h2>
+        )}
+        {description && <p class="landing-contact__copy">{description}</p>}
       </div>
 
       <div class="landing-contact__channels">

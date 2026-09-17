@@ -13,15 +13,25 @@ import {
   PUBLIC_IMAGE_FALLBACK_HANDLER,
   resolvePublicImageUrl,
 } from "../../lib/public-image.js";
+import { normalizeLandingCopy } from "./landing-shape.js";
 
 interface Props {
   publications: PublicationListItem[] | null;
+  title?: string | null;
+  description?: string | null;
 }
 
-const { publications } = Astro.props;
+const {
+  publications,
+  title = "Lo que estamos viviendo.",
+  description = "Historias, salidas y momentos que mantienen viva la misión.",
+} = Astro.props;
 const hasPublications = Boolean(publications && publications.length > 0);
 const showControls = hasPublications && (publications?.length ?? 0) > 1;
 const trackId = "publications-track";
+const normalizedTitle = normalizeLandingCopy(title);
+const normalizedDescription = normalizeLandingCopy(description);
+const titleParts = normalizedTitle?.match(/^(.*?)(\S+)\s*$/s);
 ---
 
 {hasPublications && (
@@ -29,15 +39,19 @@ const trackId = "publications-track";
     class="public-section landing-publications"
     id="publicaciones"
     data-testid="publications-entry"
-    aria-labelledby="publications-entry-title"
+    aria-labelledby={normalizedTitle ? "publications-entry-title" : undefined}
+    aria-label={normalizedTitle ? undefined : "Publicaciones"}
   >
     <div class="landing-publications__inner">
       <header class="landing-publications__header">
         <div class="landing-publications__heading">
           <p class="landing-publications__eyebrow">Publicaciones</p>
-          <h2 id="publications-entry-title" class="landing-publications__title">
-            Lo que estamos <span class="landing-publications__underline">viviendo.</span>
-          </h2>
+          {normalizedTitle && (
+            <h2 id="publications-entry-title" class="landing-publications__title">
+              {titleParts?.[1]}
+              <span class="landing-publications__underline">{titleParts?.[2]}</span>
+            </h2>
+          )}
         </div>
         <a class="landing-publications__link" href="/publicaciones" data-testid="publications-entry-link">
           <span class="landing-publications__link-label">Ver todas las publicaciones</span>
@@ -47,9 +61,11 @@ const trackId = "publications-track";
 
       <div class="landing-publications__carousel">
         <div class="landing-publications__carousel-head">
-          <p class="landing-publications__note" data-testid="publications-subtitle">
-            Historias, salidas y momentos que mantienen viva la misión.
-          </p>
+          {normalizedDescription && (
+            <p class="landing-publications__note" data-testid="publications-subtitle">
+              {normalizedDescription}
+            </p>
+          )}
           {showControls && (
             <div
               class="landing-publications__controls"

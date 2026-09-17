@@ -21,12 +21,23 @@ function fullPayload(): LandingPayloadShape {
     heroTitle: "Misión 1-99",
     heroSubtitle: "Transformamos vidas",
     heroImageUrl: "/files/hero",
+    missionsTitle: "Proyectos reales.",
+    missionsDescription:
+      "Cada salida, conversación y servicio es una oportunidad para buscar al uno.",
+    publicationsTitle: "Lo que estamos viviendo.",
+    publicationsDescription:
+      "Historias, salidas y momentos que mantienen viva la misión.",
+    aboutTitle: "No esperamos.\nSalimos.",
     mission: "Alcanzar a cada persona",
     vision: "Ver cada vida transformada",
     description: "Somos una comunidad de fe",
     featuredVideoUrl: "https://www.youtube.com/embed/abc",
+    contactTitle: "Hablemos.\nVamos juntos.",
+    contactDescription:
+      "¿Quieres servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos.",
     contactEmail: "contacto@m199.org",
     contactPhone: "+54 11 1234-5678",
+    visualBreakImageUrl: "/files/banner",
     currentVerse: {
       text: "Id por todo el mundo",
       reference: "Marcos 16:15",
@@ -39,12 +50,20 @@ function minimalPayload(): LandingPayloadShape {
     heroTitle: null,
     heroSubtitle: null,
     heroImageUrl: null,
+    missionsTitle: null,
+    missionsDescription: null,
+    publicationsTitle: null,
+    publicationsDescription: null,
+    aboutTitle: null,
     mission: null,
     vision: null,
     description: null,
     featuredVideoUrl: null,
+    contactTitle: null,
+    contactDescription: null,
     contactEmail: null,
     contactPhone: null,
+    visualBreakImageUrl: null,
     currentVerse: null,
   };
 }
@@ -126,6 +145,14 @@ describe("Landing.astro — successful markup", () => {
     // Sanity-check the section content for the most error-prone fields.
     expect(html).toContain("Misión 1-99");
     expect(html).toContain("Transformamos vidas");
+    expect(html).toContain("Proyectos");
+    expect(html).toContain("reales.");
+    expect(html).toContain("Cada salida, conversación y servicio");
+    expect(html).toContain("Lo que estamos");
+    expect(html).toContain("viviendo.");
+    expect(html).toContain("Historias, salidas y momentos");
+    expect(html).toContain("No esperamos.");
+    expect(html).toContain("Hablemos.");
     expect(html).toContain("Id por todo el mundo");
     expect(html).toContain("Marcos 16:15");
     // The latest publications carousel keeps the archive link real and never
@@ -232,7 +259,45 @@ describe("Landing.astro — about, verse, banner, and contact", () => {
   it("renders the OpenDesign banner visual pause", async () => {
     const html = await render(fullPayload());
     expect(html).toContain('data-testid="banner-section"');
+    expect(html).toContain('src="/files/banner"');
+    expect(html).toContain('data-cms-image="present"');
+  });
+
+  it("uses the bundled banner fallback when the visual-break image is absent", async () => {
+    const html = await render({ ...fullPayload(), visualBreakImageUrl: null });
     expect(html).toContain('src="/assets/redesign/banner.png"');
+    expect(html).toContain('data-cms-image="fallback"');
+  });
+
+  it("keeps cards and optional sections when configurable headings and descriptions are blank", async () => {
+    const html = await render(
+      {
+        ...fullPayload(),
+        missionsTitle: "   ",
+        missionsDescription: "\t",
+        publicationsTitle: "\n",
+        publicationsDescription: "   ",
+        aboutTitle: "   ",
+        contactTitle: "\t",
+        contactDescription: "   ",
+      },
+      null,
+      [{ slug: "alpha", title: "Alpha" }],
+    );
+
+    expect(html).toContain('data-testid="missions-section"');
+    expect(html).toContain('data-testid="mission-card"');
+    expect(html).not.toContain('id="missions-title"');
+    expect(html).not.toContain('data-testid="missions-subtitle"');
+    expect(html).toContain('data-testid="publications-entry"');
+    expect(html).toContain('data-testid="publication-card"');
+    expect(html).not.toContain('id="publications-entry-title"');
+    expect(html).not.toContain('data-testid="publications-subtitle"');
+    expect(html).toContain('data-testid="about-section"');
+    expect(html).not.toContain('id="about-title"');
+    expect(html).toContain('data-testid="contact-section"');
+    expect(html).not.toContain('id="contact-title"');
+    expect(html).not.toContain('class="landing-contact__copy"');
   });
 
   it("renders the latest publications carousel and archive link", async () => {

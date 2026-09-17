@@ -109,13 +109,22 @@ const publicationsHref = "/publicaciones";
 
     <LandingVerse verse={payload.currentVerse} />
 
-    <LandingBanner />
+    <LandingBanner visualBreakImageUrl={payload.visualBreakImageUrl} />
 
-    <LandingMissions missions={missions} />
+    <LandingMissions
+      missions={missions}
+      title={payload.missionsTitle}
+      description={payload.missionsDescription}
+    />
 
-    <LandingPublications publications={publications} />
+    <LandingPublications
+      publications={publications}
+      title={payload.publicationsTitle}
+      description={payload.publicationsDescription}
+    />
 
     <LandingAbout
+      aboutTitle={payload.aboutTitle}
       mission={payload.mission}
       vision={payload.vision}
       description={payload.description}
@@ -125,6 +134,8 @@ const publicationsHref = "/publicaciones";
     <LandingFeaturedVideo featuredVideoUrl={payload.featuredVideoUrl} />
 
     <LandingContact
+      contactTitle={payload.contactTitle}
+      contactDescription={payload.contactDescription}
       contactEmail={payload.contactEmail}
       contactPhone={payload.contactPhone}
     />

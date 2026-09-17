@@ -23,14 +23,22 @@ export interface LandingSettingsRow {
   heroTitle: string | null;
   heroSubtitle: string | null;
   heroImageId: string | null;
+  missionsTitle: string | null;
+  missionsDescription: string | null;
+  publicationsTitle: string | null;
+  publicationsDescription: string | null;
+  aboutTitle: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
   featuredVideoUrl: string | null;
+  contactTitle: string | null;
+  contactDescription: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
   verseText: string | null;
   verseReference: string | null;
+  visualBreakImageId: string | null;
 }
 
 const FULL_SETTINGS: LandingSettingsRow = {
@@ -38,14 +46,22 @@ const FULL_SETTINGS: LandingSettingsRow = {
   heroTitle: "Misión 1-99",
   heroSubtitle: "Transformando vidas",
   heroImageId: "img-001",
+  missionsTitle: "Proyectos reales.",
+  missionsDescription: "Cada salida, conversación y servicio.",
+  publicationsTitle: "Lo que estamos viviendo.",
+  publicationsDescription: "Historias de la misión.",
+  aboutTitle: "No esperamos. Salimos.",
   mission: "Nuestra misión es servir",
   vision: "Ser referencia en la comunidad",
   description: "Somos una organización dedicada a...",
   featuredVideoUrl: "https://youtube.com/watch?v=abc",
+  contactTitle: "Hablemos. Vamos juntos.",
+  contactDescription: "Conoce más sobre una misión.",
   contactEmail: "info@m199.org",
   contactPhone: "+54 11 1234-5678",
   verseText: "Todo lo puedo en Cristo que me fortalece",
   verseReference: "Filipenses 4:13",
+  visualBreakImageId: "img-break-001",
 };
 
 const UPDATED_SETTINGS: LandingSettingsRow = {
@@ -155,6 +171,31 @@ describe("LandingAdminController", () => {
       expect(result.featuredVideoUrl).toBeNull();
     });
 
+    it("accepts null to clear either landing image", async () => {
+      const pipe = new ValidationPipe({ whitelist: true, transform: true });
+      const result = await pipe.transform(
+        { heroImageId: null, visualBreakImageId: null },
+        { type: "body", metatype: UpdateLandingSettingsDto },
+      );
+
+      expect(result.heroImageId).toBeNull();
+      expect(result.visualBreakImageId).toBeNull();
+    });
+
+    it.each(["heroImageId", "visualBreakImageId"] as const)(
+      "rejects an empty %s before reaching the service",
+      async (field) => {
+        const pipe = new ValidationPipe({ whitelist: true, transform: true });
+
+        await expect(
+          pipe.transform(
+            { [field]: "" },
+            { type: "body", metatype: UpdateLandingSettingsDto },
+          ),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      },
+    );
+
     it("rejects unsafe video URLs through the real Nest route", async () => {
       const landingService = mockLandingService();
       const module = await Test.createTestingModule({
@@ -182,7 +223,7 @@ describe("LandingAdminController", () => {
       }
     });
 
-    it("rejects an explicit null hero image before calling the service", async () => {
+    it("passes an explicit null hero image through the real Nest route", async () => {
       const landingService = mockLandingService();
       const module = await Test.createTestingModule({
         controllers: [LandingAdminController],
@@ -202,8 +243,10 @@ describe("LandingAdminController", () => {
           .put("/landing/admin")
           .send({ heroImageId: null });
 
-        expect(res.status).toBe(400);
-        expect(landingService.updateSettings).not.toHaveBeenCalled();
+        expect(res.status).toBe(200);
+        expect(landingService.updateSettings).toHaveBeenCalledWith({
+          heroImageId: null,
+        });
       } finally {
         await app.close();
       }

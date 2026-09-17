@@ -6,7 +6,7 @@
  *
  * The approved vocabulary is the Mission/Publication domain reset
  * subset: MISSION_HERO, PUBLICATION_FEATURED_IMAGE, PUBLICATION_DOWNLOAD,
- * LANDING_HERO, OTHER. Legacy POST_/OUTING_-only values are not
+ * LANDING_HERO, LANDING_VISUAL_BREAK, OTHER. Legacy POST_/OUTING_-only values are not
  * representable in the regenerated Prisma enum.
  */
 import { FileCategory } from "@prisma/client";
@@ -22,13 +22,14 @@ const DOC_MIMES = [...IMAGE_MIMES, "application/pdf"] as const;
 
 /**
  * Image-only categories — Mission hero, Publication featured image,
- * Landing hero, and Other. PUBLICATION_DOWNLOAD is a document category
- * (allows image/* + application/pdf).
+ * Landing hero, visual break, and Other. PUBLICATION_DOWNLOAD is a document
+ * category (allows image/* + application/pdf).
  */
 const IMAGE_CATS = new Set<FileCategory>([
   FileCategory.MISSION_HERO,
   FileCategory.PUBLICATION_FEATURED_IMAGE,
   FileCategory.LANDING_HERO,
+  FileCategory.LANDING_VISUAL_BREAK,
   FileCategory.OTHER,
 ]);
 

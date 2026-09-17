@@ -44,14 +44,22 @@ const SAMPLE_SETTINGS = {
   heroTitle: "Welcome to M199",
   heroSubtitle: "Serving the community",
   heroImageId: "existing-hero",
+  missionsTitle: "Mission projects",
+  missionsDescription: "Mission description",
+  publicationsTitle: "Publication stories",
+  publicationsDescription: "Publication description",
+  aboutTitle: "About us",
   mission: "Our mission text",
   vision: "Our vision text",
   description: "Our description text",
   featuredVideoUrl: "https://video.example.com/embed",
+  contactTitle: "Contact us",
+  contactDescription: "Contact description",
   contactEmail: "contact@example.com",
   contactPhone: "+54 11 1234-5678",
   verseText: "Todo lo puedo en Cristo que me fortalece",
   verseReference: "Filipenses 4:13",
+  visualBreakImageId: "existing-break",
 };
 
 // ---------------------------------------------------------------------------
@@ -114,14 +122,33 @@ describe("LandingSettingsPage load", () => {
       screen.getByAltText("Imagen hero de Welcome to M199").getAttribute("src"),
     ).toBe(`/files/${SAMPLE_SETTINGS.heroImageId}`);
     expect(
-      within(screen.getByTestId("landing-hero-upload-widget")).queryByTestId(
+      within(screen.getByTestId("landing-hero-upload-widget")).getByTestId(
         "file-upload-remove",
       ),
-    ).toBeNull();
+    ).toBeTruthy();
+    expect(
+      (screen.getByLabelText("Título de Misiones") as HTMLInputElement).value,
+    ).toBe(SAMPLE_SETTINGS.missionsTitle);
+    expect(
+      (
+        screen.getByLabelText("Descripción de Publicaciones", {
+          selector: "textarea",
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toBe(SAMPLE_SETTINGS.publicationsDescription);
+    expect(
+      within(
+        screen.getByTestId("landing-visual-break-upload-widget"),
+      ).getByTestId("file-upload-remove"),
+    ).toBeTruthy();
     expect(screen.queryByLabelText(/^misión$/i)).toBeNull();
     expect(screen.queryByLabelText(/^visión$/i)).toBeNull();
     expect(
-      (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).value,
+      (
+        screen.getByLabelText("Descripción", {
+          selector: "textarea",
+        }) as HTMLTextAreaElement
+      ).value,
     ).toBe(SAMPLE_SETTINGS.description);
     expect(
       (screen.getByLabelText(/video destacado/i) as HTMLInputElement).value,
@@ -158,7 +185,11 @@ describe("LandingSettingsPage load", () => {
 
     // All fields must be empty strings, never "null"
     expect(
-      (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).value,
+      (
+        screen.getByLabelText("Descripción", {
+          selector: "textarea",
+        }) as HTMLTextAreaElement
+      ).value,
     ).toBe("");
     expect(
       (screen.getByLabelText(/video destacado/i) as HTMLInputElement).value,
@@ -233,7 +264,11 @@ describe("LandingSettingsPage load", () => {
     expect(screen.queryByLabelText(/^misión$/i)).toBeNull();
     expect(screen.queryByLabelText(/^visión$/i)).toBeNull();
     expect(
-      (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).value,
+      (
+        screen.getByLabelText("Descripción", {
+          selector: "textarea",
+        }) as HTMLTextAreaElement
+      ).value,
     ).toBe("");
   });
 });
@@ -279,7 +314,9 @@ describe("LandingSettingsPage edit and save", () => {
   it("allows editing each field", async () => {
     await renderWithSettings();
 
-    const descriptionField = screen.getByLabelText(/descripción/i);
+    const descriptionField = screen.getByLabelText("Descripción", {
+      selector: "textarea",
+    });
     fireEvent.change(descriptionField, {
       target: { value: "Updated description" },
     });
@@ -382,9 +419,12 @@ describe("LandingSettingsPage edit and save", () => {
       json: () => Promise.resolve(updatedSettings),
     } as unknown as Response);
 
-    fireEvent.change(screen.getByLabelText(/descripción/i), {
-      target: { value: "Saved description" },
-    });
+    fireEvent.change(
+      screen.getByLabelText("Descripción", { selector: "textarea" }),
+      {
+        target: { value: "Saved description" },
+      },
+    );
 
     await confirmSave();
 
@@ -413,11 +453,21 @@ describe("LandingSettingsPage edit and save", () => {
     expect(body).not.toHaveProperty("vision");
     expect(body.description).toBe("Saved description");
     expect(body.heroImageId).toBe(SAMPLE_SETTINGS.heroImageId);
+    expect(body.missionsTitle).toBe(SAMPLE_SETTINGS.missionsTitle);
+    expect(body.missionsDescription).toBe(SAMPLE_SETTINGS.missionsDescription);
+    expect(body.publicationsTitle).toBe(SAMPLE_SETTINGS.publicationsTitle);
+    expect(body.publicationsDescription).toBe(
+      SAMPLE_SETTINGS.publicationsDescription,
+    );
+    expect(body.aboutTitle).toBe(SAMPLE_SETTINGS.aboutTitle);
     expect(body.featuredVideoUrl).toBe(SAMPLE_SETTINGS.featuredVideoUrl);
+    expect(body.contactTitle).toBe(SAMPLE_SETTINGS.contactTitle);
+    expect(body.contactDescription).toBe(SAMPLE_SETTINGS.contactDescription);
     expect(body.contactEmail).toBe(SAMPLE_SETTINGS.contactEmail);
     expect(body.contactPhone).toBe(SAMPLE_SETTINGS.contactPhone);
     expect(body.verseText).toBe(SAMPLE_SETTINGS.verseText);
     expect(body.verseReference).toBe(SAMPLE_SETTINGS.verseReference);
+    expect(body.visualBreakImageId).toBe(SAMPLE_SETTINGS.visualBreakImageId);
   });
 
   it("sends an empty featured video URL as null", async () => {
@@ -479,11 +529,16 @@ describe("LandingSettingsPage edit and save", () => {
     fireEvent.change(screen.getByLabelText("Título principal"), {
       target: { value: "Updated hero" },
     });
-    fireEvent.change(screen.getByTestId("file-upload-input"), {
-      target: {
-        files: [new File(["image"], "hero.png", { type: "image/png" })],
+    fireEvent.change(
+      within(screen.getByTestId("landing-hero-upload-widget")).getByTestId(
+        "file-upload-input",
+      ),
+      {
+        target: {
+          files: [new File(["image"], "hero.png", { type: "image/png" })],
+        },
       },
-    });
+    );
 
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -495,10 +550,10 @@ describe("LandingSettingsPage edit and save", () => {
       screen.getByAltText("Imagen hero de Updated hero").getAttribute("src"),
     ).toBe("/files/new-hero");
     expect(
-      within(screen.getByTestId("landing-hero-upload-widget")).queryByTestId(
+      within(screen.getByTestId("landing-hero-upload-widget")).getByTestId(
         "file-upload-remove",
       ),
-    ).toBeNull();
+    ).toBeTruthy();
 
     await confirmSave();
 
@@ -516,7 +571,7 @@ describe("LandingSettingsPage edit and save", () => {
     });
   });
 
-  it("omits an absent hero image ID while retaining hero copy on save failure", async () => {
+  it("sends a null hero image ID while retaining hero copy on save failure", async () => {
     const settingsWithoutHeroImage = { ...SAMPLE_SETTINGS, heroImageId: null };
     // WU3 — LandingSettingsPage no longer issues the /outings/admin
     // lookup that was previously chained to the load, so the mock is
@@ -554,22 +609,127 @@ describe("LandingSettingsPage edit and save", () => {
     const body = JSON.parse(
       (putCall![1] as RequestInit).body as string,
     ) as Record<string, string>;
-    expect(body).not.toHaveProperty("heroImageId");
+    expect(body.heroImageId).toBeNull();
     expect(body.heroSubtitle).toBe("Retry this subtitle");
     expect(
       (screen.getByLabelText("Subtítulo principal") as HTMLInputElement).value,
     ).toBe("Retry this subtitle");
   });
 
+  it("stages a LANDING_VISUAL_BREAK upload and saves its ID", async () => {
+    await renderWithSettings();
+
+    const uploadedAsset = {
+      id: "new-break",
+      url: "/files/new-break",
+      thumbnailUrl: null,
+      mimeType: "image/png",
+      fileSize: 1024,
+      originalFilename: "break.png",
+      category: "LANDING_VISUAL_BREAK",
+      createdAt: "2026-07-19T00:00:00.000Z",
+    };
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(uploadedAsset),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ...SAMPLE_SETTINGS,
+            visualBreakImageId: "new-break",
+          }),
+      });
+
+    const widget = screen.getByTestId("landing-visual-break-upload-widget");
+    fireEvent.change(within(widget).getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["image"], "break.png", { type: "image/png" })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/files/LANDING_VISUAL_BREAK",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+    expect(
+      within(widget)
+        .getByAltText("Imagen de descanso de la página de inicio")
+        .getAttribute("src"),
+    ).toBe("/files/new-break");
+
+    await confirmSave();
+
+    await waitFor(() => {
+      const putCall = (
+        globalThis.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+      );
+      const body = JSON.parse(
+        (putCall![1] as RequestInit).body as string,
+      ) as Record<string, unknown>;
+      expect(body.visualBreakImageId).toBe("new-break");
+    });
+  });
+
+  it("explicitly clears both landing images before saving", async () => {
+    await renderWithSettings();
+    fireEvent.click(
+      within(screen.getByTestId("landing-hero-upload-widget")).getByTestId(
+        "file-upload-remove",
+      ),
+    );
+    fireEvent.click(
+      within(
+        screen.getByTestId("landing-visual-break-upload-widget"),
+      ).getByTestId("file-upload-remove"),
+    );
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ...SAMPLE_SETTINGS,
+          heroImageId: null,
+          visualBreakImageId: null,
+        }),
+    });
+    await confirmSave();
+
+    await waitFor(() => {
+      const putCall = (
+        globalThis.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+      );
+      const body = JSON.parse(
+        (putCall![1] as RequestInit).body as string,
+      ) as Record<string, unknown>;
+      expect(body.heroImageId).toBeNull();
+      expect(body.visualBreakImageId).toBeNull();
+    });
+  });
+
   it("keeps the current hero visible when its replacement upload fails", async () => {
     await renderWithSettings();
     globalThis.fetch = vi.fn().mockRejectedValue(new Error("Upload failed"));
 
-    fireEvent.change(screen.getByTestId("file-upload-input"), {
-      target: {
-        files: [new File(["image"], "hero.png", { type: "image/png" })],
+    fireEvent.change(
+      within(screen.getByTestId("landing-hero-upload-widget")).getByTestId(
+        "file-upload-input",
+      ),
+      {
+        target: {
+          files: [new File(["image"], "hero.png", { type: "image/png" })],
+        },
       },
-    });
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("file-upload-error").textContent).toBe(
@@ -678,7 +838,11 @@ describe("LandingSettingsPage triangulation", () => {
 
     // After load, fields should be editable (not disabled)
     expect(
-      (screen.getByLabelText(/descripción/i) as HTMLTextAreaElement).disabled,
+      (
+        screen.getByLabelText("Descripción", {
+          selector: "textarea",
+        }) as HTMLTextAreaElement
+      ).disabled,
     ).toBe(false);
     expect(
       (screen.getByLabelText(/correo electrónico/i) as HTMLInputElement)

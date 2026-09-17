@@ -31,11 +31,24 @@ export interface LandingPayloadShape {
   heroTitle: string | null;
   heroSubtitle: string | null;
   heroImageUrl: string | null;
+  missionsTitle: string | null;
+  missionsDescription: string | null;
+  publicationsTitle: string | null;
+  publicationsDescription: string | null;
+  aboutTitle: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
   featuredVideoUrl: string | null;
+  contactTitle: string | null;
+  contactDescription: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  visualBreakImageUrl: string | null;
   currentVerse: LandingVerse | null;
+}
+
+export function normalizeLandingCopy(value: string | null): string | null {
+  const normalized = value?.trim() ?? "";
+  return normalized || null;
 }

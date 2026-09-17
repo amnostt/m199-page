@@ -45,24 +45,40 @@ const EMPTY: LandingSettingsForm = {
   heroTitle: "",
   heroSubtitle: "",
   heroImageId: null,
+  missionsTitle: "",
+  missionsDescription: "",
+  publicationsTitle: "",
+  publicationsDescription: "",
+  aboutTitle: "",
   description: "",
   featuredVideoUrl: "",
+  contactTitle: "",
+  contactDescription: "",
   contactEmail: "",
   contactPhone: "",
   verseText: "",
   verseReference: "",
+  visualBreakImageId: null,
 };
 
 const fields: Array<keyof LandingSettingsForm> = [
   "heroTitle",
   "heroSubtitle",
   "heroImageId",
+  "missionsTitle",
+  "missionsDescription",
+  "publicationsTitle",
+  "publicationsDescription",
+  "aboutTitle",
   "description",
   "featuredVideoUrl",
+  "contactTitle",
+  "contactDescription",
   "contactEmail",
   "contactPhone",
   "verseText",
   "verseReference",
+  "visualBreakImageId",
 ];
 
 // ---------------------------------------------------------------------------
@@ -81,12 +97,20 @@ export function normalizeLandingSettings(
     heroTitle: data.heroTitle ?? "",
     heroSubtitle: data.heroSubtitle ?? "",
     heroImageId: data.heroImageId,
+    missionsTitle: data.missionsTitle ?? "",
+    missionsDescription: data.missionsDescription ?? "",
+    publicationsTitle: data.publicationsTitle ?? "",
+    publicationsDescription: data.publicationsDescription ?? "",
+    aboutTitle: data.aboutTitle ?? "",
     description: data.description ?? "",
     featuredVideoUrl: data.featuredVideoUrl ?? "",
+    contactTitle: data.contactTitle ?? "",
+    contactDescription: data.contactDescription ?? "",
     contactEmail: data.contactEmail ?? "",
     contactPhone: data.contactPhone ?? "",
     verseText: data.verseText ?? "",
     verseReference: data.verseReference ?? "",
+    visualBreakImageId: data.visualBreakImageId,
   };
 }
 
@@ -148,7 +172,10 @@ export function LandingSettingsPage({
   // ------------------------------------------------------------------
 
   const handleChange = (
-    field: Exclude<keyof LandingSettingsForm, "heroImageId">,
+    field: Exclude<
+      keyof LandingSettingsForm,
+      "heroImageId" | "visualBreakImageId"
+    >,
     value: string,
   ) => {
     setSettings((prev) => (prev ? { ...prev, [field]: value } : null));
@@ -158,6 +185,22 @@ export function LandingSettingsPage({
     setSettings((prev) => (prev ? { ...prev, heroImageId: asset.id } : null));
   };
 
+  const handleHeroRemoved = () => {
+    setSettings((prev) => (prev ? { ...prev, heroImageId: null } : null));
+  };
+
+  const handleVisualBreakUploaded = (asset: { id: string }) => {
+    setSettings((prev) =>
+      prev ? { ...prev, visualBreakImageId: asset.id } : null,
+    );
+  };
+
+  const handleVisualBreakRemoved = () => {
+    setSettings((prev) =>
+      prev ? { ...prev, visualBreakImageId: null } : null,
+    );
+  };
+
   const saveSettings = async () => {
     if (!settings || saving) return;
     setSaving(true);
@@ -165,6 +208,7 @@ export function LandingSettingsPage({
     try {
       const {
         heroImageId,
+        visualBreakImageId,
         featuredVideoUrl,
         verseText,
         verseReference,
@@ -178,7 +222,8 @@ export function LandingSettingsPage({
           featuredVideoUrl: featuredVideoUrl.trim() || null,
           verseText: verseText.trim(),
           verseReference: verseReference.trim(),
-          ...(heroImageId ? { heroImageId } : {}),
+          heroImageId,
+          visualBreakImageId,
         }),
       });
       const normalized = normalizeLandingSettings(response);
@@ -341,10 +386,121 @@ export function LandingSettingsPage({
                       category="LANDING_HERO"
                       fileId={settings.heroImageId}
                       onUploaded={handleHeroUploaded}
+                      onRemove={handleHeroRemoved}
                       preview
                       previewVariant="hero"
                       previewAlt={`Imagen hero de ${settings.heroTitle || "la página de inicio"}`}
                       data-testid="landing-hero-upload-widget"
+                    />
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <FieldSet>
+                <FieldLegend>Imagen de descanso</FieldLegend>
+                <FieldDescription>
+                  Imagen visual entre el versículo y los proyectos. Si la
+                  quitas, se mostrará la imagen incluida en la página.
+                </FieldDescription>
+                <FieldGroup>
+                  <Field>
+                    <FieldTitle>Imagen de descanso</FieldTitle>
+                    <FileUploadWidget
+                      category="LANDING_VISUAL_BREAK"
+                      fileId={settings.visualBreakImageId}
+                      onUploaded={handleVisualBreakUploaded}
+                      onRemove={handleVisualBreakRemoved}
+                      preview
+                      previewAlt="Imagen de descanso de la página de inicio"
+                      data-testid="landing-visual-break-upload-widget"
+                    />
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <FieldSet>
+                <FieldLegend>Misiones</FieldLegend>
+                <FieldDescription>
+                  Encabezado y descripción que acompañan los proyectos de la
+                  landing pública.
+                </FieldDescription>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="ls-missions-title">
+                      Título de Misiones
+                    </FieldLabel>
+                    <Input
+                      id="ls-missions-title"
+                      type="text"
+                      className="min-h-10"
+                      value={settings.missionsTitle}
+                      onChange={(e) =>
+                        handleChange("missionsTitle", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="ls-missions-description">
+                      Descripción de Misiones
+                    </FieldLabel>
+                    <Textarea
+                      id="ls-missions-description"
+                      value={settings.missionsDescription}
+                      onChange={(e) =>
+                        handleChange("missionsDescription", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <FieldSet>
+                <FieldLegend>Publicaciones</FieldLegend>
+                <FieldDescription>
+                  Encabezado y descripción que presentan las publicaciones
+                  recientes.
+                </FieldDescription>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="ls-publications-title">
+                      Título de Publicaciones
+                    </FieldLabel>
+                    <Input
+                      id="ls-publications-title"
+                      type="text"
+                      className="min-h-10"
+                      value={settings.publicationsTitle}
+                      onChange={(e) =>
+                        handleChange("publicationsTitle", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="ls-publications-description">
+                      Descripción de Publicaciones
+                    </FieldLabel>
+                    <Textarea
+                      id="ls-publications-description"
+                      value={settings.publicationsDescription}
+                      onChange={(e) =>
+                        handleChange("publicationsDescription", e.target.value)
+                      }
+                      disabled={saving}
                     />
                   </Field>
                 </FieldGroup>
@@ -401,6 +557,21 @@ export function LandingSettingsPage({
                 </FieldDescription>
                 <FieldGroup>
                   <Field>
+                    <FieldLabel htmlFor="ls-about-title">
+                      Título de Nosotros
+                    </FieldLabel>
+                    <Input
+                      id="ls-about-title"
+                      type="text"
+                      className="min-h-10"
+                      value={settings.aboutTitle}
+                      onChange={(e) =>
+                        handleChange("aboutTitle", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
                     <FieldLabel htmlFor="ls-description">
                       Descripción
                     </FieldLabel>
@@ -456,6 +627,34 @@ export function LandingSettingsPage({
                   landing pública.
                 </FieldDescription>
                 <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="ls-contact-title">
+                      Título de Contacto
+                    </FieldLabel>
+                    <Input
+                      id="ls-contact-title"
+                      type="text"
+                      className="min-h-10"
+                      value={settings.contactTitle}
+                      onChange={(e) =>
+                        handleChange("contactTitle", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="ls-contact-description">
+                      Descripción de Contacto
+                    </FieldLabel>
+                    <Textarea
+                      id="ls-contact-description"
+                      value={settings.contactDescription}
+                      onChange={(e) =>
+                        handleChange("contactDescription", e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </Field>
                   <Field>
                     <FieldLabel htmlFor="ls-email">
                       Correo electrónico de contacto

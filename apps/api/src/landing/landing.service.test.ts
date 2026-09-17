@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DbService } from "../db/db.service.js";
+import type { UpdateLandingSettingsDto } from "./dto/update-landing-settings.dto.js";
 import { LandingService } from "./landing.service.js";
 
 interface LandingSettingsRow {
@@ -9,14 +10,22 @@ interface LandingSettingsRow {
   heroTitle: string | null;
   heroSubtitle: string | null;
   heroImageId: string | null;
+  missionsTitle: string | null;
+  missionsDescription: string | null;
+  publicationsTitle: string | null;
+  publicationsDescription: string | null;
+  aboutTitle: string | null;
   mission: string | null;
   vision: string | null;
   description: string | null;
   featuredVideoUrl: string | null;
+  contactTitle: string | null;
+  contactDescription: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
   verseText: string | null;
   verseReference: string | null;
+  visualBreakImageId: string | null;
 }
 
 interface FileAssetRow {
@@ -29,14 +38,22 @@ const FULL_SETTINGS: LandingSettingsRow = {
   heroTitle: "Misión 1-99",
   heroSubtitle: "Transformando vidas",
   heroImageId: "img-001",
+  missionsTitle: "Proyectos reales.",
+  missionsDescription: "Cada salida y servicio",
+  publicationsTitle: "Lo que estamos viviendo.",
+  publicationsDescription: "Historias de la misión",
+  aboutTitle: "No esperamos.\nSalimos.",
   mission: "Nuestra misión es servir",
   vision: "Ser referencia en la comunidad",
   description: "Somos una organización dedicada a...",
   featuredVideoUrl: "https://youtube.com/watch?v=abc",
+  contactTitle: "Hablemos.\nVamos juntos.",
+  contactDescription: "Hablemos sobre la misión.",
   contactEmail: "info@m199.org",
   contactPhone: "+54 11 1234-5678",
   verseText: "Todo lo puedo en Cristo que me fortalece",
   verseReference: "Filipenses 4:13",
+  visualBreakImageId: "break-001",
 };
 
 interface MockDbOverrides {
@@ -132,6 +149,45 @@ describe("LandingService", () => {
       expect(mocks.upsert).toHaveBeenCalledOnce();
     });
 
+    it("validates a visual-break asset with its dedicated category", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        fileAssetReturn: {
+          id: "break-asset",
+          category: "LANDING_VISUAL_BREAK",
+        },
+      });
+
+      await service.updateSettings({ visualBreakImageId: "break-asset" });
+
+      expect(mocks.fileAssetFindUnique).toHaveBeenCalledWith({
+        where: { id: "break-asset" },
+      });
+      expect(mocks.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: { visualBreakImageId: "break-asset" },
+        }),
+      );
+    });
+
+    it("allows explicit clearing of hero and visual-break assets", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+      });
+
+      await service.updateSettings({
+        heroImageId: null,
+        visualBreakImageId: null,
+      });
+
+      expect(mocks.fileAssetFindUnique).not.toHaveBeenCalled();
+      expect(mocks.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: { heroImageId: null, visualBreakImageId: null },
+        }),
+      );
+    });
+
     it("rejects a missing hero asset before saving settings", async () => {
       const { service, mocks } = await buildService({
         settingsReturn: FULL_SETTINGS,
@@ -142,6 +198,23 @@ describe("LandingService", () => {
       ).rejects.toThrow('FileAsset with id "missing-asset" not found');
       expect(mocks.upsert).not.toHaveBeenCalled();
     });
+
+    it.each(["heroImageId", "visualBreakImageId"] as const)(
+      "rejects an empty %s before saving settings",
+      async (field) => {
+        const { service, mocks } = await buildService({
+          settingsReturn: FULL_SETTINGS,
+        });
+
+        await expect(
+          service.updateSettings({ [field]: "" } as UpdateLandingSettingsDto),
+        ).rejects.toThrow('FileAsset with id "" not found');
+        expect(mocks.fileAssetFindUnique).toHaveBeenCalledWith({
+          where: { id: "" },
+        });
+        expect(mocks.upsert).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("public payload", () => {
@@ -153,6 +226,8 @@ describe("LandingService", () => {
       const result = await service.getPublicPayload();
 
       expect(result.heroImageUrl).toBe("/files/img-001");
+      expect(result.visualBreakImageUrl).toBe("/files/break-001");
+      expect(result.missionsTitle).toBe("Proyectos reales.");
       expect(result.currentVerse).toEqual({
         text: "Todo lo puedo en Cristo que me fortalece",
         reference: "Filipenses 4:13",
@@ -196,12 +271,20 @@ describe("LandingService", () => {
         heroTitle: null,
         heroSubtitle: null,
         heroImageUrl: null,
+        missionsTitle: null,
+        missionsDescription: null,
+        publicationsTitle: null,
+        publicationsDescription: null,
+        aboutTitle: null,
         mission: null,
         vision: null,
         description: null,
         featuredVideoUrl: null,
+        contactTitle: null,
+        contactDescription: null,
         contactEmail: null,
         contactPhone: null,
+        visualBreakImageUrl: null,
         currentVerse: null,
       });
     });

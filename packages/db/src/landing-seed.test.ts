@@ -12,12 +12,22 @@ describe("landing settings seed defaults", () => {
       heroTitle: "Misión 1-99",
       heroSubtitle:
         "Acompañamos a comunidades y familias con esperanza, servicio y fe.",
+      missionsTitle: "Proyectos reales.",
+      missionsDescription:
+        "Cada salida, conversación y servicio es una oportunidad para buscar al uno.",
+      publicationsTitle: "Lo que estamos viviendo.",
+      publicationsDescription:
+        "Historias, salidas y momentos que mantienen viva la misión.",
+      aboutTitle: "No esperamos.\nSalimos.",
       mission:
         "Servir con amor, construir vínculos y compartir recursos que transformen vidas.",
       vision:
         "Ver comunidades fortalecidas, unidas y activas en el cuidado de cada persona.",
       description:
         "Somos una misión comprometida con acercar ayuda concreta, acompañamiento espiritual y oportunidades de encuentro para quienes más lo necesitan.",
+      contactTitle: "Hablemos.\nVamos juntos.",
+      contactDescription:
+        "¿Quieres servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos.",
       verseText: "No nos cansemos de hacer el bien.",
       verseReference: "Gálatas 6:9",
     });
@@ -37,8 +47,15 @@ describe("landing settings seed defaults", () => {
       }),
     ).toEqual({
       heroSubtitle: DEFAULT_LANDING_SETTINGS.heroSubtitle,
+      missionsTitle: DEFAULT_LANDING_SETTINGS.missionsTitle,
+      missionsDescription: DEFAULT_LANDING_SETTINGS.missionsDescription,
+      publicationsTitle: DEFAULT_LANDING_SETTINGS.publicationsTitle,
+      publicationsDescription: DEFAULT_LANDING_SETTINGS.publicationsDescription,
+      aboutTitle: DEFAULT_LANDING_SETTINGS.aboutTitle,
       vision: DEFAULT_LANDING_SETTINGS.vision,
       description: DEFAULT_LANDING_SETTINGS.description,
+      contactTitle: DEFAULT_LANDING_SETTINGS.contactTitle,
+      contactDescription: DEFAULT_LANDING_SETTINGS.contactDescription,
       contactEmail: DEFAULT_LANDING_SETTINGS.contactEmail,
       contactPhone: DEFAULT_LANDING_SETTINGS.contactPhone,
       verseText: DEFAULT_LANDING_SETTINGS.verseText,
@@ -77,9 +94,16 @@ describe("seedLandingSettings", () => {
         findUnique: vi.fn().mockResolvedValue({
           heroTitle: "",
           heroSubtitle: "Custom subtitle",
+          missionsTitle: "Custom missions title",
+          missionsDescription: "Custom missions description",
+          publicationsTitle: "Custom publications title",
+          publicationsDescription: "Custom publications description",
+          aboutTitle: "Custom about title",
           mission: null,
           vision: "Custom vision",
           description: null,
+          contactTitle: "Custom contact title",
+          contactDescription: "Custom contact description",
           contactEmail: "admin@example.com",
           contactPhone: "",
           verseText: null,
@@ -109,9 +133,16 @@ describe("seedLandingSettings", () => {
         findUnique: vi.fn().mockResolvedValue({
           heroTitle: "",
           heroSubtitle: "Custom subtitle",
+          missionsTitle: "Custom missions title",
+          missionsDescription: "Custom missions description",
+          publicationsTitle: "Custom publications title",
+          publicationsDescription: "Custom publications description",
+          aboutTitle: "Custom about title",
           mission: "Custom mission",
           vision: "Custom vision",
           description: "Custom description",
+          contactTitle: "Custom contact title",
+          contactDescription: "Custom contact description",
           contactEmail: "admin@example.com",
           contactPhone: "",
           verseText: "Custom verse",

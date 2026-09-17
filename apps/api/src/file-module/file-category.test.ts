@@ -6,7 +6,7 @@
  * - Document categories: image/* + application/pdf
  *
  * Approved vocabulary only: MISSION_HERO, PUBLICATION_FEATURED_IMAGE,
- * PUBLICATION_DOWNLOAD, LANDING_HERO, OTHER. Legacy POST_/OUTING_ values
+ * PUBLICATION_DOWNLOAD, LANDING_HERO, LANDING_VISUAL_BREAK, OTHER. Legacy POST_/OUTING_ values
  * are NOT representable.
  */
 import { describe, it, expect } from "vitest";
@@ -26,6 +26,7 @@ describe("FileCategory enum", () => {
     );
     expect(FileCategory.PUBLICATION_DOWNLOAD).toBe("PUBLICATION_DOWNLOAD");
     expect(FileCategory.LANDING_HERO).toBe("LANDING_HERO");
+    expect(FileCategory.LANDING_VISUAL_BREAK).toBe("LANDING_VISUAL_BREAK");
     expect(FileCategory.OTHER).toBe("OTHER");
   });
 
@@ -74,8 +75,9 @@ describe("IMAGE_CATS", () => {
     expect(IMAGE_CATS.has(FileCategory.MISSION_HERO)).toBe(true);
     expect(IMAGE_CATS.has(FileCategory.PUBLICATION_FEATURED_IMAGE)).toBe(true);
     expect(IMAGE_CATS.has(FileCategory.LANDING_HERO)).toBe(true);
+    expect(IMAGE_CATS.has(FileCategory.LANDING_VISUAL_BREAK)).toBe(true);
     expect(IMAGE_CATS.has(FileCategory.OTHER)).toBe(true);
-    expect(IMAGE_CATS.size).toBe(4);
+    expect(IMAGE_CATS.size).toBe(5);
   });
 
   it("does NOT contain PUBLICATION_DOWNLOAD (document category)", () => {
@@ -85,13 +87,14 @@ describe("IMAGE_CATS", () => {
 
 describe("isAllowedMime (FU-05)", () => {
   // --- Image categories (MISSION_HERO, PUBLICATION_FEATURED_IMAGE,
-  //     LANDING_HERO, OTHER)
+  //     LANDING_HERO, LANDING_VISUAL_BREAK, OTHER)
 
   describe("for image categories", () => {
     const imageCats = [
       FileCategory.MISSION_HERO,
       FileCategory.PUBLICATION_FEATURED_IMAGE,
       FileCategory.LANDING_HERO,
+      FileCategory.LANDING_VISUAL_BREAK,
       FileCategory.OTHER,
     ];
 
