@@ -1,8 +1,14 @@
 ---
+import {
+  PUBLIC_IMAGE_FALLBACK_HANDLER,
+  resolvePublicImageUrl,
+} from "../../lib/public-image.js";
+
 interface Mission {
   slug: string;
   title: string;
   status: "ACTIVE" | "ARCHIVED";
+  profileImageUrl: string | null;
 }
 const { missions } = Astro.props as { missions: Mission[] };
 ---
@@ -20,7 +26,23 @@ const { missions } = Astro.props as { missions: Mission[] };
       {missions.map((mission) => (
         <li class="public-publication-missions__item">
           <a class="public-publication-missions__link" href={`/misiones/${mission.slug}`}>
-            <span>{mission.title}</span>
+            <span class="public-publication-missions__identity">
+              {mission.profileImageUrl && (
+                <span
+                  class="public-publication-missions__profile"
+                  data-testid="publication-mission-logo"
+                >
+                  <img
+                    src={resolvePublicImageUrl(mission.profileImageUrl)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    onerror={PUBLIC_IMAGE_FALLBACK_HANDLER}
+                  />
+                </span>
+              )}
+              <span>{mission.title}</span>
+            </span>
             <span aria-hidden="true">↗</span>
           </a>
           {mission.status === "ARCHIVED" && (

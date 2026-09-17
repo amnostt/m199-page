@@ -18,7 +18,12 @@ export type PublicationsList = {
 };
 export type PublicationPublicDetail = PublicationListItem & {
   content: string;
-  missions: { slug: string; title: string; status: "ACTIVE" | "ARCHIVED" }[];
+  missions: {
+    slug: string;
+    title: string;
+    status: "ACTIVE" | "ARCHIVED";
+    profileImageUrl: string | null;
+  }[];
   imageUrls: string[];
 };
 export class PublicationsFetchError extends Error {
@@ -95,6 +100,11 @@ export function validatePublicationPublicPayload(
         typeof (mission as Record<string, unknown>).title !== "string" ||
         !["ACTIVE", "ARCHIVED"].includes(
           (mission as Record<string, unknown>).status as string,
+        ) ||
+        !(
+          typeof (mission as Record<string, unknown>).profileImageUrl ===
+            "string" ||
+          (mission as Record<string, unknown>).profileImageUrl === null
         ),
     )
   )

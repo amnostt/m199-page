@@ -11,7 +11,9 @@ const renderPublicationDetail = async (publication: object) => {
     name: "@astrojs/react",
     entrypoint: "@astrojs/react/client.js",
   });
-  return container.renderToString(PublicationDetail, { props: { publication } });
+  return container.renderToString(PublicationDetail, {
+    props: { publication },
+  });
 };
 
 const publication = {
@@ -27,7 +29,7 @@ const publication = {
 };
 
 describe("PublicationDetail image integration", () => {
-  it("preserves the ordered publication image sequence", async () => {
+  it("preserves the ordered image sequence and accessible headings", async () => {
     const html = await renderPublicationDetail(publication);
 
     expect(html).toContain('data-testid="public-image-carousel"');
@@ -37,8 +39,16 @@ describe("PublicationDetail image integration", () => {
     expect(html.indexOf('src="/files/second"')).toBeLessThan(
       html.indexOf('src="/files/third"'),
     );
-    expect(html).toContain('aria-label="Ampliar imagen 1 de 3 de la publicación Demo"');
-    expect(html).toContain("La historia continúa");
+    expect(html).toContain(
+      'aria-label="Ampliar imagen 1 de 3 de la publicación Demo"',
+    );
+    expect(html).not.toContain("La historia continúa");
+    expect(html).toMatch(
+      /<h1 id="publication-title" class="public-publication-detail__title"/,
+    );
+    expect(html).toMatch(
+      /<h2 id="publication-content-title" class="public-visually-hidden"[^>]*>\s*Contenido\s*<\/h2>/,
+    );
   });
 
   it("keeps one fallback image when the public image contract is empty", async () => {
@@ -49,7 +59,9 @@ describe("PublicationDetail image integration", () => {
     });
 
     expect(html).toContain('src="/assets/template-picture.png"');
-    expect(html).toContain('aria-label="Ampliar imagen 1 de 1 de la publicación Demo"');
+    expect(html).toContain(
+      'aria-label="Ampliar imagen 1 de 1 de la publicación Demo"',
+    );
     expect(html).not.toContain("Imagen anterior");
   });
 });

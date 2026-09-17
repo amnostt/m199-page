@@ -24,6 +24,7 @@ export interface PublicationMissionLink {
   slug: string;
   title: string;
   status: "ACTIVE" | "ARCHIVED";
+  profileImageUrl: string | null;
 }
 
 export interface PublicationPublicDetail extends PublicationPublicDetailBase {

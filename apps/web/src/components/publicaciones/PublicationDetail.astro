@@ -46,7 +46,9 @@ const timelineLabel = getPublicationTimelineLabel(publication);
     </div>
     <div class="public-publication-detail__hero-copy">
       <p class="public-publication-detail__type">{typeLabel}</p>
-      <h1 id="publication-title">{publication.title}</h1>
+      <h1 id="publication-title" class="public-publication-detail__title">
+        {publication.title}
+      </h1>
       <p class="public-publication-detail__excerpt">{publication.excerpt}</p>
       <div class="public-publication-detail__meta">
         {timelineLabel && <p class="public-publication-detail__timeline">{timelineLabel}</p>}
@@ -68,7 +70,9 @@ const timelineLabel = getPublicationTimelineLabel(publication);
   >
     <div class="public-publication-detail__section-heading">
       <p>Contenido</p>
-      <h2 id="publication-content-title">La historia continúa</h2>
+      <h2 id="publication-content-title" class="public-visually-hidden">
+        Contenido
+      </h2>
     </div>
     <PublicationContent content={publication.content} />
   </section>

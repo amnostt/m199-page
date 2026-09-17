@@ -142,6 +142,7 @@ describe("PublicationsService public list", () => {
             slug: "newer-archived",
             title: "Newer archived",
             status: "ARCHIVED",
+            profileImageId: "archived-logo",
           },
         },
         {
@@ -149,6 +150,7 @@ describe("PublicationsService public list", () => {
             slug: "older-active",
             title: "Older active",
             status: "ACTIVE",
+            profileImageId: null,
           },
         },
       ],
@@ -158,8 +160,18 @@ describe("PublicationsService public list", () => {
     } as never);
     const result = await service.findOnePublicBySlug("linked");
     expect(result.missions).toEqual([
-      { slug: "newer-archived", title: "Newer archived", status: "ARCHIVED" },
-      { slug: "older-active", title: "Older active", status: "ACTIVE" },
+      {
+        slug: "newer-archived",
+        title: "Newer archived",
+        status: "ARCHIVED",
+        profileImageUrl: "/files/archived-logo",
+      },
+      {
+        slug: "older-active",
+        title: "Older active",
+        status: "ACTIVE",
+        profileImageUrl: null,
+      },
     ]);
   });
 

@@ -69,7 +69,10 @@ describe("publication detail SSR", () => {
           ? "Ver salida"
           : "Ver evento",
     );
-    expect(html).toContain("La historia continúa");
+    expect(html).not.toContain("La historia continúa");
+    expect(html).toMatch(
+      /<h1 id="publication-title" class="public-publication-detail__title"/,
+    );
     expect(html).not.toContain("<script>bad()</script>");
     expect(html).not.toContain("bad()");
     expect(html).not.toContain('data-testid="publication-missions"');
@@ -82,8 +85,18 @@ describe("publication detail SSR", () => {
         new Response(
           JSON.stringify(
             detail("POST", [
-              { slug: "alpha", title: "Alpha mission", status: "ACTIVE" },
-              { slug: "beta", title: "Beta mission", status: "ARCHIVED" },
+              {
+                slug: "alpha",
+                title: "Alpha mission",
+                status: "ACTIVE",
+                profileImageUrl: "/files/alpha-logo",
+              },
+              {
+                slug: "beta",
+                title: "Beta mission",
+                status: "ARCHIVED",
+                profileImageUrl: null,
+              },
             ]),
           ),
         ),
@@ -101,6 +114,8 @@ describe("publication detail SSR", () => {
     expect(html).toContain("Alpha mission");
     expect(html).toContain("Beta mission");
     expect(html).toContain("Misión finalizada");
+    expect(html).toContain('data-testid="publication-mission-logo"');
+    expect(html).toContain('src="/files/alpha-logo"');
     expect(html).toContain("Body");
   });
 

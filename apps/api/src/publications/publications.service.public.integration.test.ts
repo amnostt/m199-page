@@ -286,7 +286,14 @@ integration("public publications PostgreSQL boundary", () => {
       ]);
       expect(
         detail.missions.map((mission) => Object.keys(mission).sort()),
-      ).toEqual(detail.missions.map(() => ["slug", "status", "title"]));
+      ).toEqual(
+        detail.missions.map(() => [
+          "profileImageUrl",
+          "slug",
+          "status",
+          "title",
+        ]),
+      );
       expect(detail).not.toHaveProperty("missionIds");
 
       const list = await service.findManyPublic({ page: 1, limit: 50 });

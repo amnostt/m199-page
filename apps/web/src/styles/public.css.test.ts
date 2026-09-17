@@ -439,13 +439,25 @@ describe("public.css publications editorial contract", () => {
       /\.public-ui\s+\.public-publications-pagination__link\s*\{[^}]*min-height:\s*44px/s,
     );
     expect(css).toMatch(
-      /\.public-ui\s+\.public-publication-detail__hero\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.15fr\)\s+minmax\(18rem,\s*0\.85fr\)/s,
+      /\.public-ui\s+\.public-publication-detail__hero\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.15fr\)\s+minmax\(18rem,\s*0\.85fr\)[^}]*align-items:\s*start/s,
     );
     expect(css).toMatch(
       /\.public-ui\s+\.public-publication-badge\s*\{[^}]*background:\s*var\(--secondary\)/s,
     );
     expect(css).toMatch(
-      /\.public-ui\s+\.public-publication-missions__list\s*\{[^}]*border-block-start:/s,
+      /\.public-ui\s+\.public-publication-missions__list\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-image-carousel__frame\s*\{[^}]*background:\s*var\(--background\)/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-image-carousel__image-trigger img\s*\{[^}]*object-fit:\s*contain/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-mission-detail__hero\s*\{[^}]*grid-template-columns:[^}]*align-items:\s*start/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui\s+\.public-publication-missions__profile img\s*\{[^}]*object-fit:\s*contain/s,
     );
   });
 });

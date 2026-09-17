@@ -17,11 +17,40 @@ describe("PublicImageCarousel", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "La Misión en imágenes" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Ampliar imagen 1 de 1/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Imagen anterior" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Imagen siguiente" })).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "La Misión en imágenes" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /Ampliar imagen 1 de 1/ }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Imagen anterior" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Imagen siguiente" }),
+    ).toBeNull();
     expect(screen.getAllByRole("button")).toHaveLength(2);
+  });
+
+  it("keeps the primary image separate from the cropped thumbnail sequence", () => {
+    render(
+      <PublicImageCarousel
+        images={["/one.jpg", "/two.jpg"]}
+        label="la misión Uno"
+        heading="La Misión en imágenes"
+      />,
+    );
+
+    const mainButton = screen.getByRole("button", {
+      name: /Ampliar imagen 1 de 2/,
+    });
+    const thumbnails = screen.getByRole("list", {
+      name: "Seleccionar imagen de la misión Uno",
+    });
+
+    expect(mainButton.querySelector("img")).toBeTruthy();
+    expect(thumbnails.querySelectorAll("img")).toHaveLength(2);
+    expect(mainButton.querySelector("img")?.closest("button")).toBe(mainButton);
   });
 
   it("browses thumbnails, opens a lightbox, supports arrows and restores focus", () => {
@@ -75,7 +104,9 @@ describe("PublicImageCarousel", () => {
       name: /Ampliar imagen 1 de 2/,
     });
     fireEvent.click(mainImage);
-    fireEvent.click(screen.getByRole("button", { name: "Cerrar imagen ampliada" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Cerrar imagen ampliada" }),
+    );
 
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.body.style.overflow).toBe("");

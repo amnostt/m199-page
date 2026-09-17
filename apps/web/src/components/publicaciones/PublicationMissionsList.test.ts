@@ -19,7 +19,14 @@ describe("PublicationMissionsList SSR", () => {
       await AstroContainer.create()
     ).renderToString(PublicationMissionsList, {
       props: {
-        missions: [{ slug: "alpha", title: "Alpha mission", status: "ACTIVE" }],
+        missions: [
+          {
+            slug: "alpha",
+            title: "Alpha mission",
+            status: "ACTIVE",
+            profileImageUrl: null,
+          },
+        ],
       },
     });
     expect(html).toContain('data-testid="publication-missions"');
@@ -34,8 +41,18 @@ describe("PublicationMissionsList SSR", () => {
     ).renderToString(PublicationMissionsList, {
       props: {
         missions: [
-          { slug: "alpha", title: "Alpha mission", status: "ACTIVE" },
-          { slug: "beta", title: "Beta mission", status: "ARCHIVED" },
+          {
+            slug: "alpha",
+            title: "Alpha mission",
+            status: "ACTIVE",
+            profileImageUrl: "/files/alpha-logo",
+          },
+          {
+            slug: "beta",
+            title: "Beta mission",
+            status: "ARCHIVED",
+            profileImageUrl: null,
+          },
         ],
       },
     });
@@ -52,5 +69,8 @@ describe("PublicationMissionsList SSR", () => {
       "Misión finalizada",
     );
     expect(html.slice(betaIndex)).toContain("Misión finalizada");
+    expect(html).toContain('data-testid="publication-mission-logo"');
+    expect(html).toContain('src="/files/alpha-logo"');
+    expect(html).not.toContain('src="/files/beta-logo"');
   });
 });

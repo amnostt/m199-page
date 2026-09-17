@@ -155,7 +155,14 @@ export class PublicationsService {
             { mission: { id: "desc" } },
           ],
           select: {
-            mission: { select: { slug: true, title: true, status: true } },
+            mission: {
+              select: {
+                slug: true,
+                title: true,
+                status: true,
+                profileImageId: true,
+              },
+            },
           },
         },
       },
@@ -180,6 +187,7 @@ export class PublicationsService {
                 slug: string;
                 title: string;
                 status: "ACTIVE" | "ARCHIVED";
+                profileImageId: string | null;
               };
             }[];
           }
@@ -188,6 +196,9 @@ export class PublicationsService {
         slug: String(mission.slug),
         title: String(mission.title),
         status: mission.status,
+        profileImageUrl: mission.profileImageId
+          ? `/files/${String(mission.profileImageId)}`
+          : null,
       })),
     };
     if (row.type !== PublicationType.POST)

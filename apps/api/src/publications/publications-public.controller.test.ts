@@ -138,8 +138,18 @@ describe("PublicationsPublicController", () => {
         activityDate: "2026-02-01",
         imageUrls: ["/files/cover", "/files/second"],
         missions: [
-          { slug: "alpha", title: "Alpha", status: "ACTIVE" },
-          { slug: "beta", title: "Beta", status: "ARCHIVED" },
+          {
+            slug: "alpha",
+            title: "Alpha",
+            status: "ACTIVE",
+            profileImageUrl: "/files/alpha-logo",
+          },
+          {
+            slug: "beta",
+            title: "Beta",
+            status: "ARCHIVED",
+            profileImageUrl: null,
+          },
         ],
       }),
     };
@@ -166,8 +176,18 @@ describe("PublicationsPublicController", () => {
         "type",
       ]);
       expect(response.body.missions).toEqual([
-        { slug: "alpha", title: "Alpha", status: "ACTIVE" },
-        { slug: "beta", title: "Beta", status: "ARCHIVED" },
+        {
+          slug: "alpha",
+          title: "Alpha",
+          status: "ACTIVE",
+          profileImageUrl: "/files/alpha-logo",
+        },
+        {
+          slug: "beta",
+          title: "Beta",
+          status: "ARCHIVED",
+          profileImageUrl: null,
+        },
       ]);
       expect(service.findOnePublicBySlug).toHaveBeenCalledWith("trip");
     } finally {

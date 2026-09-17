@@ -50,25 +50,49 @@ describe("publications validator contracts", () => {
     publishedAt: "2026-01-01",
     featuredImageUrl: null,
     missions: [
-      { slug: "alpha", title: "Alpha", status: "ACTIVE" },
-      { slug: "beta", title: "Beta", status: "ARCHIVED" },
+      {
+        slug: "alpha",
+        title: "Alpha",
+        status: "ACTIVE",
+        profileImageUrl: "/files/alpha-logo",
+      },
+      {
+        slug: "beta",
+        title: "Beta",
+        status: "ARCHIVED",
+        profileImageUrl: null,
+      },
     ],
   } as const;
 
   it("accepts the detail payload with ACTIVE+ARCHIVED mission links in the closed shape", () => {
     const result = validatePublicationPublicPayload(baseDetail);
     expect(result.missions).toEqual([
-      { slug: "alpha", title: "Alpha", status: "ACTIVE" },
-      { slug: "beta", title: "Beta", status: "ARCHIVED" },
+      {
+        slug: "alpha",
+        title: "Alpha",
+        status: "ACTIVE",
+        profileImageUrl: "/files/alpha-logo",
+      },
+      {
+        slug: "beta",
+        title: "Beta",
+        status: "ARCHIVED",
+        profileImageUrl: null,
+      },
     ]);
     expect(
       result.missions.map((mission) => Object.keys(mission).sort()),
-    ).toEqual(result.missions.map(() => ["slug", "status", "title"]));
+    ).toEqual(
+      result.missions.map(() => ["profileImageUrl", "slug", "status", "title"]),
+    );
     expect(
       result.missions.every(
         (mission) =>
           typeof mission.slug === "string" &&
           typeof mission.title === "string" &&
+          (typeof mission.profileImageUrl === "string" ||
+            mission.profileImageUrl === null) &&
           (mission.status === "ACTIVE" || mission.status === "ARCHIVED"),
       ),
     ).toBe(true);
@@ -81,21 +105,35 @@ describe("publications validator contracts", () => {
       "invalid status",
       {
         ...baseDetail,
-        missions: [{ slug: "alpha", title: "Alpha", status: "PUBLISHED" }],
+        missions: [
+          {
+            slug: "alpha",
+            title: "Alpha",
+            status: "PUBLISHED",
+            profileImageUrl: null,
+          },
+        ],
       },
     ],
     [
       "missing slug",
       {
         ...baseDetail,
-        missions: [{ title: "Alpha", status: "ACTIVE" }],
+        missions: [{ title: "Alpha", status: "ACTIVE", profileImageUrl: null }],
       },
     ],
     [
       "missing title",
       {
         ...baseDetail,
-        missions: [{ slug: "alpha", status: "ACTIVE" }],
+        missions: [{ slug: "alpha", status: "ACTIVE", profileImageUrl: null }],
+      },
+    ],
+    [
+      "missing profile image URL",
+      {
+        ...baseDetail,
+        missions: [{ slug: "alpha", title: "Alpha", status: "ACTIVE" }],
       },
     ],
     [
