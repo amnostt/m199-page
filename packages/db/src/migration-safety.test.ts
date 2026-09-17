@@ -182,3 +182,36 @@ describe("Landing verse migration", () => {
     );
   });
 });
+
+describe("Landing background music migration", () => {
+  const sql = readFileSync(
+    resolve(
+      import.meta.dirname,
+      "../prisma/migrations/20260917150000_landing_background_music/migration.sql",
+    ),
+    "utf-8",
+  );
+
+  it("adds the category before the nullable settings pointer", () => {
+    expect(sql).toContain(
+      "ALTER TYPE \"FileCategory\" ADD VALUE 'LANDING_BACKGROUND_MUSIC'",
+    );
+    expect(sql).toContain('ADD COLUMN "backgroundMusicId" TEXT');
+    expect(sql.indexOf("ALTER TYPE")).toBeLessThan(
+      sql.indexOf('ADD COLUMN "backgroundMusicId"'),
+    );
+  });
+
+  it("references FileAsset with null-on-delete semantics", () => {
+    expect(sql).toContain(
+      'CONSTRAINT "LandingSettings_backgroundMusicId_fkey"',
+    );
+    expect(sql).toContain(
+      'FOREIGN KEY ("backgroundMusicId") REFERENCES "FileAsset"("id") ON DELETE SET NULL ON UPDATE CASCADE',
+    );
+  });
+
+  it("does not drop existing landing data", () => {
+    expect(sql).not.toMatch(/DROP\s+(COLUMN|TABLE)/i);
+  });
+});

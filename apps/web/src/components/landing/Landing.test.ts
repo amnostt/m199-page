@@ -5,6 +5,7 @@
 // supported pattern for unit-testing .astro components in vitest)
 // to render the component in isolation and assert on the HTML.
 import { describe, it, expect, beforeAll } from "vitest";
+import reactRenderer from "@astrojs/react/server.js";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import Landing from "./Landing.astro";
 import type { LandingPayloadShape } from "./landing-shape.js";
@@ -14,6 +15,11 @@ let container: Awaited<ReturnType<typeof AstroContainer.create>>;
 
 beforeAll(async () => {
   container = await AstroContainer.create();
+  container.addServerRenderer({ renderer: reactRenderer });
+  container.addClientRenderer({
+    name: "@astrojs/react",
+    entrypoint: "@astrojs/react/client.js",
+  });
 });
 
 function fullPayload(): LandingPayloadShape {
@@ -32,6 +38,7 @@ function fullPayload(): LandingPayloadShape {
     vision: "Ver cada vida transformada",
     description: "Somos una comunidad de fe",
     featuredVideoUrl: "/files/video-001",
+    backgroundMusicUrl: "/files/music-001",
     contactTitle: "Hablemos.\nVamos juntos.",
     contactDescription:
       "¿Quieres servir, sumar a tu iglesia o conocer más sobre una misión? Hablemos.",
@@ -59,6 +66,7 @@ function minimalPayload(): LandingPayloadShape {
     vision: null,
     description: null,
     featuredVideoUrl: null,
+    backgroundMusicUrl: null,
     contactTitle: null,
     contactDescription: null,
     contactEmail: null,
@@ -575,5 +583,18 @@ describe("Landing.astro — featured video omission and safety", () => {
     expect(html).toMatch(/<video[^>]*title="Misión 1-99 en acción"/);
     expect(html).toContain('preload="metadata"');
     expect(html).not.toContain("autoplay");
+  });
+
+  it("renders the floating background music control only when configured", async () => {
+    const html = await render(fullPayload());
+    expect(html).toContain('data-testid="landing-background-music"');
+    expect(html).toContain('src="/files/music-001"');
+    expect(html).toContain('aria-label="Play background music"');
+    expect(html).not.toContain(" autoplay");
+
+    const withoutMusic = await render(minimalPayload());
+    expect(withoutMusic).not.toContain(
+      'data-testid="landing-background-music"',
+    );
   });
 });

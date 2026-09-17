@@ -5,6 +5,8 @@
  *  - `validateFeaturedVideoUrl`: a local FileAsset URL policy. Invalid values
  *    are omitted
  *    (returns null) rather than rendered. Never throws.
+ *  - `validateLandingAudioUrl`: the same local FileAsset URL policy for the
+ *    optional landing background music.
  *  - `validateLandingPublicPayload`: typed schema validation for the
  *    `GET /landing/public` contract defined in
  *    `apps/api/src/landing/landing.service.ts`. Runs the local video URL
@@ -50,6 +52,7 @@ export interface LandingPublicPayload {
    * string; unsafe values are omitted on the way in.
    */
   featuredVideoUrl: string | null;
+  backgroundMusicUrl: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;
@@ -69,6 +72,13 @@ export interface LandingPublicPayload {
  * Never throws so the renderer can always render whatever it returns.
  */
 export function validateFeaturedVideoUrl(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const candidate = raw.trim();
+  return /^\/files\/[^/?#]+$/.test(candidate) ? candidate : null;
+}
+
+/** Validate an optional local FileAsset URL for landing background music. */
+export function validateLandingAudioUrl(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const candidate = raw.trim();
   return /^\/files\/[^/?#]+$/.test(candidate) ? candidate : null;
@@ -151,6 +161,9 @@ export function validateLandingPublicPayload(
     description: requireNullableString(c, "description"),
     featuredVideoUrl: validateFeaturedVideoUrl(
       requireNullableString(c, "featuredVideoUrl"),
+    ),
+    backgroundMusicUrl: validateLandingAudioUrl(
+      requireNullableString(c, "backgroundMusicUrl"),
     ),
     contactTitle: requireNullableString(c, "contactTitle"),
     contactDescription: requireNullableString(c, "contactDescription"),

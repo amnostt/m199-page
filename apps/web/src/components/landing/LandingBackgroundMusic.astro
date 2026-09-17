@@ -1,0 +1,11 @@
+---
+import LandingBackgroundMusic from "./LandingBackgroundMusicControl.js";
+
+interface Props {
+  musicUrl: string | null;
+}
+
+const { musicUrl } = Astro.props;
+---
+
+{musicUrl && <LandingBackgroundMusic musicUrl={musicUrl} client:load />}

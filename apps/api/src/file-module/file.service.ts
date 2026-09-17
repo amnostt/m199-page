@@ -27,6 +27,7 @@ import path from "path";
 
 const DEFAULT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_LANDING_FEATURED_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_LANDING_BACKGROUND_MUSIC_BYTES = 10 * 1024 * 1024;
 
 const MP4_BRANDS = new Set([
   "isom",
@@ -90,6 +91,111 @@ function hasMp4FtypSignature(buffer: Buffer): boolean {
   }
 
   return false;
+}
+
+function hasMp3Signature(buffer: Buffer): boolean {
+  let frameOffset = 0;
+
+  if (buffer.subarray(0, 3).equals(Buffer.from("ID3"))) {
+    if (buffer.length < 10) return false;
+
+    const version = buffer[3];
+    const flags = buffer[5];
+    const sizeBytes = buffer.subarray(6, 10);
+    const size0 = sizeBytes[0];
+    const size1 = sizeBytes[1];
+    const size2 = sizeBytes[2];
+    const size3 = sizeBytes[3];
+    const reservedFlagsMask = version === 4 ? 0x0f : 0x1f;
+    if (
+      version === undefined ||
+      version < 2 ||
+      version > 4 ||
+      flags === undefined ||
+      (flags & reservedFlagsMask) !== 0 ||
+      size0 === undefined ||
+      size1 === undefined ||
+      size2 === undefined ||
+      size3 === undefined ||
+      sizeBytes.some((byte) => byte >= 0x80)
+    ) {
+      return false;
+    }
+
+    const tagSize = (size0 << 21) | (size1 << 14) | (size2 << 7) | size3;
+    const footerSize = (flags & 0x10) === 0 ? 0 : 10;
+    frameOffset = 10 + tagSize + footerSize;
+    if (frameOffset > buffer.length) return false;
+  }
+
+  if (frameOffset + 4 > buffer.length) return false;
+  const first = buffer[frameOffset];
+  const second = buffer[frameOffset + 1];
+  const third = buffer[frameOffset + 2];
+  const fourth = buffer[frameOffset + 3];
+  if (
+    first === undefined ||
+    second === undefined ||
+    third === undefined ||
+    fourth === undefined
+  ) {
+    return false;
+  }
+
+  const versionBits = (second >> 3) & 0x03;
+  const layerBits = (second >> 1) & 0x03;
+  const bitrateIndex = (third >> 4) & 0x0f;
+  const sampleRateIndex = (third >> 2) & 0x03;
+  const hasFrameSync = first === 0xff && (second & 0xe0) === 0xe0;
+  if (
+    !hasFrameSync ||
+    versionBits === 1 ||
+    layerBits === 0 ||
+    bitrateIndex === 0 ||
+    bitrateIndex === 15 ||
+    sampleRateIndex === 3
+  ) {
+    return false;
+  }
+
+  const bitrateTables = {
+    mpeg1: [
+      [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448],
+      [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384],
+      [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+    ],
+    mpeg2: [
+      [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256],
+      [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+      [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+    ],
+  } as const;
+  const sampleRates = [44100, 48000, 32000];
+  const isMpeg1 = versionBits === 3;
+  const versionTable = isMpeg1 ? bitrateTables.mpeg1 : bitrateTables.mpeg2;
+  const layerIndex = 3 - layerBits;
+  const bitrate = versionTable[layerIndex]?.[bitrateIndex];
+  const baseSampleRate = sampleRates[sampleRateIndex];
+  const sampleRate =
+    baseSampleRate === undefined
+      ? undefined
+      : isMpeg1
+        ? baseSampleRate
+        : versionBits === 2
+          ? baseSampleRate / 2
+          : baseSampleRate / 4;
+  if (bitrate === undefined || sampleRate === undefined) return false;
+
+  const padding = (third >> 1) & 0x01;
+  const frameLength =
+    layerBits === 3
+      ? Math.floor((12 * bitrate * 1000) / sampleRate + padding) * 4
+      : Math.floor(
+          ((isMpeg1 || layerBits === 2 ? 144 : 72) * bitrate * 1000) /
+            sampleRate +
+            padding,
+        );
+  return frameOffset + frameLength <= buffer.length;
 }
 
 // ---------------------------------------------------------------------------
@@ -186,12 +292,23 @@ export class FileService {
     const maxSize =
       category === FileCategory.LANDING_FEATURED_VIDEO
         ? MAX_LANDING_FEATURED_VIDEO_BYTES
-        : Number(process.env["MAX_FILE_SIZE"]) || DEFAULT_MAX_FILE_SIZE_BYTES;
+        : category === FileCategory.LANDING_BACKGROUND_MUSIC
+          ? MAX_LANDING_BACKGROUND_MUSIC_BYTES
+          : Number(process.env["MAX_FILE_SIZE"]) || DEFAULT_MAX_FILE_SIZE_BYTES;
     if (buffer.length > maxSize) {
       throw new PayloadTooLargeException("File too large");
     }
 
     this.assertMagicBytesMatchMime(buffer, mimeType);
+
+    if (category === FileCategory.LANDING_BACKGROUND_MUSIC) {
+      const extension = path.extname(originalFilename).toLowerCase();
+      if (extension !== ".mp3") {
+        throw new BadRequestException(
+          "Landing background music must use .mp3 extension",
+        );
+      }
+    }
 
     const ext = this.extFromMime(mimeType);
     const uuid = randomUUID();
@@ -336,6 +453,7 @@ export class FileService {
       "image/gif": ".gif",
       "application/pdf": ".pdf",
       "video/mp4": ".mp4",
+      "audio/mpeg": ".mp3",
     };
     return map[mimeType] ?? "";
   }
@@ -378,6 +496,8 @@ export class FileService {
           );
         case "video/mp4":
           return hasMp4FtypSignature(buffer);
+        case "audio/mpeg":
+          return hasMp3Signature(buffer);
         default:
           return false;
       }

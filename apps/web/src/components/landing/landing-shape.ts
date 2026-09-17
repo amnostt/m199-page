@@ -40,6 +40,7 @@ export interface LandingPayloadShape {
   vision: string | null;
   description: string | null;
   featuredVideoUrl: string | null;
+  backgroundMusicUrl: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;

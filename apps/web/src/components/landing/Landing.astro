@@ -17,8 +17,9 @@
  *   7. Latest published publications carousel (omitted for null/empty).
  *   8. About (CMS narrative precedence + local gallery + optional contact CTA).
  *   9. Featured video (omitted when no safe URL is configured).
- *  10. Contact (conditional channels; never placeholder values).
- *  11. Footer (always present).
+ *  10. Background music control (omitted when no safe URL is configured).
+ *  11. Contact (conditional channels; never placeholder values).
+ *  12. Footer (always present).
  *
  * The failure branch is intentionally generic and NEVER includes
  * the failure reason, the API host, the stack, or any driver
@@ -39,6 +40,7 @@ import LandingMissions from "./LandingMissions.astro";
 import LandingPublications from "./LandingPublications.astro";
 import LandingAbout from "./LandingAbout.astro";
 import LandingFeaturedVideo from "./LandingFeaturedVideo.astro";
+import LandingBackgroundMusic from "./LandingBackgroundMusic.astro";
 import LandingContact from "./LandingContact.astro";
 import type { MissionListItem } from "../../lib/server/missions.js";
 import type { PublicationListItem } from "../../lib/server/publications.js";
@@ -132,6 +134,8 @@ const publicationsHref = "/publicaciones";
     />
 
     <LandingFeaturedVideo featuredVideoUrl={payload.featuredVideoUrl} />
+
+    <LandingBackgroundMusic musicUrl={payload.backgroundMusicUrl} />
 
     <LandingContact
       contactTitle={payload.contactTitle}

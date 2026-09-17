@@ -23,6 +23,7 @@ const BASE_VALID_PAYLOAD = {
   vision: null,
   description: null,
   featuredVideoUrl: null,
+  backgroundMusicUrl: null,
   contactTitle: null,
   contactDescription: null,
   contactEmail: null,

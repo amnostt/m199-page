@@ -115,6 +115,7 @@ function buildSuccessPayload() {
     vision: null,
     description: null,
     featuredVideoUrl: null,
+    backgroundMusicUrl: null,
     contactTitle: "PR4 SSR proof — contact title",
     contactDescription: "PR4 SSR proof — contact description",
     contactEmail: "contact@pr4.test",

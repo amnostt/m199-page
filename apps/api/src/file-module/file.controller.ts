@@ -35,6 +35,7 @@ import { FileCategory, isFileCategory } from "./file-category.js";
 
 const DEFAULT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_LANDING_FEATURED_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_LANDING_BACKGROUND_MUSIC_BYTES = 10 * 1024 * 1024;
 
 @Controller("files")
 @UseGuards(AuthGuard)
@@ -57,6 +58,25 @@ export class FilesController {
   ): Promise<FileAssetResponse> {
     return this.uploadWithCategory(
       FileCategory.LANDING_FEATURED_VIDEO,
+      file,
+      req,
+    );
+  }
+
+  /** Upload the landing background music with its dedicated 10 MB limit. */
+  @Post("LANDING_BACKGROUND_MUSIC")
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(
+    FileInterceptor("file", {
+      limits: { fileSize: MAX_LANDING_BACKGROUND_MUSIC_BYTES },
+    }),
+  )
+  async uploadBackgroundMusic(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Req() req: Request,
+  ): Promise<FileAssetResponse> {
+    return this.uploadWithCategory(
+      FileCategory.LANDING_BACKGROUND_MUSIC,
       file,
       req,
     );
@@ -87,7 +107,10 @@ export class FilesController {
     @UploadedFile() file: Express.Multer.File | undefined,
     @Req() req: Request,
   ): Promise<FileAssetResponse> {
-    if (category === FileCategory.LANDING_FEATURED_VIDEO) {
+    if (
+      category === FileCategory.LANDING_FEATURED_VIDEO ||
+      category === FileCategory.LANDING_BACKGROUND_MUSIC
+    ) {
       throw new BadRequestException("Invalid file category route");
     }
     if (!isFileCategory(category)) {

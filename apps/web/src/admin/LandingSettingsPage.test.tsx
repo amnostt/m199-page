@@ -53,6 +53,7 @@ const SAMPLE_SETTINGS = {
   vision: "Our vision text",
   description: "Our description text",
   featuredVideoId: "existing-video",
+  backgroundMusicId: "existing-music",
   contactTitle: "Contact us",
   contactDescription: "Contact description",
   contactEmail: "contact@example.com",
@@ -257,6 +258,7 @@ describe("LandingSettingsPage load", () => {
           vision: null,
           description: null,
           featuredVideoId: null,
+          backgroundMusicId: null,
           contactEmail: null,
           contactPhone: null,
         }),
@@ -459,6 +461,7 @@ describe("LandingSettingsPage edit and save", () => {
     );
     expect(body.aboutTitle).toBe(SAMPLE_SETTINGS.aboutTitle);
     expect(body.featuredVideoId).toBe(SAMPLE_SETTINGS.featuredVideoId);
+    expect(body.backgroundMusicId).toBe(SAMPLE_SETTINGS.backgroundMusicId);
     expect(body.contactTitle).toBe(SAMPLE_SETTINGS.contactTitle);
     expect(body.contactDescription).toBe(SAMPLE_SETTINGS.contactDescription);
     expect(body.contactEmail).toBe(SAMPLE_SETTINGS.contactEmail);
@@ -557,6 +560,63 @@ describe("LandingSettingsPage edit and save", () => {
         (putCall![1] as RequestInit).body as string,
       ) as Record<string, unknown>;
       expect(body.featuredVideoId).toBe("new-video");
+    });
+  });
+
+  it("stages an MP3 background music upload and saves its asset ID", async () => {
+    await renderWithSettings();
+
+    const uploadedAsset = {
+      id: "new-music",
+      url: "/files/new-music",
+      thumbnailUrl: null,
+      mimeType: "audio/mpeg",
+      fileSize: 1024,
+      originalFilename: "landing.mp3",
+      category: "LANDING_BACKGROUND_MUSIC",
+      createdAt: "2026-09-17T00:00:00.000Z",
+    };
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(uploadedAsset),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ...SAMPLE_SETTINGS,
+            backgroundMusicId: "new-music",
+          }),
+      });
+
+    const widget = screen.getByTestId("landing-background-music-upload-widget");
+    fireEvent.change(within(widget).getByTestId("file-upload-input"), {
+      target: {
+        files: [new File(["mp3"], "landing.mp3", { type: "audio/mpeg" })],
+      },
+    });
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/files/LANDING_BACKGROUND_MUSIC",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    await confirmSave();
+
+    await waitFor(() => {
+      const putCall = (
+        globalThis.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+      );
+      const body = JSON.parse(
+        (putCall![1] as RequestInit).body as string,
+      ) as Record<string, unknown>;
+      expect(body.backgroundMusicId).toBe("new-music");
     });
   });
 

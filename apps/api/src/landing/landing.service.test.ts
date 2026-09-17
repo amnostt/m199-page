@@ -19,6 +19,7 @@ interface LandingSettingsRow {
   vision: string | null;
   description: string | null;
   featuredVideoId: string | null;
+  backgroundMusicId: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;
@@ -47,6 +48,7 @@ const FULL_SETTINGS: LandingSettingsRow = {
   vision: "Ser referencia en la comunidad",
   description: "Somos una organización dedicada a...",
   featuredVideoId: "video-001",
+  backgroundMusicId: "music-001",
   contactTitle: "Hablemos.\nVamos juntos.",
   contactDescription: "Hablemos sobre la misión.",
   contactEmail: "info@m199.org",
@@ -224,6 +226,40 @@ describe("LandingService", () => {
       );
     });
 
+    it("validates and persists a landing background music asset", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        fileAssetReturn: {
+          id: "music-asset",
+          category: "LANDING_BACKGROUND_MUSIC",
+        },
+      });
+
+      await service.updateSettings({ backgroundMusicId: "music-asset" });
+
+      expect(mocks.fileAssetFindUnique).toHaveBeenCalledWith({
+        where: { id: "music-asset" },
+      });
+      expect(mocks.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: { backgroundMusicId: "music-asset" },
+        }),
+      );
+    });
+
+    it("allows explicit clearing of landing background music", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+      });
+
+      await service.updateSettings({ backgroundMusicId: null });
+
+      expect(mocks.fileAssetFindUnique).not.toHaveBeenCalled();
+      expect(mocks.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ update: { backgroundMusicId: null } }),
+      );
+    });
+
     it("rejects a featured video asset from another category", async () => {
       const { service, mocks } = await buildService({
         settingsReturn: FULL_SETTINGS,
@@ -236,6 +272,21 @@ describe("LandingService", () => {
       await expect(
         service.updateSettings({ featuredVideoId: "image-asset" }),
       ).rejects.toThrow("must have category LANDING_FEATURED_VIDEO");
+      expect(mocks.upsert).not.toHaveBeenCalled();
+    });
+
+    it("rejects a background music asset from another category", async () => {
+      const { service, mocks } = await buildService({
+        settingsReturn: FULL_SETTINGS,
+        fileAssetReturn: {
+          id: "video-asset",
+          category: "LANDING_FEATURED_VIDEO",
+        },
+      });
+
+      await expect(
+        service.updateSettings({ backgroundMusicId: "video-asset" }),
+      ).rejects.toThrow("must have category LANDING_BACKGROUND_MUSIC");
       expect(mocks.upsert).not.toHaveBeenCalled();
     });
 
@@ -279,6 +330,7 @@ describe("LandingService", () => {
       expect(result.heroImageUrl).toBe("/files/img-001");
       expect(result.visualBreakImageUrl).toBe("/files/break-001");
       expect(result.featuredVideoUrl).toBe("/files/video-001");
+      expect(result.backgroundMusicUrl).toBe("/files/music-001");
       expect(result.missionsTitle).toBe("Proyectos reales.");
       expect(result.currentVerse).toEqual({
         text: "Todo lo puedo en Cristo que me fortalece",
@@ -332,6 +384,7 @@ describe("LandingService", () => {
         vision: null,
         description: null,
         featuredVideoUrl: null,
+        backgroundMusicUrl: null,
         contactTitle: null,
         contactDescription: null,
         contactEmail: null,

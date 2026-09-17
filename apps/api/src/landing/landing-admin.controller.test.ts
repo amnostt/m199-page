@@ -32,6 +32,7 @@ export interface LandingSettingsRow {
   vision: string | null;
   description: string | null;
   featuredVideoId: string | null;
+  backgroundMusicId: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;
@@ -55,6 +56,7 @@ const FULL_SETTINGS: LandingSettingsRow = {
   vision: "Ser referencia en la comunidad",
   description: "Somos una organización dedicada a...",
   featuredVideoId: "video-001",
+  backgroundMusicId: "music-001",
   contactTitle: "Hablemos. Vamos juntos.",
   contactDescription: "Conoce más sobre una misión.",
   contactEmail: "info@m199.org",
@@ -169,6 +171,27 @@ describe("LandingAdminController", () => {
       );
 
       expect(result.featuredVideoId).toBeNull();
+    });
+
+    it("rejects an empty background music ID when validating the DTO directly", async () => {
+      const pipe = new ValidationPipe({ whitelist: true, transform: true });
+
+      await expect(
+        pipe.transform(
+          { backgroundMusicId: "" },
+          { type: "body", metatype: UpdateLandingSettingsDto },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it("accepts null to clear the optional background music", async () => {
+      const pipe = new ValidationPipe({ whitelist: true, transform: true });
+      const result = await pipe.transform(
+        { backgroundMusicId: null },
+        { type: "body", metatype: UpdateLandingSettingsDto },
+      );
+
+      expect(result.backgroundMusicId).toBeNull();
     });
 
     it("accepts null to clear either landing image", async () => {

@@ -67,6 +67,11 @@ export class UpdateLandingSettingsDto {
 
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
+  backgroundMusicId?: string | null;
+
+  @IsOptional()
+  @IsString()
   contactEmail?: string;
 
   @IsOptional()

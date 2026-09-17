@@ -96,6 +96,7 @@ export interface LandingSettings {
   vision: string | null;
   description: string | null;
   featuredVideoId: string | null;
+  backgroundMusicId: string | null;
   contactTitle: string | null;
   contactDescription: string | null;
   contactEmail: string | null;
@@ -117,6 +118,7 @@ export interface LandingSettingsForm {
   aboutTitle: string;
   description: string;
   featuredVideoId: string | null;
+  backgroundMusicId: string | null;
   contactTitle: string;
   contactDescription: string;
   contactEmail: string;
