@@ -72,7 +72,8 @@ describe("mission detail SSR", () => {
     expect(html).toContain(
       'aria-label="Ampliar imagen 1 de 2 de la misión One"',
     );
-    expect(html).toContain("La Misión en imágenes");
+    expect(html).toContain('aria-label="Galería de la misión One"');
+    expect(html).not.toContain("La Misión en imágenes");
     expect(html).toContain("Story One");
     expect(html).toContain("Explorar publicaciones");
     expect(html).not.toContain('data-testid="mission-detail-error"');

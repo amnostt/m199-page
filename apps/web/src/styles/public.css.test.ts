@@ -125,6 +125,19 @@ describe("public.css route-owned stylesheet", () => {
       readToken(css, ".public-ui.public-page.landing-page", "padding"),
     ).toBe("0");
   });
+
+  it("animates only active landing music and disables it for reduced motion", () => {
+    const css = readPublic();
+    expect(css).toMatch(
+      /\.public-ui\s+\.landing-background-music__toggle\[data-playing="true"\]\s*\{[^}]*animation:\s*landing-background-music-pulse\s+2\.4s\s+ease-in-out\s+infinite;/s,
+    );
+    expect(css).toMatch(
+      /@keyframes\s+landing-background-music-pulse\s*\{[\s\S]*box-shadow:/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.public-ui\s+\.landing-background-music__toggle\s*\{[^}]*animation:\s*none;[^}]*transition:\s*none;/s,
+    );
+  });
 });
 
 describe("public.css landing hero contract", () => {
@@ -452,6 +465,15 @@ describe("public.css publications editorial contract", () => {
     );
     expect(css).toMatch(
       /\.public-ui\s+\.public-image-carousel__image-trigger img\s*\{[^}]*object-fit:\s*contain/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(min-width:\s*768px\)[\s\S]*\.public-ui \.public-image-carousel__frame,[\s\S]*\.public-ui \.public-image-carousel__image-trigger img\s*\{[^}]*max-height:\s*100vh;[^}]*max-height:\s*100dvh;/s,
+    );
+    expect(css).toMatch(
+      /\.public-ui \.public-image-carousel__toolbar\s*\{[^}]*min-height:\s*60px;/s,
+    );
+    expect(css).toMatch(
+      /@media\s+\(max-width:\s*767px\)[\s\S]*\.public-ui \.public-image-carousel__image-trigger img\s*\{[^}]*aspect-ratio:\s*4\s*\/\s*3;/s,
     );
     expect(css).toMatch(
       /\.public-ui\s+\.public-mission-detail__hero\s*\{[^}]*grid-template-columns:[^}]*align-items:\s*start/s,

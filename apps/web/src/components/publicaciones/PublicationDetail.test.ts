@@ -42,6 +42,8 @@ describe("PublicationDetail image integration", () => {
     expect(html).toContain(
       'aria-label="Ampliar imagen 1 de 3 de la publicación Demo"',
     );
+    expect(html).toContain('aria-label="Galería de la publicación Demo"');
+    expect(html).not.toContain("Más de esta historia");
     expect(html).not.toContain("La historia continúa");
     expect(html).toMatch(
       /<h1 id="publication-title" class="public-publication-detail__title"/,

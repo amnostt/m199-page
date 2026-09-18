@@ -41,7 +41,11 @@ describe("MissionDetail image integration", () => {
     const html = await renderMissionDetail(mission);
 
     expect(html).toContain('data-testid="public-image-carousel"');
-    expect(html).toContain('aria-label="Ampliar imagen 1 de 2 de la misión One"');
+    expect(html).toContain('aria-label="Galería de la misión One"');
+    expect(html).toContain(
+      'aria-label="Ampliar imagen 1 de 2 de la misión One"',
+    );
+    expect(html).not.toContain("La Misión en imágenes");
     expect(html.indexOf('src="/files/hero"')).toBeLessThan(
       html.indexOf('src="/files/story"'),
     );
@@ -59,7 +63,9 @@ describe("MissionDetail image integration", () => {
     });
 
     expect(html).toContain('src="/assets/template-picture.png"');
-    expect(html).toContain('aria-label="Ampliar imagen 1 de 1 de la misión One"');
+    expect(html).toContain(
+      'aria-label="Ampliar imagen 1 de 1 de la misión One"',
+    );
     expect(html).not.toContain("Explorar publicaciones");
   });
 });

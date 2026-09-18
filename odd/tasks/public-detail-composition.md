@@ -16,6 +16,8 @@ Visitors need an immediate, coherent view of the detail subject and its media. K
 
 - Adjust desktop-only public mission and publication detail hero composition alignment while preserving responsive mobile behavior.
 - Update the shared `PublicImageCarousel` primary-image presentation to contain the image inside a dark backdrop; leave thumbnail cropping and lightbox behavior unchanged unless a focused regression requires otherwise.
+- Cap only the shared carousel main media viewport at the desktop viewport height while preserving mobile behavior and keeping the full carousel controls outside that cap.
+- Remove the visible mission and publication carousel section labels while retaining the carousel's accessible section name and interaction semantics.
 - Remove only the visible publication label text `La historia continúa`; retain a logical accessible H1 and move the strong editorial display hierarchy to that H1.
 - Render publication `En contexto` associated ministries as a responsive grid. Render a mission logo only when its nullable URL exists, in a neutral non-cropped container.
 - Make the minimum API and public web contract changes needed to expose nullable mission profile image URLs on public publication detail, using existing file URL conventions. Do not change Prisma schema or migrations.
@@ -55,6 +57,8 @@ Visitors need an immediate, coherent view of the detail subject and its media. K
 - `PDC-06` — Expose nullable mission profile image URLs through the public publication detail contract and render the responsive ministry grid with conditional neutral logos.
 - `PDC-07` — Add or update focused tests for API, contracts, detail presentation, carousel, and ministry logos/grid.
 - `PDC-08` — Run applicable verification, detector, and diff checks; record exact observed outcomes and close only proven units.
+- `PDC-09` — Cap the shared carousel desktop main media viewport at the viewport height without clipping controls or changing mobile behavior.
+- `PDC-10` — Remove visible mission/publication carousel section labels while retaining accessible carousel naming and controls.
 
 ## Work Units
 
@@ -92,6 +96,29 @@ Implement `PDC-07` and `PDC-08` after the behavior is complete. Use the narrowes
 - The Impeccable detector has one post-edit run over all changed web UI targets, with its exact outcome recorded.
 - Any failed or unavailable required check is explicitly recorded and the related work unit remains incomplete.
 
+### PDC-WU4 — Desktop carousel viewport-height cap
+
+Implement `PDC-09` as a focused follow-up to `PDC-WU1`. The shared `PublicImageCarousel` main media viewport/frame must use a robust desktop viewport-relative maximum height so extreme portrait media cannot overflow the desktop viewport. Scope the constraint to the media frame/image layout rather than the full carousel UI; preserve contain rendering, the dark backdrop, controls, lightbox, thumbnails, accessibility, and responsive mobile behavior.
+
+**Acceptance criteria**
+
+- The shared mission/publication carousel main media viewport has a desktop viewport-relative maximum height, including dynamic viewport support where appropriate.
+- The primary image remains fully visible with `object-fit: contain`; it is not cropped or truncated to satisfy the cap, and its dark backdrop remains intact.
+- Toolbar, controls, thumbnails, lightbox behavior, accessibility, and mobile layout are not clipped or otherwise constrained by the desktop cap.
+- Focused changed-file web tests cover the desktop cap and contain/mobile preservation.
+- Web typecheck, changed-file Prettier, `git diff --check`, and exactly one post-edit Impeccable detector run have exact observed outcomes recorded.
+
+### PDC-WU5 — Visible carousel label removal
+
+Implement `PDC-10` as a focused follow-up for the mission and publication detail pages. Remove only the visible text `La Misión en imágenes` and `Más de esta historia`; do not replace either with different visible copy. Preserve the shared carousel's accessible section name, controls, counter, lightbox, keyboard semantics, and SSR behavior. Evolve `PublicImageCarousel` only as needed for its mission and publication detail consumers.
+
+**Acceptance criteria**
+
+- Mission detail does not render visible `La Misión en imágenes`.
+- Publication detail does not render visible `Más de esta historia`.
+- The carousel retains an accessible section name, controls, counter, lightbox, and keyboard semantics.
+- Focused component and SSR tests assert both labels are absent and accessibility behavior remains present.
+
 ## Applicable Checks
 
 - Focused `pnpm --filter @m199/web test` selection for changed web tests.
@@ -117,10 +144,12 @@ Implement `PDC-07` and `PDC-08` after the behavior is complete. Use the narrowes
 - [x] `PDC-WU1` Detail composition and carousel media behavior; focused style/component tests and the web build passed.
 - [x] `PDC-WU2` Publication hierarchy and ministries data/UI; focused API/web contract, service/controller, SSR, and presentation tests passed.
 - [ ] `PDC-WU3` Focused verification; applicable changed-file checks passed, but the repository-wide format check remains incomplete because of unrelated pre-existing formatting findings.
+- [x] `PDC-WU4` Desktop carousel viewport-height cap; desktop-only media cap, mobile preservation, focused tests, typecheck, changed-file formatting, diff check, and detector are complete.
+- [ ] `PDC-WU5` Visible carousel label removal; implementation and focused behavior checks pass, but the changed carousel source file retains pre-existing formatting differences that block a clean source-file Prettier check.
 
 ## Next Step
 
-Implementation is complete for `PDC-WU1` and `PDC-WU2`. `PDC-WU3` remains open only because `pnpm format:check` reports unrelated pre-existing files; no further authorized source work is pending.
+Implementation is complete for `PDC-WU1`, `PDC-WU2`, `PDC-WU4`, and `PDC-WU5`. `PDC-WU3` remains open only because its prior repository-wide format check reported unrelated pre-existing files; `PDC-WU5` remains open only because the changed carousel source file retains pre-existing formatting differences that block a clean source-file Prettier check.
 
 ## Verification Log
 
@@ -139,3 +168,15 @@ Observed implementation and verification outcomes:
 - Impeccable detector: `node .opencode/skills/impeccable/scripts/detect.mjs --json apps/web/src/components/publicaciones/PublicationDetail.astro apps/web/src/components/publicaciones/PublicationMissionsList.astro apps/web/src/components/public/PublicImageCarousel.tsx apps/web/src/styles/public.css` — PASS with exact output `[]`; this was the single post-edit detector invocation.
 - Diff check: `git diff --check` — PASS with no output.
 - Scope safety: no Prisma schema or migration changes, generated files, commits, pushes, pull requests, or RDD commands were made. Existing unrelated `opencode.json` and `.gentle-ai-default-agent.json` worktree changes were preserved.
+- `PDC-WU4` implementation: added a desktop-only `100vh` fallback plus `100dvh` maximum height to the shared carousel media frame and primary image; controls and thumbnails remain outside the capped frame, while the existing contain rendering, dark backdrop, and mobile aspect-ratio rules remain unchanged.
+- `PDC-WU4` focused web tests: `pnpm --filter @m199/web exec vitest run src/components/public/PublicImageCarousel.test.tsx src/styles/public.css.test.ts` — PASS, 2 files, 28 tests passed.
+- `PDC-WU4` web typecheck: `pnpm --filter @m199/web typecheck` — PASS, 0 errors, 0 warnings, 19 hints.
+- `PDC-WU4` changed-file Prettier check: `pnpm exec prettier --check apps/web/src/components/public/PublicImageCarousel.test.tsx apps/web/src/styles/public.css apps/web/src/styles/public.css.test.ts` — PASS, all matched files use Prettier code style.
+- `PDC-WU4` Impeccable detector: `node .opencode/skills/impeccable/scripts/detect.mjs --json apps/web/src/components/public/PublicImageCarousel.test.tsx apps/web/src/styles/public.css apps/web/src/styles/public.css.test.ts` — PASS with exact output `[]`; this was the single post-edit detector invocation for this follow-up.
+- `PDC-WU4` diff check: `git diff --check` — PASS with no output before the task record update; it is rerun after this record update.
+- `PDC-WU5` implementation: removed the visible mission/publication carousel heading props and labels; the shared carousel now exposes an accessible `section` name through `aria-label="Galería de ${label}"`, while controls, counter, lightbox, keyboard behavior, and SSR rendering remain intact.
+- `PDC-WU5` focused web tests: `pnpm --filter @m199/web exec vitest run src/components/public/PublicImageCarousel.test.tsx src/components/misiones/MissionDetail.test.ts src/components/publicaciones/PublicationDetail.test.ts src/pages/misiones/detail.test.ts src/pages/publicaciones/detail.test.ts` — PASS, 5 files, 27 tests passed.
+- `PDC-WU5` web typecheck: `pnpm --filter @m199/web typecheck` — PASS, 0 errors, 0 warnings, 19 hints.
+- `PDC-WU5` changed-file formatting: `pnpm exec prettier --check odd/tasks/public-detail-composition.md` and `pnpm exec prettier --check --parser markdown odd/public-detail-composition/tasks` — PASS; focused web tests — PASS with `pnpm exec prettier --check apps/web/src/components/public/PublicImageCarousel.test.tsx apps/web/src/components/misiones/MissionDetail.test.ts apps/web/src/components/publicaciones/PublicationDetail.test.ts apps/web/src/pages/misiones/detail.test.ts apps/web/src/pages/publicaciones/detail.test.ts`. `pnpm exec prettier --check apps/web/src/components/public/PublicImageCarousel.tsx` — FAIL with pre-existing formatting differences only (import grouping and two long JSX attributes); no unrelated formatting normalization was applied.
+- `PDC-WU5` Impeccable detector: `node .opencode/skills/impeccable/scripts/detect.mjs --json apps/web/src/components/misiones/MissionDetail.astro apps/web/src/components/publicaciones/PublicationDetail.astro apps/web/src/components/public/PublicImageCarousel.tsx` — PASS with exact output `[]`; this was the single post-edit detector invocation.
+- `PDC-WU5` diff check: `git diff --check` — PASS with no output before this ODD evidence update; it is rerun after this record update.

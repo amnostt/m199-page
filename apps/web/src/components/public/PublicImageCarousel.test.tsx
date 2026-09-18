@@ -9,17 +9,12 @@ describe("PublicImageCarousel", () => {
   });
 
   it("renders the complete image sequence and hides navigation for one image", () => {
-    render(
-      <PublicImageCarousel
-        images={["/one.jpg"]}
-        label="la misión Uno"
-        heading="La Misión en imágenes"
-      />,
-    );
+    render(<PublicImageCarousel images={["/one.jpg"]} label="la misión Uno" />);
 
     expect(
-      screen.getByRole("heading", { name: "La Misión en imágenes" }),
+      screen.getByRole("region", { name: "Galería de la misión Uno" }),
     ).toBeTruthy();
+    expect(screen.queryByText("La Misión en imágenes")).toBeNull();
     expect(
       screen.getByRole("button", { name: /Ampliar imagen 1 de 1/ }),
     ).toBeTruthy();
@@ -37,7 +32,6 @@ describe("PublicImageCarousel", () => {
       <PublicImageCarousel
         images={["/one.jpg", "/two.jpg"]}
         label="la misión Uno"
-        heading="La Misión en imágenes"
       />,
     );
 
@@ -53,12 +47,31 @@ describe("PublicImageCarousel", () => {
     expect(mainButton.querySelector("img")?.closest("button")).toBe(mainButton);
   });
 
+  it("keeps the desktop media frame separate from carousel controls", () => {
+    render(
+      <PublicImageCarousel
+        images={["/one.jpg", "/two.jpg"]}
+        label="la publicación Demo"
+      />,
+    );
+
+    const carousel = screen.getByTestId("public-image-carousel");
+    const frame = carousel.querySelector(".public-image-carousel__frame");
+    const toolbar = carousel.querySelector(".public-image-carousel__toolbar");
+
+    expect(frame?.querySelector("img")).toBeTruthy();
+    expect(frame?.contains(toolbar)).toBe(false);
+    expect(toolbar?.querySelectorAll("button")).toHaveLength(2);
+    expect(
+      carousel.querySelectorAll(".public-image-carousel__thumbnail"),
+    ).toHaveLength(2);
+  });
+
   it("browses thumbnails, opens a lightbox, supports arrows and restores focus", () => {
     render(
       <PublicImageCarousel
         images={["/one.jpg", "/two.jpg", "/three.jpg"]}
         label="la publicación Demo"
-        heading="Más de esta historia"
       />,
     );
 
@@ -91,7 +104,6 @@ describe("PublicImageCarousel", () => {
       <PublicImageCarousel
         images={["/one.jpg", "/two.jpg"]}
         label="la misión Uno"
-        heading="La Misión en imágenes"
       />,
     );
 
@@ -114,13 +126,7 @@ describe("PublicImageCarousel", () => {
   });
 
   it("keeps blank sources on the public fallback", () => {
-    render(
-      <PublicImageCarousel
-        images={["  "]}
-        label="la misión Uno"
-        heading="La Misión en imágenes"
-      />,
-    );
+    render(<PublicImageCarousel images={["  "]} label="la misión Uno" />);
 
     expect(
       screen.getByRole("button", { name: /Ampliar imagen/ }).innerHTML,
@@ -129,11 +135,7 @@ describe("PublicImageCarousel", () => {
 
   it("switches failed images to the public fallback", () => {
     render(
-      <PublicImageCarousel
-        images={["/broken.jpg"]}
-        label="la misión Uno"
-        heading="La Misión en imágenes"
-      />,
+      <PublicImageCarousel images={["/broken.jpg"]} label="la misión Uno" />,
     );
 
     const image = screen.getAllByRole("presentation")[0]!;

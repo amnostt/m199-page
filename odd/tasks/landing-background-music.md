@@ -143,3 +143,24 @@ TDD is explicitly disabled by Engram decision #1133. Use ordinary tests with the
 - Status after verification: Complete.
 - Evidence: `pnpm --filter @m199/api exec vitest run src/file-module/file.service.test.ts` passed 1 file and 35 tests; `pnpm --filter @m199/api typecheck` passed; `git diff --check` passed.
 - Correction result: ID3v2.4 now permits only its defined footer-present bit outside the reserved mask, while older accepted ID3 versions retain the stricter mask. The focused test accepts a valid footer followed by a complete MPEG frame. No migration, dependency, RDD, commit, push, PR, or out-of-scope change was performed.
+
+## Authorized Refinement Work Units — 2026-09-17
+
+These work units are recorded before source edits and preserve all completed implementation and correction evidence above.
+
+- [x] LBM-5 — Persisted uploaded-audio attachment visibility: render a truthful shadcn Attachment-style row from the loaded landing settings audio ID, while preserving upload, replace, remove, and existing image/video FileUploadWidget behavior.
+- [x] LBM-6 — Accessible play-button motion: add subtle CSS playback-active motion that is absent while paused or in error, keeps keyboard/focus behavior, and is disabled by `prefers-reduced-motion`.
+- [x] LBM-7 — Verification: add focused admin/player/UI/style tests, run the requested web checks and exactly one Impeccable detector pass, and record exact outcomes without checking off unproven items.
+
+### Refinement Scope
+
+- Authorized source paths remain limited to the existing landing settings, landing player, UI attachment, public styles, and adjacent focused tests needed for these work units.
+- Use the current landing settings API fields only; the opaque public URL/ID does not provide filename or size metadata, so the attachment copy must stay generic and honest.
+- Do not add dependencies, apply migrations, edit generated files, invoke RDD, commit, push, open a PR, or modify unrelated worktree files.
+
+## Third Refinement Evidence — 2026-09-17
+
+- [x] LBM-5 — Status: Complete. `LandingSettingsPage` now enables the existing `FileUploadWidget` Attachment composition for saved music, using an audio icon, generic configured-MP3 title/description, and the existing remove/replace actions. The loaded-settings test confirms the persisted row is rendered after reload, the input value remains empty, and remove returns the widget to its upload state. Existing image/video callers retain their prior preview variants.
+- [x] LBM-6 — Status: Complete. The public play control now receives a CSS pulse ring only while `data-playing="true"`; paused, ended, rejected-play, and media-error states set it false. Keyboard/focus behavior and accessible state remain unchanged, and the reduced-motion media query disables the animation and transition.
+- [x] LBM-7 — Status: Complete. Focused web tests passed 4 files/75 tests: `pnpm --filter @m199/web exec vitest run src/admin/LandingSettingsPage.test.tsx src/admin/FileUploadWidget.test.tsx src/components/landing/LandingBackgroundMusic.test.tsx src/styles/public.css.test.ts`. The Impeccable detector pass ran exactly once and returned `[]` for the changed UI targets. Changed-file Prettier check passed. Web typecheck passed with 0 errors and 19 existing hints. Web build passed on the sequential rerun; the first parallel check/build attempt hit a transient Vite `ENOTEMPTY` cache rename race. `git diff --check` passed.
+- [x] Constraints preserved: no migration, dependency, generated-file, RDD, commit, push, PR, or unrelated worktree change was performed; `.gentle-ai-default-agent.json` remains untracked and untouched.

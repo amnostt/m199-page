@@ -32,7 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { ImageIcon, RotateCcwIcon, XIcon } from "lucide-react";
+import { ImageIcon, Music2Icon, RotateCcwIcon, XIcon } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,7 +48,7 @@ export interface FileUploadWidgetProps {
   maxSizeBytes?: number;
   preview?: boolean;
   previewAlt?: string;
-  previewVariant?: "logo" | "hero";
+  previewVariant?: "logo" | "hero" | "audio";
   fileLabel?: string;
   inputLabel?: string;
   description?: string;
@@ -182,7 +182,9 @@ export function FileUploadWidget({
       ? `Cargando ${fileLabel}…`
       : state === "error"
         ? `No se pudo cargar el ${errorFileLabel}.`
-        : `${fileLabel[0]?.toUpperCase() ?? ""}${fileLabel.slice(1)} cargada y lista para guardar.`;
+        : previewVariant === "audio"
+          ? "MP3 configurado y listo para guardar."
+          : `${fileLabel[0]?.toUpperCase() ?? ""}${fileLabel.slice(1)} cargada y lista para guardar.`;
 
   // prettier-ignore
   return (
@@ -197,14 +199,16 @@ export function FileUploadWidget({
           data-testid="file-upload-preview"
         >
           <AttachmentMedia
-            variant="image"
+            variant={previewVariant === "audio" ? "icon" : "image"}
             className={cn(
-              "[&>img]:!object-contain",
+              previewVariant !== "audio" && "[&>img]:!object-contain",
               previewVariant === "hero" &&
                 "!aspect-[16/9] !w-40 sm:!w-56",
             )}
           >
-            {fileId ? (
+            {previewVariant === "audio" ? (
+              <Music2Icon aria-hidden="true" />
+            ) : fileId ? (
               <img
                 src={`/files/${fileId}`}
                 alt={previewAlt}

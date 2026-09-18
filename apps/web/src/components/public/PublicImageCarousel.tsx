@@ -22,7 +22,6 @@ import {
 export interface PublicImageCarouselProps {
   images: (string | null | undefined)[];
   label: string;
-  heading: string;
 }
 
 function focusableElements(container: HTMLElement): HTMLElement[] {
@@ -36,7 +35,6 @@ function focusableElements(container: HTMLElement): HTMLElement[] {
 export function PublicImageCarousel({
   images,
   label,
-  heading,
 }: PublicImageCarouselProps) {
   const resolvedImages = images.map(resolvePublicImageUrl);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -45,7 +43,6 @@ export function PublicImageCarousel({
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const id = useId().replaceAll(":", "");
-  const headingId = `${id}-heading`;
   const dialogTitleId = `${id}-dialog-title`;
 
   useEffect(() => {
@@ -142,12 +139,9 @@ export function PublicImageCarousel({
   return (
     <section
       className="public-image-carousel"
-      aria-labelledby={headingId}
+      aria-label={`Galería de ${label}`}
       data-testid="public-image-carousel"
     >
-      <h2 id={headingId} className="public-image-carousel__heading">
-        {heading}
-      </h2>
       <div className="public-image-carousel__frame">
         <button
           ref={triggerRef}

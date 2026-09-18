@@ -55,9 +55,17 @@ describe("LandingBackgroundMusic", () => {
 
     await waitFor(() => {
       expect(
+        screen.getByRole("button", { name: "Pause background music" }),
+      ).toBeTruthy();
+      expect(
         screen
           .getByRole("button", { name: "Pause background music" })
           .getAttribute("aria-pressed"),
+      ).toBe("true");
+      expect(
+        screen
+          .getByRole("button", { name: "Pause background music" })
+          .getAttribute("data-playing"),
       ).toBe("true");
     });
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce();
@@ -71,6 +79,11 @@ describe("LandingBackgroundMusic", () => {
         screen
           .getByRole("button", { name: "Play background music" })
           .getAttribute("aria-pressed"),
+      ).toBe("false");
+      expect(
+        screen
+          .getByRole("button", { name: "Play background music" })
+          .getAttribute("data-playing"),
       ).toBe("false");
     });
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
@@ -99,6 +112,11 @@ describe("LandingBackgroundMusic", () => {
         screen
           .getByRole("button", { name: "Play background music" })
           .getAttribute("aria-pressed"),
+      ).toBe("false");
+      expect(
+        screen
+          .getByRole("button", { name: "Play background music" })
+          .getAttribute("data-playing"),
       ).toBe("false");
       expect(screen.getByRole("status").textContent).toBe(
         "Background music could not be played. Please try again.",

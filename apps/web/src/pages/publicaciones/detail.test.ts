@@ -59,6 +59,7 @@ describe("publication detail SSR", () => {
     expect(html).toContain(
       `aria-label="Ampliar imagen 1 de 1 de la publicación Demo"`,
     );
+    expect(html).toContain('aria-label="Galería de la publicación Demo"');
     expect(html).toContain(
       type === "POST" ? "Historia" : type === "OUTING" ? "Salida" : "Evento",
     );
@@ -70,6 +71,7 @@ describe("publication detail SSR", () => {
           : "Ver evento",
     );
     expect(html).not.toContain("La historia continúa");
+    expect(html).not.toContain("Más de esta historia");
     expect(html).toMatch(
       /<h1 id="publication-title" class="public-publication-detail__title"/,
     );

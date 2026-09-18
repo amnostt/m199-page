@@ -445,6 +445,8 @@ export function LandingSettingsPage({
                       accept=".mp3,audio/mpeg"
                       acceptedFormats="MP3"
                       maxSizeBytes={10 * 1024 * 1024}
+                      preview
+                      previewVariant="audio"
                       fileLabel="música"
                       inputLabel="música de fondo"
                       description="Formato: MP3 (audio/mpeg). Tamaño máximo: 10 MB."

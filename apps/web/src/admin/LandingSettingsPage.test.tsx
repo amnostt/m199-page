@@ -161,6 +161,22 @@ describe("LandingSettingsPage load", () => {
         .getByTestId("file-upload-input")
         .getAttribute("accept"),
     ).toBe("video/mp4");
+    const musicWidget = screen.getByTestId(
+      "landing-background-music-upload-widget",
+    );
+    expect(within(musicWidget).getByTestId("file-upload-preview")).toBeTruthy();
+    expect(within(musicWidget).getByText("Música actual")).toBeTruthy();
+    expect(
+      within(musicWidget).getByText("MP3 configurado y listo para guardar."),
+    ).toBeTruthy();
+    expect(within(musicWidget).queryByRole("img")).toBeNull();
+    expect(
+      (within(musicWidget).getByTestId("file-upload-input") as HTMLInputElement)
+        .value,
+    ).toBe("");
+    fireEvent.click(within(musicWidget).getByTestId("file-upload-remove"));
+    expect(within(musicWidget).queryByTestId("file-upload-preview")).toBeNull();
+    expect(within(musicWidget).getByTestId("file-upload-input")).toBeTruthy();
     expect(
       (screen.getByLabelText(/correo electrónico/i) as HTMLInputElement).value,
     ).toBe(SAMPLE_SETTINGS.contactEmail);
