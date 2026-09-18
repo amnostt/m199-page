@@ -33,6 +33,10 @@ export function applyGlobalPipes(app: INestApplication): void {
 export async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
+  // Let Nest close the HTTP listener and run module shutdown hooks on
+  // Ctrl+C/SIGINT and container/process termination/SIGTERM.
+  app.enableShutdownHooks(["SIGINT", "SIGTERM"]);
+
   // Parse httpOnly cookies so AuthGuard/AuthService can read
   // access_token and refresh_token from signed-in clients.
   app.use(cookieParser());

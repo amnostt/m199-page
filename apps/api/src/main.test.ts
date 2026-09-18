@@ -14,14 +14,19 @@
  * which builds a full Nest app and exercises the pipe through HTTP.
  */
 
-const { listenMock, useGlobalPipesMock, useMock, mkdirMock } = vi.hoisted(
-  () => ({
-    listenMock: vi.fn(),
-    useGlobalPipesMock: vi.fn(),
-    useMock: vi.fn(),
-    mkdirMock: vi.fn(),
-  }),
-);
+const {
+  enableShutdownHooksMock,
+  listenMock,
+  useGlobalPipesMock,
+  useMock,
+  mkdirMock,
+} = vi.hoisted(() => ({
+  enableShutdownHooksMock: vi.fn(),
+  listenMock: vi.fn(),
+  useGlobalPipesMock: vi.fn(),
+  useMock: vi.fn(),
+  mkdirMock: vi.fn(),
+}));
 
 // Mock env.validation so the @Module decorator in AppModule evaluates
 // ConfigModule.forRoot({ validate }) cleanly at import time without
@@ -55,6 +60,7 @@ vi.mock("@nestjs/core", async (importOriginal) => {
     NestFactory: {
       ...actual.NestFactory,
       create: vi.fn().mockResolvedValue({
+        enableShutdownHooks: enableShutdownHooksMock,
         use: useMock,
         useGlobalPipes: useGlobalPipesMock,
         get: vi.fn().mockReturnValue({
@@ -96,6 +102,13 @@ describe("main bootstrap (BF-01 valid server start)", () => {
 
     expect(listenMock).toHaveBeenCalledTimes(1);
     expect(listenMock).toHaveBeenCalledWith(3001);
+  });
+
+  it("enables shutdown hooks for SIGINT and SIGTERM", async () => {
+    await bootstrap();
+
+    expect(enableShutdownHooksMock).toHaveBeenCalledTimes(1);
+    expect(enableShutdownHooksMock).toHaveBeenCalledWith(["SIGINT", "SIGTERM"]);
   });
 
   it("registers cookieParser middleware via app.use", async () => {
